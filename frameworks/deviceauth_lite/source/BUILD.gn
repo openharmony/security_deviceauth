@@ -63,7 +63,7 @@ hichian_sources = [
 config("hichain_config") {
   include_dirs = [
     "//third_party/bounds_checking_function/include",
-    "//base/security/interfaces/innerkits/hichainsdk_lite",
+    "//base/security/deviceauth/interfaces/innerkits/deviceauth_lite",
     "//third_party/cJSON",
     "base",
     "huks_adapter",
@@ -94,9 +94,9 @@ if (ohos_kernel_type == "liteos_m") {
     sources = hichian_sources
     public_configs = [ ":hichain_config" ]
     deps = [
-      "//base/security/frameworks/huks_lite/source:huks",
+      "//base/security/huks/frameworks/huks_lite/source:huks",
+      "//build/lite/config/component/cJSON:cjson_shared",
       "//third_party/bounds_checking_function:libsec_shared",
-      "//third_party/cJSON:cjson_shared",
     ]
     cflags = [
       "-flto",

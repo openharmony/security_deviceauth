@@ -13,10 +13,10 @@
 # limitations under the License.
 #
 
- import("//build/lite/config/component/lite_component.gni")
+import("//build/lite/config/component/lite_component.gni")
 
 lite_component("hichainsdk") {
-     features = [
-         "//base/security/frameworks/hichainsdk_lite/source:hichainsdk",
-     ]
- }
+  features = [
+    "//base/security/deviceauth/frameworks/deviceauth_lite/source:hichainsdk",
+  ]
+}

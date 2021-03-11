@@ -103,7 +103,6 @@ int hilink_mutex_unlock(hilink_mutex_t *mutex);
 int hilink_mutex_destroy(hilink_mutex_t *mutex);
 void hilink_diagnosis_record_ex(int errCode);
 int hilink_printf(const char *format, ...);
-
 int HiLinkGetNetWorkErrno(int fd);
 
 #ifdef __cplusplus
