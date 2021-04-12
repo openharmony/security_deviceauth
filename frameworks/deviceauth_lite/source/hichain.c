@@ -751,7 +751,7 @@ static void encap_inform_message(int32_t error_code, struct message *send)
 
 #if (defined(_CUT_EXCHANGE_) || defined(_CUT_EXCHANGE_SERVER_))
     if (error_code == HC_UNSUPPORT) {
-        send->msg_code=INVALID_MESSAGE;
+        send->msg_code = INVALID_MESSAGE;
         return;
     }
 #endif

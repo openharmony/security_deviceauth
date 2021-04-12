@@ -92,7 +92,11 @@ struct sts_server {
     struct sts_end_response_data end_response_data;
 };
 #else
+<<<<<<< HEAD
 struct sts_server {
+=======
+struct sts_server{
+>>>>>>> 663a145bdb100a367cf19422faf1438a0625602d
     char rsv;
 };
 #endif
