@@ -24,8 +24,6 @@ enum sts_message_type {
     STS_END_MSG,
 };
 
-#if !(defined(_CUT_STS_) || defined(_CUT_STS_SERVER_))
-
 #include "key_agreement_server.h"
 
 #if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
@@ -71,6 +69,7 @@ struct sts_start_response_data {
     enum hc_user_type peer_user_type;
 };
 
+#if !(defined(_CUT_STS_) || defined(_CUT_STS_SERVER_))
 struct sts_server {
     struct key_agreement_server server_info;
     const struct session_identity *identity;
@@ -92,6 +91,11 @@ struct sts_server {
     struct sts_start_response_data start_response_data;
     struct sts_end_response_data end_response_data;
 };
+#else
+struct sts_server{
+    char rsv;
+};
+#endif
 
 struct sts_start_request_data {
     struct key_agreement_version peer_version;
@@ -125,6 +129,7 @@ struct sts_end_request_data {
     struct auth_data auth_data;
 };
 
+#if !(defined(_CUT_STS_) || defined(_CUT_STS_SERVER_))
 static inline uint32_t sts_server_sn(struct sts_server *server)
 {
     return server->server_info.protocol_base_info.sn;
@@ -132,12 +137,6 @@ static inline uint32_t sts_server_sn(struct sts_server *server)
 
 int32_t send_sts_start_response(struct sts_server *handle, struct message *receive, struct message *send);
 int32_t send_sts_end_response(struct sts_server *handle, struct message *receive, struct message *send);
-
-#else /* _CUT_XXX_ */
-
-struct sts_server {
-    char rsv;
-};
 
 #endif /* _CUT_XXX_ */
 
