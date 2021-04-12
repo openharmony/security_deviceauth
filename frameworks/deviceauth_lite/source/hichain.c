@@ -63,7 +63,9 @@ static int32_t check_call_back(const struct hc_call_back *call_back);
 static int32_t check_auth_info(const struct hc_user_info *user_info);
 static int32_t delete_base_key(struct service_id service_id, struct operation_parameter para);
 static int32_t delete_public_key(hc_handle handle, struct service_id service_id, int32_t user_type);
+#if !(defined(_CUT_STS_) || defined(_CUT_STS_SERVER_) || defined(_CUT_EXCHANGE_) || defined(_CUT_EXCHANGE_SERVER_))
 static void build_self_lt_key_pair(const struct hichain *hichain);
+#endif
 
 #if DESC("api")
 DLL_API_PUBLIC hc_handle get_instance(const struct session_identity *identity, enum hc_type type,
@@ -746,6 +748,13 @@ static void encap_inform_message(int32_t error_code, struct message *send)
     if ((error_code == HC_OK) || (send->msg_code != INFORM_MESSAGE) || (send->payload != NULL)) {
         return;
     }
+
+#if (defined(_CUT_EXCHANGE_) || defined(_CUT_EXCHANGE_SERVER_))
+    if (error_code == HC_UNSUPPORT) {
+        send->msg_code = INVALID_MESSAGE;
+        return;
+    }
+#endif
     int32_t *err = (int32_t *)MALLOC(sizeof(int32_t));
     if (err == NULL) {
         LOGE("Malloc for encape inform message failed");
@@ -851,6 +860,14 @@ static int32_t deserialize_message(const struct uint8_buff *data, struct message
         return HC_BUILD_OBJECT_FAILED;
     }
 
+#if (defined(_CUT_EXCHANGE_) || defined(_CUT_EXCHANGE_SERVER_))
+    if (pass_through_data->message_code == EXCHANGE_REQUEST) {
+        free_data(pass_through_data);
+        pass_through_data = NULL;
+        return HC_UNSUPPORT;
+    }
+#endif
+
     /* message payload deserialization */
     int32_t ret = build_struct_by_receive_data(pass_through_data->message_code, pass_through_data->payload_data,
                                                JSON_STRING_DATA, receive);
@@ -874,7 +891,11 @@ static int32_t deserialize_message_with_json_object(const void *json_object, str
         LOGE("Parse data failed");
         return HC_BUILD_OBJECT_FAILED;
     }
-
+#if (defined(_CUT_EXCHANGE_) || defined(_CUT_EXCHANGE_SERVER_))
+    if (message_code == EXCHANGE_REQUEST) {
+        return HC_UNSUPPORT;
+    }
+#endif
     /* message payload deserialization */
     int32_t ret = build_struct_by_receive_data(message_code, obj_value, JSON_OBJECT_DATA, receive);
     if (ret != HC_OK) {
@@ -1184,6 +1205,7 @@ static int32_t delete_public_key(hc_handle handle, struct service_id service_id,
     return HC_OK;
 }
 
+#if !(defined(_CUT_STS_) || defined(_CUT_STS_SERVER_)|| defined(_CUT_EXCHANGE_)|| defined(_CUT_EXCHANGE_SERVER_))
 static void build_self_lt_key_pair(const struct hichain *hichain)
 {
     struct hc_pin pin = { 0, {0} };
@@ -1218,3 +1240,4 @@ static void build_self_lt_key_pair(const struct hichain *hichain)
         }
     }
 }
+#endif
