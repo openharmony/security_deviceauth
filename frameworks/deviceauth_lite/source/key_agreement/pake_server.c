@@ -227,6 +227,10 @@ static int32_t generate_pake_params(struct pake_server *pake_server, struct epk 
     uint32_t esk_len = (pake_server->prime_type == NUM_LEN_384) ? PAKE_ESK_LENGTH : PAKE_ESK_SHORT_LENGTH;
     uint32_t prime_len = (pake_server->prime_type == NUM_LEN_384) ?
         HC_BIG_PRIME_MAX_LEN_384 : HC_BIG_PRIME_MAX_LEN_256;
+    if (prime_len > sizeof(self_epk->epk)) {
+        LOGE("Actual len of epk is shorter than the expected output len: %d", prime_len);
+        return HC_MEMCPY_ERROR;
+    }
     if (pake_server->server_info.protocol_base_info.state == PROTOCOL_INIT) {
         struct random_value rand = generate_random(esk_len);
         if (rand.length == 0) {

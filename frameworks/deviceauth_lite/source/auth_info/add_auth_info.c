@@ -310,9 +310,9 @@ int32_t import_lite_auth_info(const struct hichain *hichain, const struct hc_aut
 
     struct import_auth_data *import_data = (struct import_auth_data *)parse_import_add_auth_data(
         (char *)out_plain.val, JSON_STRING_DATA);
+    free_import_add_auth_data(out_plain.val);
     if (import_data == NULL) {
         LOGE("Parse import lite add auth data failed");
-        free_import_add_auth_data(out_plain.val);
         return HC_BUILD_OBJECT_FAILED;
     }
 
