@@ -236,7 +236,7 @@ static int32_t IpcServiceGmDelGroup(const IpcDataInfo *ipcParams, int32_t paramN
     int64_t requestId = 0;
     int32_t inOutLen;
     const char *appId = NULL;
-    const char *groupId = NULL;
+    const char *delParams = NULL;
 
     LOGI("starting ...");
     inOutLen = sizeof(int64_t);
@@ -250,13 +250,13 @@ static int32_t IpcServiceGmDelGroup(const IpcDataInfo *ipcParams, int32_t paramN
         LOGE("get param error, type %d", PARAM_TYPE_APPID);
         return ret;
     }
-    ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_GROUPID, (uint8_t *)&groupId, NULL);
+    ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_DEL_PARAMS, (uint8_t *)&delParams, NULL);
     if (ret != HC_SUCCESS) {
-        LOGE("get param error, type %d", PARAM_TYPE_GROUPID);
+        LOGE("get param error, type %d", PARAM_TYPE_DEL_PARAMS);
         return ret;
     }
 
-    callRet = g_devGroupMgrMethod.deleteGroup(requestId, groupId, appId);
+    callRet = g_devGroupMgrMethod.deleteGroup(requestId, appId, delParams);
     ret = IpcEncodeCallReplay(outCache, PARAM_TYPE_IPC_RESULT, (const uint8_t *)&callRet, sizeof(int32_t));
     LOGI("process done, call ret %d, ipc ret %d", callRet, ret);
     return ret;
@@ -269,7 +269,7 @@ static int32_t IpcServiceGmAddMemberToGroup(const IpcDataInfo *ipcParams, int32_
     int32_t inOutLen;
     int64_t requestId = 0;
     const char *addParams = NULL;
-    const char *groupId = NULL;
+    const char *appId = NULL;
 
     LOGI("starting ...");
     inOutLen = sizeof(int64_t);
@@ -283,13 +283,16 @@ static int32_t IpcServiceGmAddMemberToGroup(const IpcDataInfo *ipcParams, int32_
         LOGE("get param error, type %d", PARAM_TYPE_ADD_PARAMS);
         return ret;
     }
-    ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_GROUPID, (uint8_t *)&groupId, NULL);
+    ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
     if (ret != HC_SUCCESS) {
-        LOGE("get param error, type %d", PARAM_TYPE_GROUPID);
+        LOGE("get param error, type %d", PARAM_TYPE_APPID);
         return ret;
     }
-
-    callRet = g_devGroupMgrMethod.addMemberToGroup(requestId, groupId, addParams);
+    ret = AddReqIdByAppId(appId, requestId);
+    if (ret != HC_SUCCESS) {
+        return ret;
+    }
+    callRet = g_devGroupMgrMethod.addMemberToGroup(requestId, appId, addParams);
     ret = IpcEncodeCallReplay(outCache, PARAM_TYPE_IPC_RESULT, (const uint8_t *)&callRet, sizeof(int32_t));
     LOGI("process done, call ret %d, ipc ret %d", callRet, ret);
     return ret;
