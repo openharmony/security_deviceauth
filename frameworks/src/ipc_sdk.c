@@ -34,6 +34,7 @@ extern "C" {
 #define IPC_APPID_LEN 128
 
 #define IS_STRING_VALID(str) (((str) != NULL) && ((str)[0] != 0))
+#define IS_COMM_DATA_VALID(dPtr, dLen) (((dPtr) != NULL) && ((dLen) > 0) && ((dLen) <= 4096))
 
 typedef struct {
     uintptr_t inst;
@@ -303,7 +304,7 @@ static int32_t IpcGmCreateGroup(int64_t requestId, const char *appid, const char
     }
     ret = SetCallRequestParamInfo(callCtx, PARAM_TYPE_APPID, (const uint8_t *)appid, strlen(appid) + 1);
     if (ret != HC_SUCCESS) {
-        LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_CREATE_PARAMS);
+        LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_APPID);
         DestroyCallCtx(&callCtx, NULL);
         return HC_ERR_IPC_BUILD_PARAM;
     }
@@ -329,7 +330,7 @@ static int32_t IpcGmCreateGroup(int64_t requestId, const char *appid, const char
     return ret;
 }
 
-static int32_t IpcGmDelGroup(int64_t requestId, const char *groupId, const char *appId)
+static int32_t IpcGmDelGroup(int64_t requestId, const char *appId, const char *delParams)
 {
     uintptr_t callCtx = 0x0;
     int32_t ret;
@@ -337,7 +338,7 @@ static int32_t IpcGmDelGroup(int64_t requestId, const char *groupId, const char 
     IpcDataInfo replyCache = {0};
 
     LOGI("starting ...");
-    if (!IS_STRING_VALID(groupId) || !IS_STRING_VALID(appId)) {
+    if (!IS_STRING_VALID(delParams) || !IS_STRING_VALID(appId)) {
         return HC_ERR_INVALID_PARAMS;
     }
     if (!IsServiceRunning()) {
@@ -356,9 +357,9 @@ static int32_t IpcGmDelGroup(int64_t requestId, const char *groupId, const char 
         DestroyCallCtx(&callCtx, NULL);
         return HC_ERR_IPC_BUILD_PARAM;
     }
-    ret = SetCallRequestParamInfo(callCtx, PARAM_TYPE_GROUPID, (const uint8_t *)groupId, strlen(groupId) + 1);
+    ret = SetCallRequestParamInfo(callCtx, PARAM_TYPE_DEL_PARAMS, (const uint8_t *)delParams, strlen(delParams) + 1);
     if (ret != HC_SUCCESS) {
-        LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_GROUPID);
+        LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_DEL_PARAMS);
         DestroyCallCtx(&callCtx, NULL);
         return HC_ERR_IPC_BUILD_PARAM;
     }
@@ -383,7 +384,7 @@ static int32_t IpcGmDelGroup(int64_t requestId, const char *groupId, const char 
     return ret;
 }
 
-static int32_t IpcGmAddMemberToGroup(int64_t requestId, const char *groupId, const char *addParams)
+static int32_t IpcGmAddMemberToGroup(int64_t requestId, const char *appId, const char *addParams)
 {
     uintptr_t callCtx = 0x0;
     int32_t ret;
@@ -391,7 +392,7 @@ static int32_t IpcGmAddMemberToGroup(int64_t requestId, const char *groupId, con
     IpcDataInfo replyCache = {0};
 
     LOGI("starting ...");
-    if (!IS_STRING_VALID(groupId) || !IS_STRING_VALID(addParams)) {
+    if (!IS_STRING_VALID(appId) || !IS_STRING_VALID(addParams)) {
         return HC_ERR_INVALID_PARAMS;
     }
     if (!IsServiceRunning()) {
@@ -410,9 +411,9 @@ static int32_t IpcGmAddMemberToGroup(int64_t requestId, const char *groupId, con
         DestroyCallCtx(&callCtx, NULL);
         return HC_ERR_IPC_BUILD_PARAM;
     }
-    ret = SetCallRequestParamInfo(callCtx, PARAM_TYPE_GROUPID, (const uint8_t *)groupId, strlen(groupId) + 1);
+    ret = SetCallRequestParamInfo(callCtx, PARAM_TYPE_APPID, (const uint8_t *)appId, strlen(appId) + 1);
     if (ret != HC_SUCCESS) {
-        LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_GROUPID);
+        LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_APPID);
         DestroyCallCtx(&callCtx, NULL);
         return HC_ERR_IPC_BUILD_PARAM;
     }
@@ -499,7 +500,7 @@ static int32_t IpcGmProcessData(int64_t requestId, const uint8_t *data, uint32_t
     IpcDataInfo replyCache = {0};
 
     LOGI("starting ...");
-    if ((data == NULL) || (dataLen == 0)) {
+    if (!IS_COMM_DATA_VALID(data, dataLen)) {
         return HC_ERR_INVALID_PARAMS;
     }
     if (!IsServiceRunning()) {
@@ -540,7 +541,7 @@ static int32_t IpcGmProcessData(int64_t requestId, const uint8_t *data, uint32_t
     return ret;
 }
 
-static int32_t IpcGmConfirmRequest(int64_t requestId, const char *appId, const char *returnParams)
+static int32_t IpcGmConfirmRequest(int64_t requestId, const char *appId, const char *cfmParams)
 {
     uintptr_t callCtx = 0x0;
     int32_t ret;
@@ -548,7 +549,7 @@ static int32_t IpcGmConfirmRequest(int64_t requestId, const char *appId, const c
     IpcDataInfo replyCache = {0};
 
     LOGI("starting ...");
-    if (!IS_STRING_VALID(appId) || !IS_STRING_VALID(returnParams)) {
+    if (!IS_STRING_VALID(appId) || !IS_STRING_VALID(cfmParams)) {
         return HC_ERR_INVALID_PARAMS;
     }
     if (!IsServiceRunning()) {
@@ -573,7 +574,7 @@ static int32_t IpcGmConfirmRequest(int64_t requestId, const char *appId, const c
         DestroyCallCtx(&callCtx, NULL);
         return HC_ERR_IPC_BUILD_PARAM;
     }
-    ret = SetCallRequestParamInfo(callCtx, PARAM_TYPE_REQ_CFM, (const uint8_t *)returnParams, strlen(returnParams) + 1);
+    ret = SetCallRequestParamInfo(callCtx, PARAM_TYPE_REQ_CFM, (const uint8_t *)cfmParams, strlen(cfmParams) + 1);
     if (ret != HC_SUCCESS) {
         LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_REQ_CFM);
         DestroyCallCtx(&callCtx, NULL);
@@ -710,7 +711,7 @@ static int32_t IpcGmProcessLiteData(int64_t requestId, const char *appId, const 
     IpcDataInfo replyCache = {0};
 
     LOGI("starting ...");
-    if ((data == NULL) || (dataLen == 0) || !IS_STRING_VALID(appId)) {
+    if (!IS_COMM_DATA_VALID(data, dataLen) || !IS_STRING_VALID(appId)) {
         return HC_ERR_INVALID_PARAMS;
     }
     if (!IsServiceRunning()) {
@@ -724,7 +725,7 @@ static int32_t IpcGmProcessLiteData(int64_t requestId, const char *appId, const 
     }
     ret = SetCallRequestParamInfo(callCtx, PARAM_TYPE_REQID, (const uint8_t *)(&requestId), sizeof(requestId));
     if (ret != HC_SUCCESS) {
-        LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_APPID);
+        LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_REQID);
         DestroyCallCtx(&callCtx, NULL);
         return HC_ERR_IPC_BUILD_PARAM;
     }
@@ -1727,13 +1728,35 @@ static bool IpcGmIsDeviceInGroup(const char *appId, const char *groupId, const c
     return (ret == HC_SUCCESS) ? true : false;
 }
 
-void IpcGmDestroyInfo(char **returnInfo)
+static void IpcGmDestroyInfo(char **returnInfo)
 {
     if ((returnInfo == NULL) || (*returnInfo == NULL)) {
         return;
     }
     FreeJsonString(*returnInfo);
     *returnInfo = NULL;
+}
+
+static int32_t IpcGmAuthKeyAgree(int64_t requestId, const char *appId, const char *buildParams)
+{
+    LOGI("starting ...");
+    if (!IS_STRING_VALID(appId) || !IS_STRING_VALID(buildParams)) {
+        return HC_ERR_INVALID_PARAMS;
+    }
+
+    (void)requestId;
+    return HC_ERR_NOT_SUPPORT;
+}
+
+static int32_t IpcGmProcessKeyAgreeData(int64_t requestId, const char *appId, const uint8_t *data, uint32_t dataLen)
+{
+    LOGI("starting ...");
+    if (!IS_STRING_VALID(appId) || !IS_COMM_DATA_VALID(data, dataLen)) {
+        return HC_ERR_INVALID_PARAMS;
+    }
+
+    (void)requestId;
+    return HC_ERR_NOT_SUPPORT;
 }
 
 static void InitIpcGmMethods(DeviceGroupManager *gmMethodObj)
@@ -1769,6 +1792,8 @@ static void InitIpcGmMethods(DeviceGroupManager *gmMethodObj)
     gmMethodObj->getTrustedDevices = IpcGmGetTrustedDevices;
     gmMethodObj->isDeviceInGroup = IpcGmIsDeviceInGroup;
     gmMethodObj->destroyInfo = IpcGmDestroyInfo;
+    gmMethodObj->authKeyAgree = IpcGmAuthKeyAgree;
+    gmMethodObj->processKeyAgreeData = IpcGmProcessKeyAgreeData;
     LOGI("process done");
     return;
 }
@@ -1782,7 +1807,7 @@ static int32_t IpcGaProcessData(int64_t authReqId,
     IpcDataInfo replyCache = {0};
 
     LOGI("starting ...");
-    if ((data == NULL) || (dataLen == 0) || (callback == NULL)) {
+    if (!IS_COMM_DATA_VALID(data, dataLen) || (callback == NULL)) {
         LOGE("invalid params");
         return HC_ERR_INVALID_PARAMS;
     }
