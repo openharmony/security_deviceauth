@@ -191,6 +191,89 @@ static struct sha256_value sha256(const struct uint8_buff *message)
     return sha256_value;
 }
 
+static int32_t Compare(const uint8_t *a, uint32_t lenA, const uint8_t *b, uint32_t lenB)
+{
+    const uint8_t *tmpA = a;
+    const uint8_t *tmpB = b;
+    uint32_t len = lenA;
+    if (lenA < lenB) {
+        for (uint32_t i = 0; i < lenB - lenA; i++) {
+            if (b[i] > 0) {
+                return 1; // a < b: 1
+            }
+        }
+        tmpA = a;
+        tmpB = b + lenB - lenA;
+        len = lenA;
+    }
+    if (lenA > lenB) {
+        for (uint32_t i = 0; i < lenA - lenB; i++) {
+            if (a[i] > 0) {
+                return -1; // a > b: -1
+            }
+        }
+        tmpA = a + lenA - lenB;
+        tmpB = b;
+        len = lenB;
+    }
+    for (uint32_t i = 0; i < len; i++) {
+        if (*(tmpA + i) > *(tmpB + i)) {
+            return -1;
+        }
+        if (*(tmpA + i) < *(tmpB + i)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int32_t CheckDlSpekePublicKey(const struct var_buffer *key, uint32_t bigNumLen)
+{
+    if (key == NULL) {
+        LOGE("Param is null.");
+        return HC_INPUT_ERROR;
+    }
+    const char *primeHex = NULL;
+    if (bigNumLen == HC_BIG_PRIME_MAX_LEN_384) {
+        primeHex = g_large_prime_number_hex_348;
+    } else {
+        primeHex = g_large_prime_number_hex_256;
+    }
+    uint8_t min = 1;
+    uint32_t primeLen = strlen(primeHex) / BYTE_TO_HEX_OPER_LENGTH;
+    if (key->length > primeLen) {
+        LOGE("key->length > primeLen.");
+        return HC_INPUT_ERROR;
+    }
+    uint8_t *primeVal = (uint8_t *)MALLOC(primeLen);
+    if (primeVal == NULL) {
+        LOGE("Malloc primeval failed.");
+        return HC_MALLOC_FAILED;
+    }
+    if (hex_string_to_byte(primeHex, strlen(primeHex), primeVal) != ERROR_CODE_SUCCESS) {
+        LOGE("hex_string_to_byte for prime num failed");
+        FREE(primeVal);
+        return HC_INPUT_ERROR;
+    }
+    /*
+     * P - 1, since the last byte of large prime number must be greater than 1,
+     * do not need to think about borrowing forward
+     */
+    primeVal[primeLen - 1] -= 1;
+    if (Compare(key->data, key->length, &min, sizeof(uint8_t)) >= 0) {
+        LOGE("key <= 1, invalid.");
+        FREE(primeVal);
+        return HC_MEMCPY_ERROR;
+    }
+    if (Compare(key->data, key->length, primeVal, primeLen) <= 0) {
+        LOGE("key >= p - 1, invalid.");
+        FREE(primeVal);
+        return HC_MEMCPY_ERROR;
+    }
+    FREE(primeVal);
+    return HC_OK;
+}
+
 int32_t cal_bignum_exp(struct var_buffer *base, struct var_buffer *exp,
     const uint32_t big_num_len, struct big_num *out_result)
 {
@@ -203,18 +286,9 @@ int32_t cal_bignum_exp(struct var_buffer *base, struct var_buffer *exp,
         return HC_LARGE_PRIME_NUMBER_LEN_UNSUPPORT;
     }
 
-    struct hks_blob a;
-    a.type = HKS_BLOB_TYPE_RAW;
-    a.data = base->data;
-    a.size = base->length;
+    struct hks_blob a = { HKS_BLOB_TYPE_RAW, base->data, base->length };
+    struct hks_blob e = { HKS_BLOB_TYPE_RAW, exp->data, exp->length };
 
-    struct hks_blob e;
-    e.type = HKS_BLOB_TYPE_RAW;
-    e.data = exp->data;
-    e.size = exp->length;
-
-    struct hks_blob n;
-    n.type = HKS_BLOB_TYPE_RAW;
     uint8_t *large_num = (uint8_t *)MALLOC(big_num_len);
     if (large_num == NULL) {
         LOGE("Malloc big num buff fail");
@@ -234,13 +308,14 @@ int32_t cal_bignum_exp(struct var_buffer *base, struct var_buffer *exp,
         FREE(large_num);
         return ERROR_CODE_FAILED;
     }
-    n.data = large_num;
-    n.size = big_num_len;
+    struct hks_blob n = { HKS_BLOB_TYPE_RAW, large_num, big_num_len };
+    struct hks_blob x = { 0, out_result->big_num, big_num_len };
+    if (big_num_len > sizeof(out_result->big_num)) {
+        LOGE("The big num array is shorter than the expected output len.");
+        FREE(large_num);
+        return ERROR_CODE_FAILED;
+    }
 
-    struct hks_blob x;
-    x.type = 0;
-    x.data = out_result->big_num;
-    x.size = big_num_len;
     status = hks_bn_exp_mod(&x, &a, &e, &n);
     FREE(large_num);
     if (status != ERROR_CODE_SUCCESS) {
