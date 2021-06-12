@@ -291,6 +291,10 @@ static int32_t generate_session_key(struct pake_client *pake_client, struct epk 
     struct pake_shared_secret shared_secret = { 0, {0} };
     uint32_t prime_len = (pake_client->prime_type == NUM_LEN_384) ?
                          HC_BIG_PRIME_MAX_LEN_384 : HC_BIG_PRIME_MAX_LEN_256;
+    if (CheckDlSpekePublicKey((const struct var_buffer *)peer_epk, prime_len) != HC_OK) {
+        LOGE("CheckDlSpekePublicKey failed.");
+        return HC_GENERATE_SESSION_KEY_FAILED;
+    }
     int32_t ret = cal_bignum_exp((struct var_buffer *)peer_epk, (struct var_buffer *)&pake_client->self_esk,
                                  prime_len, (struct big_num *)&shared_secret);
     pake_client->shared_secret = shared_secret;
