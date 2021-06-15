@@ -201,6 +201,14 @@ int32_t verify_with_public_key(const int32_t user_type, const struct uint8_buff 
     struct var_buffer *public_key, struct signature *signature);
 
 /*
+ * Check public key's legality
+ * @param key: public key
+ * @param bigNumLen: big num len 384 or 256
+ * @return true -- legal, false -- illegal
+ */
+int32_t CheckDlSpekePublicKey(const struct var_buffer *key, uint32_t bigNumLen);
+
+/*
  * Calculate BigNum Exponent
  * @param base 32 byte
  * @param exp 32 byte
