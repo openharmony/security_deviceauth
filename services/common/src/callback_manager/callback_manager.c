@@ -14,6 +14,7 @@
  */
 
 #include "callback_manager.h"
+#include <stddef.h>
 #include "hc_log.h"
 
 bool ProcessTransmitCallback(int64_t requestId, const uint8_t *data, uint32_t dataLen,
