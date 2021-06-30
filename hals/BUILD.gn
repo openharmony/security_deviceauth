@@ -33,6 +33,7 @@ ohos_static_library("deviceauth_hal_linux") {
     "//utils/native/base/include",
     "//third_party/openssl/include/",
     "//base/security/huks/interfaces/innerkits/huks_standard/main/include",
+    "//base/startup/syspara_lite/interfaces/innerkits/native/syspara/include"
   ]
 
   sources = hal_common_files
@@ -56,6 +57,7 @@ ohos_static_library("deviceauth_hal_linux") {
     "//third_party/cJSON:cjson_static",
     "//third_party/openssl:libcrypto_static",
     "//utils/native/base:utils",
+    "//base/startup/syspara_lite/interfaces/innerkits/native/syspara:syspara"
   ]
 
   external_deps = [ "hiviewdfx_hilog_native:libhilog" ]
