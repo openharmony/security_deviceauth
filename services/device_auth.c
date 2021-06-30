@@ -111,7 +111,7 @@ static void DoCreateGroup(HcTaskBase *task)
         return;
     }
     GroupManagerTask *realTask = (GroupManagerTask *)task;
-    LOGI("The task thread starts to execute group creation! [RequestId]: %lld", realTask->requestId);
+    LOGI("The task thread starts to execute group creation! [RequestId]: %" PRId64, realTask->requestId);
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return;
@@ -131,7 +131,7 @@ static void DoDeleteGroup(HcTaskBase *task)
         return;
     }
     GroupManagerTask *realTask = (GroupManagerTask *)task;
-    LOGI("The task thread starts to execute group deletion! [RequestId]: %lld", realTask->requestId);
+    LOGI("The task thread starts to execute group deletion! [RequestId]: %" PRId64, realTask->requestId);
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return;
@@ -151,7 +151,7 @@ static void DoAddMember(HcTaskBase *task)
         return;
     }
     GroupManagerTask *realTask = (GroupManagerTask *)task;
-    LOGI("The task thread starts to execute member addition! [RequestId]: %lld", realTask->requestId);
+    LOGI("The task thread starts to execute member addition! [RequestId]: %" PRId64, realTask->requestId);
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return;
@@ -171,7 +171,7 @@ static void DoDeleteMember(HcTaskBase *task)
         return;
     }
     GroupManagerTask *realTask = (GroupManagerTask *)task;
-    LOGI("The task thread starts to execute member deletion! [RequestId]: %lld", realTask->requestId);
+    LOGI("The task thread starts to execute member deletion! [RequestId]: %" PRId64, realTask->requestId);
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return;
@@ -191,7 +191,7 @@ static void DoConfirmRequest(HcTaskBase *task)
         return;
     }
     GroupManagerTask *realTask = (GroupManagerTask *)task;
-    LOGI("The task thread starts to execute request confirmation! [RequestId]: %lld", realTask->requestId);
+    LOGI("The task thread starts to execute request confirmation! [RequestId]: %" PRId64, realTask->requestId);
     OnConfirmationReceived(realTask->requestId, realTask->jsonParams);
 }
 
@@ -203,7 +203,7 @@ static void OnChannelOpenedAction(HcTaskBase *task)
     }
     GroupManagerTask *realTask = (GroupManagerTask *)task;
     LOGI("The task thread starts to execute the task that needs to be executed"
-        "when the soft bus channel is open! [RequestId]: %lld", realTask->requestId);
+        "when the soft bus channel is open! [RequestId]: %" PRId64, realTask->requestId);
     CJson *jsonParams = realTask->jsonParams;
     int64_t channelId = DEFAULT_CHANNEL_ID;
     if (GetByteFromJson(jsonParams, FIELD_CHANNEL_ID, (uint8_t *)&channelId, sizeof(int64_t)) != HC_SUCCESS) {
@@ -221,14 +221,14 @@ static void DoProcessBindData(HcTaskBase *task)
     }
     GroupManagerTask *realTask = (GroupManagerTask *)task;
     if (IsRequestExist(realTask->requestId)) {
-        LOGI("The task thread starts to process data! [RequestId]: %lld", realTask->requestId);
+        LOGI("The task thread starts to process data! [RequestId]: %" PRId64, realTask->requestId);
         int ret = ProcessSession(realTask->requestId, BIND_TYPE, realTask->jsonParams);
         if (ret != CONTINUE) {
             DestroySession(realTask->requestId);
         }
         return;
     }
-    LOGI("The task thread starts to create a server binding session! [RequestId]: %lld", realTask->requestId);
+    LOGI("The task thread starts to create a server binding session! [RequestId]: %" PRId64, realTask->requestId);
     if ((BindCallbackToTask(realTask, realTask->jsonParams) != HC_SUCCESS) ||
         (CheckMsgRepeatability(realTask->jsonParams, DAS_MODULE) != HC_SUCCESS)) {
         return;
@@ -518,7 +518,7 @@ static int32_t UnRegGroupManagerCallback(const char *appId)
 
 static int32_t RequestCreateGroup(int64_t requestId, const char *appId, const char *createParams)
 {
-    LOGI("[Start]: RequestCreateGroup! [AppId]: %s, [RequestId]: %lld", appId, requestId);
+    LOGI("[Start]: RequestCreateGroup! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     if ((appId == NULL) || (createParams == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
@@ -551,13 +551,13 @@ static int32_t RequestCreateGroup(int64_t requestId, const char *appId, const ch
         return HC_ERR_INIT_TASK_FAIL;
     }
     g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
-    LOGI("[End]: Create the creating group task successfully! [AppId]: %s, [RequestId]: %lld", appId, requestId);
+    LOGI("[End]: Create the creating group task successfully! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     return HC_SUCCESS;
 }
 
 static int32_t RequestDeleteGroup(int64_t requestId, const char *appId, const char *disbandParams)
 {
-    LOGI("[Start]: RequestDeleteGroup! [AppId]: %s, [RequestId]: %lld", appId, requestId);
+    LOGI("[Start]: RequestDeleteGroup! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     if ((appId == NULL) || (disbandParams == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
@@ -590,13 +590,13 @@ static int32_t RequestDeleteGroup(int64_t requestId, const char *appId, const ch
         return HC_ERR_INIT_TASK_FAIL;
     }
     g_taskThread->pushTask(g_taskThread, (HcTaskBase *)task);
-    LOGI("[End]: Create the deleting group task successfully! [AppId]: %s, [RequestId]: %lld", appId, requestId);
+    LOGI("[End]: Create the deleting group task successfully! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     return HC_SUCCESS;
 }
 
 static int32_t RequestAddMemberToGroup(int64_t requestId, const char *appId, const char *addParams)
 {
-    LOGI("[Start]: RequestAddMemberToGroup! [AppId]: %s, [RequestId]: %lld", appId, requestId);
+    LOGI("[Start]: RequestAddMemberToGroup! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     if ((appId == NULL) || (addParams == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
@@ -629,13 +629,13 @@ static int32_t RequestAddMemberToGroup(int64_t requestId, const char *appId, con
         return HC_ERR_INIT_TASK_FAIL;
     }
     g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
-    LOGI("[End]: Create the adding member task successfully! [AppId]: %s, [RequestId]: %lld", appId, requestId);
+    LOGI("[End]: Create the adding member task successfully! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     return HC_SUCCESS;
 }
 
 static int32_t RequestDeleteMemberFromGroup(int64_t requestId, const char *appId, const char *deleteParams)
 {
-    LOGI("[Start]: RequestDeleteMemberFromGroup! [AppId]: %s, [RequestId]: %lld", appId, requestId);
+    LOGI("[Start]: RequestDeleteMemberFromGroup! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     if ((appId == NULL) || (deleteParams == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
@@ -668,13 +668,13 @@ static int32_t RequestDeleteMemberFromGroup(int64_t requestId, const char *appId
         return HC_ERR_INIT_TASK_FAIL;
     }
     g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
-    LOGI("[End]: Create the deleting member task successfully! [AppId]: %s, [RequestId]: %lld", appId, requestId);
+    LOGI("[End]: Create the deleting member task successfully! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     return HC_SUCCESS;
 }
 
 static int32_t RequestProcessBindData(int64_t requestId, const uint8_t *data, uint32_t dataLen)
 {
-    LOGI("[Start]: RequestProcessBindData! [RequestId]: %lld", requestId);
+    LOGI("[Start]: RequestProcessBindData! [RequestId]: %" PRId64, requestId);
     if ((data == NULL) || (dataLen > MAX_DATA_BUFFER_SIZE)) {
         LOGE("The input data is invalid!");
         return HC_ERR_INVALID_PARAMS;
@@ -697,7 +697,7 @@ static int32_t RequestProcessBindData(int64_t requestId, const uint8_t *data, ui
     }
     if (tempRequestId != requestId) {
         LOGE("The requestId transferred by the service is inconsistent with that in the packet! "
-            "[ServiceRequestId]: %lld, [RequestId]: %lld", requestId, tempRequestId);
+            "[ServiceRequestId]: %" PRId64 ", [RequestId]: %" PRId64, requestId, tempRequestId);
         return HC_ERR_INVALID_PARAMS;
     }
     GroupManagerTask *task = (GroupManagerTask *)HcMalloc(sizeof(GroupManagerTask), 0);
@@ -708,13 +708,13 @@ static int32_t RequestProcessBindData(int64_t requestId, const uint8_t *data, ui
     }
     InitProcessBindDataTask(task, requestId, dataJson);
     g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
-    LOGI("[End]: Create the processing data task successfully! [RequestId]: %lld", requestId);
+    LOGI("[End]: Create the processing data task successfully! [RequestId]: %" PRId64, requestId);
     return HC_SUCCESS;
 }
 
 static int32_t ConfirmRequest(int64_t requestId, const char *appId, const char *confirmParams)
 {
-    LOGI("[Start]: ConfirmRequest! [AppId]: %s, [RequestId]: %lld", appId, requestId);
+    LOGI("[Start]: ConfirmRequest! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     if ((appId == NULL) || (confirmParams == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
@@ -746,7 +746,8 @@ static int32_t ConfirmRequest(int64_t requestId, const char *appId, const char *
         return HC_ERR_INIT_TASK_FAIL;
     }
     g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
-    LOGI("[End]: Create the confirming request task successfully! [AppId]: %s, [RequestId]: %lld", appId, requestId);
+    LOGI("[End]: Create the confirming request task successfully! [AppId]: %s, [RequestId]: %" PRId64,
+        appId, requestId);
     return HC_SUCCESS;
 }
 
@@ -837,7 +838,7 @@ static void DoProcessLiteData(HcTaskBase *task)
         return;
     }
     GroupManagerTask *realTask = (GroupManagerTask *)task;
-    LOGI("The task thread starts to execute the processing lite data task! [RequestId]: %lld", realTask->requestId);
+    LOGI("The task thread starts to execute the processing lite data task! [RequestId]: %" PRId64, realTask->requestId);
     if (IsRequestExist(realTask->requestId)) {
         int ret = ProcessSession(realTask->requestId, BIND_TYPE, realTask->jsonParams);
         if (ret != CONTINUE) {
@@ -863,7 +864,7 @@ static void DoBindPeer(HcTaskBase *task)
         return;
     }
     GroupManagerTask *realTask = (GroupManagerTask *)task;
-    LOGI("The task thread starts to execute the binding peer device task! [RequestId]: %lld", realTask->requestId);
+    LOGI("The task thread starts to execute the binding peer device task! [RequestId]: %" PRId64, realTask->requestId);
     int32_t result;
     ChannelType channelType = GetChannelType(realTask->callback);
     do {
@@ -897,7 +898,8 @@ static void DoUnbindPeer(HcTaskBase *task)
         return;
     }
     GroupManagerTask *realTask = (GroupManagerTask *)task;
-    LOGI("The task thread starts to execute the unbinding peer device task! [RequestId]: %lld", realTask->requestId);
+    LOGI("The task thread starts to execute the unbinding peer device task! [RequestId]: %" PRId64,
+        realTask->requestId);
     int32_t result;
     ChannelType channelType = GetChannelType(realTask->callback);
     do {
@@ -931,7 +933,7 @@ static void DoAuthAgreeKey(HcTaskBase *task)
         return;
     }
     GroupManagerTask *realTask = (GroupManagerTask *)task;
-    LOGI("The task thread starts to execute the key agreement task! [RequestId]: %lld", realTask->requestId);
+    LOGI("The task thread starts to execute the key agreement task! [RequestId]: %" PRId64, realTask->requestId);
     int32_t result;
     ChannelType channelType = GetChannelType(realTask->callback);
     do {
@@ -965,7 +967,7 @@ static void DoProcessKeyAgreeData(HcTaskBase *task)
         return;
     }
     GroupManagerTask *realTask = (GroupManagerTask *)task;
-    LOGI("The task thread starts to execute the processing key agreement data task! [RequestId]: %lld",
+    LOGI("The task thread starts to execute the processing key agreement data task! [RequestId]: %" PRId64,
         realTask->requestId);
     if (IsRequestExist(realTask->requestId)) {
         int ret = ProcessSession(realTask->requestId, BIND_TYPE, realTask->jsonParams);
@@ -1046,7 +1048,7 @@ static int32_t AddLiteDataToReceivedData(CJson *receivedData, int64_t requestId,
 
 static int32_t RequestProcessLiteData(int64_t requestId, const char *appId, const uint8_t *data, uint32_t dataLen)
 {
-    LOGI("[Start]: RequestProcessLiteData! [AppId]: %s, [RequestId]: %lld", appId, requestId);
+    LOGI("[Start]: RequestProcessLiteData! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     if ((appId == NULL) || (data == NULL) || (dataLen > MAX_DATA_BUFFER_SIZE)) {
         LOGE("The input data is NULL or dataLen is beyond max size!");
         return HC_ERR_INVALID_PARAMS;
@@ -1078,13 +1080,14 @@ static int32_t RequestProcessLiteData(int64_t requestId, const char *appId, cons
         return HC_ERR_INIT_TASK_FAIL;
     }
     g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
-    LOGI("[End]: Create the processing lite data task successfully! [AppId]: %s, [RequestId]: %lld", appId, requestId);
+    LOGI("[End]: Create the processing lite data task successfully! [AppId]: %s, [RequestId]: %" PRId64,
+        appId, requestId);
     return HC_SUCCESS;
 }
 
 static int32_t RequestBindPeer(int64_t requestId, const char *appId, const char *bindParams)
 {
-    LOGI("[Start]: RequestBindPeer! [AppId]: %s, [RequestId]: %lld", appId, requestId);
+    LOGI("[Start]: RequestBindPeer! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     if ((appId == NULL) || (bindParams == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
@@ -1117,13 +1120,14 @@ static int32_t RequestBindPeer(int64_t requestId, const char *appId, const char 
         return HC_ERR_INIT_TASK_FAIL;
     }
     g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
-    LOGI("[End]: Create the binding peer device task successfully! [AppId]: %s, [RequestId]: %lld", appId, requestId);
+    LOGI("[End]: Create the binding peer device task successfully! [AppId]: %s, [RequestId]: %" PRId64,
+        appId, requestId);
     return HC_SUCCESS;
 }
 
 static int32_t RequestUnbindPeer(int64_t requestId, const char *appId, const char *unBindParams)
 {
-    LOGI("[Start]: RequestUnbindPeer, [AppId]: %s, [RequestId]: %lld", appId, requestId);
+    LOGI("[Start]: RequestUnbindPeer, [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     if ((appId == NULL) || (unBindParams == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
@@ -1156,13 +1160,14 @@ static int32_t RequestUnbindPeer(int64_t requestId, const char *appId, const cha
         return HC_ERR_INIT_TASK_FAIL;
     }
     g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
-    LOGI("[End]: Create the unbinding peer device task successfully! [AppId]: %s, [RequestId]: %lld", appId, requestId);
+    LOGI("[End]: Create the unbinding peer device task successfully! [AppId]: %s, [RequestId]: %" PRId64,
+        appId, requestId);
     return HC_SUCCESS;
 }
 
 static int32_t RequestAuthKeyAgree(int64_t requestId, const char *appId, const char *agreeParams)
 {
-    LOGI("[Start]: RequestAuthKeyAgree! [AppId]: %s, [RequestId]: %lld", appId, requestId);
+    LOGI("[Start]: RequestAuthKeyAgree! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     if ((appId == NULL) || (agreeParams == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
@@ -1195,13 +1200,13 @@ static int32_t RequestAuthKeyAgree(int64_t requestId, const char *appId, const c
         return HC_ERR_INIT_TASK_FAIL;
     }
     g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
-    LOGI("[End]: Create the key agreement task successfully! [AppId]: %s, [RequestId]: %lld", appId, requestId);
+    LOGI("[End]: Create the key agreement task successfully! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     return HC_SUCCESS;
 }
 
 static int32_t RequestProcessKeyAgreeData(int64_t requestId, const char *appId, const uint8_t *data, uint32_t dataLen)
 {
-    LOGI("[Start]: RequestProcessKeyAgreeData! [AppId]: %s, [RequestId]: %lld", appId, requestId);
+    LOGI("[Start]: RequestProcessKeyAgreeData! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     if ((appId == NULL) || (data == NULL) || (dataLen > MAX_DATA_BUFFER_SIZE)) {
         LOGE("The input data is NULL or dataLen is beyond max size!");
         return HC_ERR_INVALID_PARAMS;
@@ -1233,7 +1238,7 @@ static int32_t RequestProcessKeyAgreeData(int64_t requestId, const char *appId, 
         return HC_ERR_INIT_TASK_FAIL;
     }
     g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
-    LOGI("[End]: Create the processing key agreement data task successfully! [AppId]: %s, [RequestId]: %lld", appId,
+    LOGI("[End]: Create the processing key agreement data task successfully! [AppId]: %s, [RequestId]: %" PRId64, appId,
         requestId);
     return HC_SUCCESS;
 }

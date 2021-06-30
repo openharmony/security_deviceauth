@@ -16,6 +16,8 @@
 #ifndef HC_LOG_H
 #define HC_LOG_H
 
+#include <inttypes.h>
+
 #ifdef HILOG_ENABLE
 
 #include "hilog/log.h"

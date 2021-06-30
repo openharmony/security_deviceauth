@@ -164,7 +164,8 @@ Session *CreateLiteServerBindSession(CJson *jsonParams, const DeviceAuthCallback
     }
     int operationCode = OP_BIND;
     (void)(GetIntFromJson(jsonParams, FIELD_OPERATION_CODE, &operationCode));
-    LOGI("Start to create lite server bind session! [RequestId]: %lld, [OperationCode]: %d", requestId, operationCode);
+    LOGI("Start to create lite server bind session! [RequestId]: %" PRId64 ", [OperationCode]: %d",
+        requestId, operationCode);
 
     LiteBindSession *session = (LiteBindSession *)HcMalloc(sizeof(LiteBindSession), 0);
     if (session == NULL) {
@@ -186,7 +187,7 @@ Session *CreateLiteServerBindSession(CJson *jsonParams, const DeviceAuthCallback
         DestroyLiteBindSession((Session *)session);
         return NULL;
     }
-    LOGI("Create lite server bind session successfully! [RequestId]: %lld, [OperationCode]: %d",
+    LOGI("Create lite server bind session successfully! [RequestId]: %" PRId64 ", [OperationCode]: %d",
         requestId, operationCode);
     return (Session *)session;
 }

@@ -467,7 +467,8 @@ Session *CreateServerBindSession(CJson *jsonParams, const DeviceAuthCallback *ca
         LOGE("Failed to get operationCode from jsonParams!");
         return NULL;
     }
-    LOGI("Start to create server bind session! [RequestId]: %lld, [OperationCode]: %d", requestId, operationCode);
+    LOGI("Start to create server bind session! [RequestId]: %" PRId64 ", [OperationCode]: %d",
+        requestId, operationCode);
 
     BindSession *session = (BindSession *)HcMalloc(sizeof(BindSession), 0);
     if (session == NULL) {
@@ -489,6 +490,7 @@ Session *CreateServerBindSession(CJson *jsonParams, const DeviceAuthCallback *ca
         DestroyBindSession((Session *)session);
         return NULL;
     }
-    LOGI("Create server bind session successfully! [RequestId]: %lld, [OperationCode]: %d", requestId, operationCode);
+    LOGI("Create server bind session successfully! [RequestId]: %" PRId64 ", [OperationCode]: %d",
+        requestId, operationCode);
     return (Session *)session;
 }

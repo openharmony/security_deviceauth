@@ -20,18 +20,20 @@
 bool ProcessTransmitCallback(int64_t requestId, const uint8_t *data, uint32_t dataLen,
     const DeviceAuthCallback *callback)
 {
-    LOGI("[OnTransmit]: We're going to notify the service! [RequestId]: %lld, [DataLen]: %d", requestId, dataLen);
+    LOGI("[OnTransmit]: We're going to notify the service! [RequestId]: %" PRId64 ", [DataLen]: %d",
+        requestId, dataLen);
     if ((callback != NULL) && (callback->onTransmit != NULL)) {
         if (callback->onTransmit(requestId, data, dataLen)) {
-            LOGI("[OnTransmit]: We notify the service successfully! [RequestId]: %lld, [DataLen]: %d",
+            LOGI("[OnTransmit]: We notify the service successfully! [RequestId]: %" PRId64 ", [DataLen]: %d",
                 requestId, dataLen);
             return true;
         }
-        LOGE("[OnTransmit]: An error occurs when the service channel sends data! [RequestId]: %lld, [DataLen]: %d",
-            requestId, dataLen);
+        LOGE("[OnTransmit]: An error occurs when the service channel sends data! "
+            "[RequestId]: %" PRId64 ", [DataLen]: %d", requestId, dataLen);
         return false;
     }
-    LOGE("[OnTransmit]: Currently, the service callback is NULL! [RequestId]: %lld, [DataLen]: %d", requestId, dataLen);
+    LOGE("[OnTransmit]: Currently, the service callback is NULL! [RequestId]: %" PRId64 ", [DataLen]: %d",
+        requestId, dataLen);
     return false;
 }
 
@@ -39,60 +41,60 @@ void ProcessSessionKeyCallback(int64_t requestId, const uint8_t *sessionKey, uin
     const DeviceAuthCallback *callback)
 {
     const char *isSessionKeyExist = (sessionKeyLen > 0) ? "true" : "false";
-    LOGI("[OnSessionKeyReturned]: We're going to notify the service! [RequestId]: %lld, [IsSessionKeyExist]: %s",
+    LOGI("[OnSessionKeyReturned]: We're going to notify the service! [RequestId]: %" PRId64 ", [IsSessionKeyExist]: %s",
         requestId, isSessionKeyExist);
     if ((callback != NULL) && (callback->onSessionKeyReturned != NULL)) {
         (void)callback->onSessionKeyReturned(requestId, sessionKey, sessionKeyLen);
-        LOGI("[OnSessionKeyReturned]: We notify the service successfully! [RequestId]: %lld, [IsSessionKeyExist]: %s",
-            requestId, isSessionKeyExist);
+        LOGI("[OnSessionKeyReturned]: We notify the service successfully! "
+            "[RequestId]: %" PRId64 ", [IsSessionKeyExist]: %s", requestId, isSessionKeyExist);
         return;
     }
-    LOGE("[OnSessionKeyReturned]: Currently, the service callback is NULL! [RequestId]: %lld, [IsSessionKeyExist]: %s",
-        requestId, isSessionKeyExist);
+    LOGE("[OnSessionKeyReturned]: Currently, the service callback is NULL! "
+        "[RequestId]: %" PRId64 ", [IsSessionKeyExist]: %s", requestId, isSessionKeyExist);
 }
 
 void ProcessFinishCallback(int64_t requestId, int operationCode, const char *returnData,
     const DeviceAuthCallback *callback)
 {
-    LOGI("[OnFinish]: We're going to notify the service! [RequestId]: %lld, [OperationCode]: %d",
+    LOGI("[OnFinish]: We're going to notify the service! [RequestId]: %" PRId64 ", [OperationCode]: %d",
         requestId, operationCode);
     if ((callback != NULL) && (callback->onFinish != NULL)) {
         callback->onFinish(requestId, operationCode, returnData);
-        LOGI("[End]: [OnFinish]: We notify the service successfully! [RequestId]: %lld, [OperationCode]: %d",
+        LOGI("[End]: [OnFinish]: We notify the service successfully! [RequestId]: %" PRId64 ", [OperationCode]: %d",
             requestId, operationCode);
         return;
     }
-    LOGE("[End]: [OnFinish]: Currently, the service callback is NULL! [RequestId]: %lld, [OperationCode]: %d",
+    LOGE("[End]: [OnFinish]: Currently, the service callback is NULL! [RequestId]: %" PRId64 ", [OperationCode]: %d",
         requestId, operationCode);
 }
 
 void ProcessErrorCallback(int64_t requestId, int operationCode, int errorCode, const char *errorReturn,
     const DeviceAuthCallback *callback)
 {
-    LOGI("[OnError]: We're going to notify the service! [RequestId]: %lld, [OperationCode]: %d, [errorCode]: %d",
+    LOGI("[OnError]: We're going to notify the service! [RequestId]: %" PRId64 ", [OperationCode]: %d, [errorCode]: %d",
         requestId, operationCode, errorCode);
     if ((callback != NULL) && (callback->onError != NULL)) {
         callback->onError(requestId, operationCode, errorCode, errorReturn);
         LOGI("[End]: [OnError]: We notify the service successfully! "
-            "[RequestId]: %lld, [OperationCode]: %d, [errorCode]: %d", requestId, operationCode, errorCode);
+            "[RequestId]: %" PRId64 ", [OperationCode]: %d, [errorCode]: %d", requestId, operationCode, errorCode);
         return;
     }
     LOGE("[End]: [OnError]: Currently, the service callback is NULL! "
-        "[RequestId]: %lld, [OperationCode]: %d, [errorCode]: %d", requestId, operationCode, errorCode);
+        "[RequestId]: %" PRId64 ", [OperationCode]: %d, [errorCode]: %d", requestId, operationCode, errorCode);
 }
 
 char *ProcessRequestCallback(int64_t requestId, int operationCode, const char *reqParams,
     const DeviceAuthCallback *callback)
 {
-    LOGI("[OnRequest]: We're going to notify the service! [RequestId]: %lld, [OperationCode]: %d",
+    LOGI("[OnRequest]: We're going to notify the service! [RequestId]: %" PRId64 ", [OperationCode]: %d",
         requestId, operationCode);
     if ((callback != NULL) && (callback->onRequest != NULL)) {
         char *returnData = callback->onRequest(requestId, operationCode, reqParams);
-        LOGI("[OnRequest]: We notify the service successfully! [RequestId]: %lld, [OperationCode]: %d",
+        LOGI("[OnRequest]: We notify the service successfully! [RequestId]: %" PRId64 ", [OperationCode]: %d",
             requestId, operationCode);
         return returnData;
     }
-    LOGE("[OnRequest]: Currently, the service callback is NULL! [RequestId]: %lld, [OperationCode]: %d",
+    LOGE("[OnRequest]: Currently, the service callback is NULL! [RequestId]: %" PRId64 ", [OperationCode]: %d",
         requestId, operationCode);
     return NULL;
 }

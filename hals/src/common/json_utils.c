@@ -495,7 +495,7 @@ int32_t AddIntToJson(CJson *jsonObj, const char *key, int value)
 int32_t AddInt64StringToJson(CJson *jsonObj, const char *key, int64_t value)
 {
     char buffer[65] = { 0 };
-    if (sprintf_s(buffer, sizeof(buffer), "%lld", value) <= 0) {
+    if (sprintf_s(buffer, sizeof(buffer), "%" PRId64, value) <= 0) {
         LOGE("Failed to convert int64_t to string!");
         return HAL_FAILED;
     }
