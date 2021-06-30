@@ -1907,22 +1907,27 @@ int32_t GetDeviceInfoForDevAuth(const char *udid, const char *groupId, DeviceInf
     TrustedDeviceEntry *deviceEntry = GetTrustedDeviceEntry(udid, groupId);
     if (deviceEntry == NULL) {
         LOGE("[DB]: The trusted device is not found!");
+        g_databaseMutex->unlock(g_databaseMutex);
         return HC_ERR_DEVICE_NOT_EXIST;
     }
     if (!StringSet(&deviceInfo->authId, deviceEntry->authId)) {
         LOGE("[DB]: Failed to copy authId!");
+        g_databaseMutex->unlock(g_databaseMutex);
         return HC_ERR_MEMORY_COPY;
     }
     if (!StringSet(&deviceInfo->udid, deviceEntry->udid)) {
         LOGE("[DB]: Failed to copy authId!");
+        g_databaseMutex->unlock(g_databaseMutex);
         return HC_ERR_MEMORY_COPY;
     }
     if (!StringSet(&(deviceInfo->groupId), deviceEntry->groupEntry->id)) {
         LOGE("[DB]: Failed to copy groupId!");
+        g_databaseMutex->unlock(g_databaseMutex);
         return HC_ERR_MEMORY_COPY;
     }
     if (!StringSet(&(deviceInfo->serviceType), deviceEntry->serviceType)) {
         LOGE("[DB]: Failed to copy serviceType!");
+        g_databaseMutex->unlock(g_databaseMutex);
         return HC_ERR_MEMORY_COPY;
     }
     deviceInfo->credential = deviceEntry->credential;
@@ -1942,22 +1947,27 @@ int32_t GetDeviceInfoByAuthId(const char *authId, const char *groupId, DeviceInf
     TrustedDeviceEntry *deviceEntry = GetTrustedDeviceEntryByAuthId(authId, groupId);
     if (deviceEntry == NULL) {
         LOGE("[DB]: The trusted device is not found!");
+        g_databaseMutex->unlock(g_databaseMutex);
         return HC_ERR_DEVICE_NOT_EXIST;
     }
     if (!StringSet(&deviceInfo->authId, deviceEntry->authId)) {
         LOGE("[DB]: Failed to copy authId!");
+        g_databaseMutex->unlock(g_databaseMutex);
         return HC_ERR_MEMORY_COPY;
     }
     if (!StringSet(&deviceInfo->udid, deviceEntry->udid)) {
         LOGE("[DB]: Failed to copy authId!");
+        g_databaseMutex->unlock(g_databaseMutex);
         return HC_ERR_MEMORY_COPY;
     }
     if (!StringSet(&(deviceInfo->groupId), deviceEntry->groupEntry->id)) {
         LOGE("[DB]: Failed to copy groupId!");
+        g_databaseMutex->unlock(g_databaseMutex);
         return HC_ERR_MEMORY_COPY;
     }
     if (!StringSet(&(deviceInfo->serviceType), deviceEntry->serviceType)) {
         LOGE("[DB]: Failed to copy serviceType!");
+        g_databaseMutex->unlock(g_databaseMutex);
         return HC_ERR_MEMORY_COPY;
     }
     deviceInfo->credential = deviceEntry->credential;

@@ -160,7 +160,8 @@ Session *CreateClientBindSession(CJson *jsonParams, const DeviceAuthCallback *ca
         LOGE("Failed to get operationCode from jsonParams!");
         return NULL;
     }
-    LOGI("Start to create client bind session! [RequestId]: %lld, [OperationCode]: %d", requestId, operationCode);
+    LOGI("Start to create client bind session! [RequestId]: %" PRId64 ", [OperationCode]: %d",
+        requestId, operationCode);
     /*
      * If service want to join the peer group,
      * the identity key pair of the corresponding group needs to be generated here.
@@ -193,6 +194,7 @@ Session *CreateClientBindSession(CJson *jsonParams, const DeviceAuthCallback *ca
         DestroyBindSession((Session *)session);
         return NULL;
     }
-    LOGI("Create client bind session successfully! [RequestId]: %lld, [OperationCode]: %d", requestId, operationCode);
+    LOGI("Create client bind session successfully! [RequestId]: %" PRId64 ", [OperationCode]: %d",
+        requestId, operationCode);
     return (Session *)session;
 }

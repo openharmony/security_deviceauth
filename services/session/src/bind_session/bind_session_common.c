@@ -969,21 +969,21 @@ static int32_t AddPeerDevToGroup(const char *peerAuthId, const char *peerUdid,
     const char *groupId, const BindSession *session)
 {
     if (IsTrustedDeviceInGroupByAuthId(groupId, peerAuthId)) {
-        LOGI("The peer device already exists in the group! RequestId: %lld", session->requestId);
+        LOGI("The peer device already exists in the group! RequestId: %" PRId64, session->requestId);
         if (DelTrustedDeviceByAuthId(peerAuthId, groupId) != HC_SUCCESS) {
-            LOGE("Failed to delete the original data! RequestId: %lld", session->requestId);
+            LOGE("Failed to delete the original data! RequestId: %" PRId64, session->requestId);
             return HC_ERR_DB;
         }
-        LOGI("Delete the original data successfully! RequestId: %lld", session->requestId);
+        LOGI("Delete the original data successfully! RequestId: %" PRId64, session->requestId);
     }
     int peerUserType = DEVICE_TYPE_ACCESSORY;
     (void)GetIntFromJson(session->params, FIELD_PEER_USER_TYPE, &peerUserType);
     int32_t result = AddTrustDevToDatabase(peerAuthId, peerUdid, groupId, peerUserType);
     if (result != HC_SUCCESS) {
-        LOGE("Failed to update the peer trusted device information! RequestId: %lld", session->requestId);
+        LOGE("Failed to update the peer trusted device information! RequestId: %" PRId64, session->requestId);
         return result;
     }
-    LOGI("The peer trusted device is added to the database successfully! RequestId: %lld", session->requestId);
+    LOGI("The peer trusted device is added to the database successfully! RequestId: %" PRId64, session->requestId);
     return HC_SUCCESS;
 }
 
@@ -1149,7 +1149,7 @@ static int32_t ProcessBindSession(Session *session, CJson *jsonParams)
         return HC_ERR_INVALID_PARAMS;
     }
     BindSession *realSession = (BindSession *)session;
-    LOGI("Start to process bind session! [RequestId]: %lld, [OperationCode]: %d",
+    LOGI("Start to process bind session! [RequestId]: %" PRId64 ", [OperationCode]: %d",
         realSession->requestId, realSession->operationCode);
 
     bool isNeedInform = true;
@@ -1165,7 +1165,7 @@ static int32_t ProcessBindSession(Session *session, CJson *jsonParams)
         CloseChannel(realSession->channelType, realSession->channelId);
         return result;
     }
-    LOGI("Process bind session successfully! [RequestId]: %lld, [OperationCode]: %d",
+    LOGI("Process bind session successfully! [RequestId]: %" PRId64 ", [OperationCode]: %d",
          realSession->requestId, realSession->operationCode);
     if (status == FINISH) {
         return status;

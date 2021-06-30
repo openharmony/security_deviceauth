@@ -601,8 +601,8 @@ static int32_t UnRegListener(const char *appId)
 
 static int32_t GetAccessibleGroupInfoById(const char *appId, const char *groupId, char **returnGroupInfo)
 {
-    if ((appId == NULL) || (groupId == NULL)) {
-        LOGE("The input appId or groupId is NULL!");
+    if ((appId == NULL) || (groupId == NULL) || (returnGroupInfo == NULL)) {
+        LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
     if (!IsGroupExistByGroupId(groupId)) {
@@ -647,8 +647,8 @@ static int32_t GetAccessibleGroupInfoById(const char *appId, const char *groupId
 static int32_t GetAccessibleGroupInfo(const char *appId, const char *queryParams, char **returnGroupVec,
     uint32_t *groupNum)
 {
-    if ((appId == NULL) || (queryParams == NULL)) {
-        LOGE("The input appId or queryParams is NULL!");
+    if ((appId == NULL) || (queryParams == NULL) || (returnGroupVec == NULL) || (groupNum == NULL)) {
+        LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
     CJson *queryParamsJson = CreateJsonFromString(queryParams);
@@ -687,8 +687,8 @@ static int32_t GetAccessibleGroupInfo(const char *appId, const char *queryParams
 
 static int32_t GetAccessibleJoinedGroups(const char *appId, int groupType, char **returnGroupVec, uint32_t *groupNum)
 {
-    if (appId == NULL) {
-        LOGE("The input appId is NULL!");
+    if ((appId == NULL) || (returnGroupVec == NULL) || (groupNum == NULL)) {
+        LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
     if (!IsGroupTypeSupported(groupType)) {
@@ -711,8 +711,8 @@ static int32_t GetAccessibleJoinedGroups(const char *appId, int groupType, char 
 static int32_t GetAccessibleRelatedGroups(const char *appId, const char *peerDeviceId,
     char **returnGroupVec, uint32_t *groupNum)
 {
-    if ((appId == NULL) || (peerDeviceId == NULL)) {
-        LOGE("The input appId or peerUdid is NULL!");
+    if ((appId == NULL) || (peerDeviceId == NULL) || (returnGroupVec == NULL) || (groupNum == NULL)) {
+        LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
     LOGI("Start to get related groups! [AppId]: %s", appId);
@@ -732,7 +732,7 @@ static int32_t GetAccessibleRelatedGroups(const char *appId, const char *peerDev
 static int32_t GetAccessibleDeviceInfoById(const char *appId, const char *deviceId,
     const char *groupId, char **returnDeviceInfo)
 {
-    if ((appId == NULL) || (deviceId == NULL) || (groupId == NULL)) {
+    if ((appId == NULL) || (deviceId == NULL) || (groupId == NULL) || (returnDeviceInfo == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
@@ -778,8 +778,8 @@ static int32_t GetAccessibleDeviceInfoById(const char *appId, const char *device
 static int32_t GetAccessibleTrustedDevices(const char *appId, const char *groupId,
     char **returnDevInfoVec, uint32_t *deviceNum)
 {
-    if ((appId == NULL) || (groupId == NULL)) {
-        LOGE("The input appId or groupId is NULL!");
+    if ((appId == NULL) || (groupId == NULL) || (returnDevInfoVec == NULL) || (deviceNum == NULL)) {
+        LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
     if (!IsGroupExistByGroupId(groupId)) {
