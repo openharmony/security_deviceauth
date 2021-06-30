@@ -148,7 +148,7 @@ static void InformTimeOutAndDestroyRequest(const DeviceAuthCallback *callback, i
             break;
         }
     }
-    LOGI("Begin to inform time out, requestId :%lld", requestId);
+    LOGI("Begin to inform time out, requestId :%" PRId64, requestId);
     callback->onError(requestId, AUTH_FORM_INVALID_TYPE, HC_ERR_TIME_OUT, NULL);
 }
 
