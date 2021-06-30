@@ -16,6 +16,7 @@
 #ifndef HC_LOG_H
 #define HC_LOG_H
 
+#include <inttypes.h>
 #include "log.h"
 
 #define LOGD(fmt, arg...) HILOG_DEBUG(HILOG_MODULE_SCY, fmt, ##arg)

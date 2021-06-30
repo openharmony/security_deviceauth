@@ -447,7 +447,7 @@ static int32_t CheckServerStatusIfNotInvite(int operationCode, const CJson *json
 
 static int32_t CreateGroup(int64_t requestId, CJson *jsonParams, const DeviceAuthCallback *callback)
 {
-    LOGI("[Start]: Start to create a peer to peer group! [RequestId]: %lld", requestId);
+    LOGI("[Start]: Start to create a peer to peer group! [RequestId]: %" PRId64, requestId);
     int32_t result;
     char *groupId = NULL;
     char *returnDataStr = NULL;
@@ -465,12 +465,12 @@ static int32_t CreateGroup(int64_t requestId, CJson *jsonParams, const DeviceAut
     } while (0);
     if (result != HC_SUCCESS) {
         ProcessErrorCallback(requestId, GROUP_CREATE, result, NULL, callback);
-        LOGE("[End]: Failed to create a peer to peer group! [RequestId]: %lld", requestId);
+        LOGE("[End]: Failed to create a peer to peer group! [RequestId]: %" PRId64, requestId);
         return result;
     }
     ProcessFinishCallback(requestId, GROUP_CREATE, returnDataStr, callback);
     FreeJsonString(returnDataStr);
-    LOGI("[End]: Create a peer to peer group successfully! [RequestId]: %lld", requestId);
+    LOGI("[End]: Create a peer to peer group successfully! [RequestId]: %" PRId64, requestId);
     return HC_SUCCESS;
 }
 
@@ -481,7 +481,7 @@ static int32_t DeleteGroup(int64_t requestId, CJson *jsonParams, const DeviceAut
     const char *appId = NULL;
     char *returnDataStr = NULL;
     do {
-        LOGI("[Start]: Start to delete a peer to peer group! [RequestId]: %lld", requestId);
+        LOGI("[Start]: Start to delete a peer to peer group! [RequestId]: %" PRId64, requestId);
         groupId = GetStringFromJson(jsonParams, FIELD_GROUP_ID);
         if (groupId == NULL) {
             LOGE("Failed to get groupId from jsonParams!");
@@ -507,7 +507,7 @@ static int32_t DeleteGroup(int64_t requestId, CJson *jsonParams, const DeviceAut
     } while (0);
     if (result != HC_SUCCESS) {
         ProcessErrorCallback(requestId, GROUP_DISBAND, result, NULL, callback);
-        LOGE("[End]: Failed to delete a peer to peer group! [RequestId]: %lld", requestId);
+        LOGE("[End]: Failed to delete a peer to peer group! [RequestId]: %" PRId64, requestId);
         return result;
     }
     /*
@@ -520,7 +520,7 @@ static int32_t DeleteGroup(int64_t requestId, CJson *jsonParams, const DeviceAut
     }
     ProcessFinishCallback(requestId, GROUP_DISBAND, returnDataStr, callback);
     FreeJsonString(returnDataStr);
-    LOGI("[End]: Delete a peer to peer group successfully! [RequestId]: %lld", requestId);
+    LOGI("[End]: Delete a peer to peer group successfully! [RequestId]: %" PRId64, requestId);
     return HC_SUCCESS;
 }
 
@@ -529,7 +529,7 @@ static int32_t AddMemberToGroup(int64_t requestId, CJson *jsonParams, const Devi
     int32_t result;
     int operationCode = MEMBER_INVITE;
     do {
-        LOGI("[Start]: Start to add member to a peer to peer group! [RequestId]: %lld", requestId);
+        LOGI("[Start]: Start to add member to a peer to peer group! [RequestId]: %" PRId64, requestId);
         (void)GetIntFromJson(jsonParams, FIELD_OPERATION_CODE, &operationCode);
         result = CheckClientStatus(operationCode, jsonParams);
         if (result != HC_SUCCESS) {
@@ -558,7 +558,7 @@ static int32_t AddMemberToGroup(int64_t requestId, CJson *jsonParams, const Devi
     } while (0);
     if (result != HC_SUCCESS) {
         ProcessErrorCallback(requestId, operationCode, result, NULL, callback);
-        LOGE("[End]: Failed to add member to a peer to peer group! [RequestId]: %lld", requestId);
+        LOGE("[End]: Failed to add member to a peer to peer group! [RequestId]: %" PRId64, requestId);
     }
     return result;
 }
@@ -613,11 +613,11 @@ static int32_t DeleteMemberFromGroupInner(int64_t requestId, CJson *jsonParams, 
 
 static int32_t DeleteMemberFromGroup(int64_t requestId, CJson *jsonParams, const DeviceAuthCallback *callback)
 {
-    LOGI("[Start]: Start to delete member from a peer to peer group! [RequestId]: %lld", requestId);
+    LOGI("[Start]: Start to delete member from a peer to peer group! [RequestId]: %" PRId64, requestId);
     int32_t result = DeleteMemberFromGroupInner(requestId, jsonParams, callback);
     if (result != HC_SUCCESS) {
         ProcessErrorCallback(requestId, MEMBER_DELETE, result, NULL, callback);
-        LOGE("[End]: Failed to delete member from a peer to peer group! [RequestId]: %lld", requestId);
+        LOGE("[End]: Failed to delete member from a peer to peer group! [RequestId]: %" PRId64, requestId);
     }
     return result;
 }

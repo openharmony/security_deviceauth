@@ -293,7 +293,7 @@ int32_t AddReqIdByAppId(const char *appId, int64_t reqId)
     }
     node->requestId = reqId;
     node->delOnFni = 0;
-    LOGI("success, appid: %s, requestId: %lld", appId, reqId);
+    LOGI("success, appid: %s, requestId: %lld", appId, (long long)reqId);
     return HC_SUCCESS;
 }
 
@@ -316,7 +316,7 @@ void AddIpcCbObjByReqId(int64_t reqId, int32_t objIdx, int32_t type)
     if (node != nullptr) {
         node->proxyId = objIdx;
         LOGI("ipc object add success, request id %lld, type %d, proxy id %d",
-            reqId, type, node->proxyId);
+            (long long)reqId, type, node->proxyId);
     }
     return;
 }
@@ -348,11 +348,11 @@ int32_t AddIpcCallBackByReqId(int64_t reqId, const uint8_t *cbPtr, int32_t cbSz,
             ServiceDevAuth::ResetRemoteObject(node->proxyId);
             node->proxyId = -1;
         }
-        LOGI("callback added success, request id %lld, type %d", reqId, type);
+        LOGI("callback added success, request id %lld, type %d", (long long)reqId, type);
         return HC_SUCCESS;
     }
 
-    LOGI("new callback to add, request id %lld, type %d", reqId, type);
+    LOGI("new callback to add, request id %lld, type %d", (long long)reqId, type);
     node = GetFreeIpcCallBackNode();
     if (node == nullptr) {
         LOGE("get free node failed");
@@ -369,7 +369,7 @@ int32_t AddIpcCallBackByReqId(int64_t reqId, const uint8_t *cbPtr, int32_t cbSz,
     node->delOnFni = 1;
     node->proxyId = -1;
     g_ipcCallBackList.nodeCnt++;
-    LOGI("callback added success, request id %lld, type %d", reqId, type);
+    LOGI("callback added success, request id %lld, type %d", (long long)reqId, type);
     return HC_SUCCESS;
 }
 
@@ -667,11 +667,11 @@ static bool GaCbOnTransmitWithType(int64_t requestId, const uint8_t *data, uint3
     MessageParcel reply;
     IpcCallBackNode *node = nullptr;
 
-    LOGI("starting ... request id: %lld, type %d", requestId, type);
+    LOGI("starting ... request id: %lld, type %d", (long long)requestId, type);
     std::lock_guard<std::mutex> autoLock(g_cbListLock);
     node = GetIpcCallBackByReqId(requestId, type);
     if (node == nullptr) {
-        LOGE("onTransmit hook is null, request id %lld", requestId);
+        LOGE("onTransmit hook is null, request id %lld", (long long)requestId);
         return false;
     }
     ret = EncodeCallData(dataParcel, PARAM_TYPE_REQID,
@@ -683,7 +683,7 @@ static bool GaCbOnTransmitWithType(int64_t requestId, const uint8_t *data, uint3
     }
     ServiceDevAuth::ActCallback(node->proxyId, CB_ID_ON_TRANS,
         reinterpret_cast<uintptr_t>(node->cbCtx.devAuth.onTransmit), dataParcel, reply);
-    LOGI("process done, request id: %lld", requestId);
+    LOGI("process done, request id: %lld", (long long)requestId);
     if (reply.ReadInt32(ret) && (ret == HC_SUCCESS)) {
         return true;
     }
@@ -707,11 +707,11 @@ static void GaCbOnSessionKeyRetWithType(int64_t requestId, const uint8_t *sessKe
     MessageParcel reply;
     IpcCallBackNode *node = nullptr;
 
-    LOGI("starting ... request id: %lld, type %d", requestId, type);
+    LOGI("starting ... request id: %lld, type %d", (long long)requestId, type);
     std::lock_guard<std::mutex> autoLock(g_cbListLock);
     node = GetIpcCallBackByReqId(requestId, type);
     if (node == nullptr) {
-        LOGE("onSessionKeyReturned hook is null, request id %lld", requestId);
+        LOGE("onSessionKeyReturned hook is null, request id %lld", (long long)requestId);
         return;
     }
 
@@ -723,7 +723,7 @@ static void GaCbOnSessionKeyRetWithType(int64_t requestId, const uint8_t *sessKe
     }
     ServiceDevAuth::ActCallback(node->proxyId, CB_ID_SESS_KEY_DONE,
         reinterpret_cast<uintptr_t>(node->cbCtx.devAuth.onSessionKeyReturned), dataParcel, reply);
-    LOGI("process done, request id: %lld", requestId);
+    LOGI("process done, request id: %lld", (long long)requestId);
     return;
 }
 
@@ -746,11 +746,11 @@ static void GaCbOnFinishWithType(int64_t requestId, int32_t operationCode, const
     MessageParcel reply;
     IpcCallBackNode *node = nullptr;
 
-    LOGI("starting ... request id: %lld, type %d", requestId, type);
+    LOGI("starting ... request id: %lld, type %d", (long long)requestId, type);
     std::lock_guard<std::mutex> autoLock(g_cbListLock);
     node = GetIpcCallBackByReqId(requestId, type);
     if (node == nullptr) {
-        LOGE("onFinish hook is null, request id %lld", requestId);
+        LOGE("onFinish hook is null, request id %lld", (long long)requestId);
         return;
     }
     ret = EncodeCallData(dataParcel, PARAM_TYPE_REQID, reinterpret_cast<uint8_t *>(&requestId), sizeof(requestId));
@@ -766,7 +766,7 @@ static void GaCbOnFinishWithType(int64_t requestId, int32_t operationCode, const
         reinterpret_cast<uintptr_t>(node->cbCtx.devAuth.onFinish), dataParcel, reply);
     /* delete request id */
     DelIpcCallBackByReqId(requestId, type, false);
-    LOGI("process done, request id: %lld", requestId);
+    LOGI("process done, request id: %lld", (long long)requestId);
     return;
 }
 
@@ -790,11 +790,11 @@ static void GaCbOnErrorWithType(int64_t requestId, int32_t operationCode,
     MessageParcel reply;
     IpcCallBackNode *node = nullptr;
 
-    LOGI("starting ... request id: %lld, type %d", requestId, type);
+    LOGI("starting ... request id: %lld, type %d", (long long)requestId, type);
     std::lock_guard<std::mutex> autoLock(g_cbListLock);
     node = GetIpcCallBackByReqId(requestId, type);
     if (node == nullptr) {
-        LOGE("onError hook is null, request id %lld", requestId);
+        LOGE("onError hook is null, request id %lld", (long long)requestId);
         return;
     }
     ret = EncodeCallData(dataParcel, PARAM_TYPE_REQID, reinterpret_cast<uint8_t *>(&requestId), sizeof(requestId));
@@ -813,7 +813,7 @@ static void GaCbOnErrorWithType(int64_t requestId, int32_t operationCode,
         reinterpret_cast<uintptr_t>(node->cbCtx.devAuth.onError), dataParcel, reply);
     /* delete request id */
     DelIpcCallBackByReqId(requestId, type, false);
-    LOGI("process done, request id: %lld", requestId);
+    LOGI("process done, request id: %lld", (long long)requestId);
     return;
 }
 
@@ -837,11 +837,11 @@ static char *GaCbOnRequestWithType(int64_t requestId, int32_t operationCode, con
     const char *dPtr = nullptr;
     IpcCallBackNode *node = nullptr;
 
-    LOGI("starting ... request id: %lld, type %d", requestId, type);
+    LOGI("starting ... request id: %lld, type %d", (long long)requestId, type);
     std::lock_guard<std::mutex> autoLock(g_cbListLock);
     node = GetIpcCallBackByReqId(requestId, type);
     if (node == nullptr) {
-        LOGE("onRequest hook is null, request id %lld", requestId);
+        LOGE("onRequest hook is null, request id %lld", (long long)requestId);
         return nullptr;
     }
 
@@ -865,7 +865,8 @@ static char *GaCbOnRequestWithType(int64_t requestId, int32_t operationCode, con
             return nullptr;
         }
         dPtr = reply.ReadCString();
-        LOGI("process done, request id: %lld, %s string", requestId, (dPtr != nullptr) ? "valid" : "invalid");
+        LOGI("process done, request id: %lld, %s string",
+             (long long)requestId, (dPtr != nullptr) ? "valid" : "invalid");
         return (dPtr != nullptr) ? strdup(dPtr) : nullptr;
     }
     return nullptr;
