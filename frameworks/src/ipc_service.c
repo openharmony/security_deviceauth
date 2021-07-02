@@ -222,6 +222,11 @@ static int32_t IpcServiceGmCreateGroup(const IpcDataInfo *ipcParams, int32_t par
         LOGE("get param error, type %d", PARAM_TYPE_CREATE_PARAMS);
         return ret;
     }
+    ret = AddReqIdByAppId(appId, requestId);
+    if (ret != HC_SUCCESS) {
+        LOGE("bind request id by app id failed");
+	return ret;
+    }
 
     callRet = g_devGroupMgrMethod.createGroup(requestId, appId, createParams);
     ret = IpcEncodeCallReplay(outCache, PARAM_TYPE_IPC_RESULT, (const uint8_t *)&callRet, sizeof(int32_t));
