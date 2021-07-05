@@ -252,6 +252,33 @@ int32_t GetIntFromJson(const CJson *jsonObj, const char *key, int *value)
     return HAL_ERR_JSON_GET;
 }
 
+int32_t GetUnsignedIntFromJson(const CJson *jsonObj, const char *key, uint32_t *value)
+{
+    if (jsonObj == NULL || key == NULL || value == NULL) {
+        LOGE("Param is null.");
+        return HAL_ERR_NULL_PTR;
+    }
+
+    cJSON *jsonObjTmp = cJSON_GetObjectItemCaseSensitive(jsonObj, key);
+    if (jsonObjTmp != NULL && cJSON_IsNumber(jsonObjTmp)) {
+        *value = (uint32_t)cJSON_GetNumberValue(jsonObjTmp);
+        return HAL_SUCCESS;
+    }
+
+    int len = cJSON_GetArraySize(jsonObj);
+    for (int i = 0; i < len; i++) {
+        cJSON *item = cJSON_GetArrayItem(jsonObj, i);
+        if (cJSON_IsObject(item)) {
+            int32_t ret = GetUnsignedIntFromJson(item, key, value);
+            if (ret == HAL_SUCCESS) {
+                return ret;
+            }
+        }
+    }
+
+    return HAL_ERR_JSON_GET;
+}
+
 int32_t GetInt64FromJson(const CJson *jsonObj, const char *key, int64_t *value)
 {
     const char *str = GetStringFromJson(jsonObj, key);

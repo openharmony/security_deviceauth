@@ -94,5 +94,6 @@ int32_t AddInt64StringToJson(CJson *jsonObj, const char *key, int64_t value);
 int32_t AddStringArrayToJson(CJson *jsonObj, const char *key, const char * const *stringArray, uint32_t arrayLen);
 void ClearSensitiveStringInJson(CJson *jsonObj, const char *key);
 void ClearAndFreeJsonString(char *jsonStr);
+int32_t GetUnsignedIntFromJson(const CJson *jsonObj, const char *key, uint32_t *value);
 
 #endif
