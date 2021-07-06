@@ -303,12 +303,12 @@ static int32_t CombineInputData(int operationCode, const CJson *returnData, CJso
 
 static bool IsAcceptRequest(const CJson *returnData)
 {
-    int confirmation = REQUEST_REJECTED;
-    if (GetIntFromJson(returnData, FIELD_CONFIRMATION, &confirmation) != HC_SUCCESS) {
+    uint32_t confirmation = REQUEST_REJECTED;
+    if (GetUnsignedIntFromJson(returnData, FIELD_CONFIRMATION, &confirmation) != HC_SUCCESS) {
         LOGE("Failed to get confirmation from returnData!");
         return false;
     }
-    return ((uint32_t)confirmation == REQUEST_ACCEPTED);
+    return (confirmation == REQUEST_ACCEPTED);
 }
 
 static int32_t PrepareServer(BindSession *session, CJson *returnData, bool *isNeedInform)
@@ -395,8 +395,8 @@ static int32_t BindSaveReceivedData(BindSession *session, const CJson *jsonParam
 
 static int32_t JudgeConfirmation(CJson *returnData, CJson *jsonParams, BindSession *session, bool *isNeedInform)
 {
-    int confirmation = REQUEST_ACCEPTED;
-    if (GetIntFromJson(returnData, FIELD_CONFIRMATION, &confirmation) != HC_SUCCESS) {
+    uint32_t confirmation = REQUEST_ACCEPTED;
+    if (GetUnsignedIntFromJson(returnData, FIELD_CONFIRMATION, &confirmation) != HC_SUCCESS) {
         LOGE("Failed to get confirmation from returnData!");
         return HC_ERR_JSON_FAIL;
     }
