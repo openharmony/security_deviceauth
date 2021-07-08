@@ -261,7 +261,13 @@ int32_t GetUnsignedIntFromJson(const CJson *jsonObj, const char *key, uint32_t *
 
     cJSON *jsonObjTmp = cJSON_GetObjectItemCaseSensitive(jsonObj, key);
     if (jsonObjTmp != NULL && cJSON_IsNumber(jsonObjTmp)) {
-        *value = (uint32_t)cJSON_GetNumberValue(jsonObjTmp);
+        double realValue = cJSON_GetNumberValue(jsonObjTmp);
+        if (realValue < 0) {
+            int32_t tmpValue = (int32_t)realValue;
+            *value = (uint32_t)tmpValue;
+        } else {
+            *value = (uint32_t)realValue;
+        }
         return HAL_SUCCESS;
     }
 
