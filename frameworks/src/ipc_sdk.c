@@ -2109,11 +2109,12 @@ static void InitIpcGaMethods(GroupAuthManager *gaMethodObj)
 DEVICE_AUTH_API_PUBLIC int InitDeviceAuthService(void)
 {
     InitHcMutex(&g_ipcMutex);
-    return HC_SUCCESS;
+    return InitProxyAdapt();
 }
 
 DEVICE_AUTH_API_PUBLIC void DestroyDeviceAuthService(void)
 {
+    UnInitProxyAdapt();
     DestroyHcMutex(&g_ipcMutex);
 }
 

@@ -90,6 +90,8 @@ void AddIpcCbObjByReqId(int64_t reqId, int32_t objIdx, int32_t type);
 bool IsCallbackMethod(int32_t methodId);
 bool IsServiceRunning(void);
 void ResetIpcCallBackNodeByNodeId(int32_t nodeIdx);
+int32_t InitProxyAdapt(void);
+void UnInitProxyAdapt(void);
 
 #ifdef __cplusplus
 }

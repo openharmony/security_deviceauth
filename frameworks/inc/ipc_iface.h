@@ -36,8 +36,10 @@ public:
     };
     DECLARE_INTERFACE_DESCRIPTOR(u"CommIpcCallback");
     virtual void DoCallBack(int32_t callbackId, uintptr_t cbHook,
-        MessageParcel &dataParcel, MessageParcel &reply) = 0;
+        MessageParcel &dataParcel, MessageParcel &reply, MessageOption &option) = 0;
 };
+
+const int32_t DEV_AUTH_CALL_WAIT_TIME = 30; /* second */
 }
 
 #endif
