@@ -35,7 +35,7 @@ namespace {
     static const int32_t IPC_CALL_BACK_STUB_NODES = 2;
 }
 
-static StubDevAuthCb g_sdkCbStub[IPC_CALL_BACK_STUB_NODES];
+static sptr<StubDevAuthCb> g_sdkCbStub[IPC_CALL_BACK_STUB_NODES] = { nullptr, nullptr };
 
 typedef void (*CallbackStub)(uintptr_t, const IpcDataInfo *, int32_t, MessageParcel &);
 typedef struct {
@@ -681,7 +681,7 @@ static bool GaCbOnTransmitWithType(int64_t requestId, const uint8_t *data, uint3
         LOGE("build trans data failed");
         return false;
     }
-    ServiceDevAuth::ActCallback(node->proxyId, CB_ID_ON_TRANS,
+    ServiceDevAuth::ActCallback(node->proxyId, CB_ID_ON_TRANS, false,
         reinterpret_cast<uintptr_t>(node->cbCtx.devAuth.onTransmit), dataParcel, reply);
     LOGI("process done, request id: %lld", (long long)requestId);
     if (reply.ReadInt32(ret) && (ret == HC_SUCCESS)) {
@@ -721,7 +721,7 @@ static void GaCbOnSessionKeyRetWithType(int64_t requestId, const uint8_t *sessKe
         LOGE("build trans data failed");
         return;
     }
-    ServiceDevAuth::ActCallback(node->proxyId, CB_ID_SESS_KEY_DONE,
+    ServiceDevAuth::ActCallback(node->proxyId, CB_ID_SESS_KEY_DONE, false,
         reinterpret_cast<uintptr_t>(node->cbCtx.devAuth.onSessionKeyReturned), dataParcel, reply);
     LOGI("process done, request id: %lld", (long long)requestId);
     return;
@@ -762,7 +762,7 @@ static void GaCbOnFinishWithType(int64_t requestId, int32_t operationCode, const
         LOGE("build trans data failed");
         return;
     }
-    ServiceDevAuth::ActCallback(node->proxyId, CB_ID_ON_FINISH,
+    ServiceDevAuth::ActCallback(node->proxyId, CB_ID_ON_FINISH, false,
         reinterpret_cast<uintptr_t>(node->cbCtx.devAuth.onFinish), dataParcel, reply);
     /* delete request id */
     DelIpcCallBackByReqId(requestId, type, false);
@@ -809,7 +809,7 @@ static void GaCbOnErrorWithType(int64_t requestId, int32_t operationCode,
         LOGE("build trans data failed");
         return;
     }
-    ServiceDevAuth::ActCallback(node->proxyId, CB_ID_ON_ERROR,
+    ServiceDevAuth::ActCallback(node->proxyId, CB_ID_ON_ERROR, false,
         reinterpret_cast<uintptr_t>(node->cbCtx.devAuth.onError), dataParcel, reply);
     /* delete request id */
     DelIpcCallBackByReqId(requestId, type, false);
@@ -857,7 +857,7 @@ static char *GaCbOnRequestWithType(int64_t requestId, int32_t operationCode, con
         return nullptr;
     }
 
-    ServiceDevAuth::ActCallback(node->proxyId, CB_ID_ON_REQUEST,
+    ServiceDevAuth::ActCallback(node->proxyId, CB_ID_ON_REQUEST, true,
         reinterpret_cast<uintptr_t>(node->cbCtx.devAuth.onRequest), dataParcel, reply);
     if (reply.ReadInt32(ret) && (ret == HC_SUCCESS)) {
         if (reply.GetReadableBytes() == 0) {
@@ -916,7 +916,7 @@ void IpcOnGroupCreated(const char *groupInfo)
                 continue;
             }
             ServiceDevAuth::ActCallback(g_ipcCallBackList.ctx[i].proxyId, CB_ID_ON_GROUP_CREATED,
-                reinterpret_cast<uintptr_t>(listener->onGroupCreated), dataParcel, reply);
+                false, reinterpret_cast<uintptr_t>(listener->onGroupCreated), dataParcel, reply);
         }
     }
     return;
@@ -956,7 +956,7 @@ void IpcOnGroupDeleted(const char *groupInfo)
                 continue;
             }
             ServiceDevAuth::ActCallback(g_ipcCallBackList.ctx[i].proxyId, CB_ID_ON_GROUP_DELETED,
-                reinterpret_cast<uintptr_t>(listener->onGroupDeleted), dataParcel, reply);
+                false, reinterpret_cast<uintptr_t>(listener->onGroupDeleted), dataParcel, reply);
         }
     }
     return;
@@ -998,7 +998,7 @@ void IpcOnDeviceBound(const char *peerUdid, const char *groupInfo)
                 continue;
             }
             ServiceDevAuth::ActCallback(g_ipcCallBackList.ctx[i].proxyId, CB_ID_ON_DEV_BOUND,
-                reinterpret_cast<uintptr_t>(listener->onDeviceBound), dataParcel, reply);
+                false, reinterpret_cast<uintptr_t>(listener->onDeviceBound), dataParcel, reply);
         }
     }
     return;
@@ -1040,7 +1040,7 @@ void IpcOnDeviceUnBound(const char *peerUdid, const char *groupInfo)
                 continue;
             }
             ServiceDevAuth::ActCallback(g_ipcCallBackList.ctx[i].proxyId, CB_ID_ON_DEV_UNBOUND,
-                reinterpret_cast<uintptr_t>(listener->onDeviceUnBound), dataParcel, reply);
+                false, reinterpret_cast<uintptr_t>(listener->onDeviceUnBound), dataParcel, reply);
         }
     }
     return;
@@ -1080,7 +1080,7 @@ void IpcOnDeviceNotTrusted(const char *peerUdid)
                 continue;
             }
             ServiceDevAuth::ActCallback(g_ipcCallBackList.ctx[i].proxyId, CB_ID_ON_DEV_UNTRUSTED,
-                reinterpret_cast<uintptr_t>(listener->onDeviceNotTrusted), dataParcel, reply);
+                false, reinterpret_cast<uintptr_t>(listener->onDeviceNotTrusted), dataParcel, reply);
         }
     }
     return;
@@ -1122,7 +1122,7 @@ void IpcOnLastGroupDeleted(const char *peerUdid, int32_t groupType)
                 continue;
             }
             ServiceDevAuth::ActCallback(g_ipcCallBackList.ctx[i].proxyId, CB_ID_ON_LAST_GROUP_DELETED,
-                reinterpret_cast<uintptr_t>(listener->onLastGroupDeleted), dataParcel, reply);
+                false, reinterpret_cast<uintptr_t>(listener->onLastGroupDeleted), dataParcel, reply);
         }
     }
     return;
@@ -1157,7 +1157,7 @@ void IpcOnTrustedDeviceNumChanged(int32_t curTrustedDeviceNum)
                 continue;
             }
             ServiceDevAuth::ActCallback(g_ipcCallBackList.ctx[i].proxyId, CB_ID_ON_TRUST_DEV_NUM_CHANGED,
-                reinterpret_cast<uintptr_t>(listener->onTrustedDeviceNumChanged), dataParcel, reply);
+                false, reinterpret_cast<uintptr_t>(listener->onTrustedDeviceNumChanged), dataParcel, reply);
         }
     }
     return;
@@ -1235,7 +1235,7 @@ void DestroyCallCtx(uintptr_t *callCtx, uintptr_t *cbCtx)
 void SetCbCtxToDataCtx(uintptr_t callCtx, int32_t cbIdx)
 {
     ProxyDevAuthData *dataCache = nullptr;
-    sptr<IRemoteObject> remote = g_sdkCbStub[cbIdx].AsObject();
+    sptr<IRemoteObject> remote = g_sdkCbStub[cbIdx];
     dataCache = reinterpret_cast<ProxyDevAuthData *>(callCtx);
     dataCache->SetCallbackStub(remote);
     return;
@@ -1476,3 +1476,20 @@ bool IsServiceRunning(void)
     return ProxyDevAuth::ServiceRunning();
 }
 
+void UnInitProxyAdapt(void)
+{
+    g_sdkCbStub[IPC_CALL_BACK_STUB_AUTH_ID] = nullptr;
+    g_sdkCbStub[IPC_CALL_BACK_STUB_BIND_ID] = nullptr;
+    return;
+}
+
+int32_t InitProxyAdapt(void)
+{
+    g_sdkCbStub[IPC_CALL_BACK_STUB_AUTH_ID] = new(std::nothrow) StubDevAuthCb;
+    g_sdkCbStub[IPC_CALL_BACK_STUB_BIND_ID] = new(std::nothrow) StubDevAuthCb;
+    if (!g_sdkCbStub[IPC_CALL_BACK_STUB_AUTH_ID] || !g_sdkCbStub[IPC_CALL_BACK_STUB_BIND_ID]) {
+        UnInitProxyAdapt();
+        return HC_ERR_ALLOC_MEMORY;
+    }
+    return HC_SUCCESS;
+}

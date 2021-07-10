@@ -27,7 +27,8 @@ StubDevAuthCb::StubDevAuthCb()
 StubDevAuthCb::~StubDevAuthCb()
 {}
 
-void StubDevAuthCb::DoCallBack(int32_t callbackId, uintptr_t cbHook, MessageParcel &dataParcel, MessageParcel &reply)
+void StubDevAuthCb::DoCallBack(int32_t callbackId, uintptr_t cbHook,
+    MessageParcel &dataParcel, MessageParcel &reply, MessageOption &option)
 {
     int32_t ret;
     int32_t i;
@@ -62,7 +63,7 @@ int32_t StubDevAuthCb::OnRemoteRequest(uint32_t code,
         case DEV_AUTH_CALLBACK_REQUEST:
             callbackId = data.ReadInt32();
             cbHook = data.ReadPointer();
-            StubDevAuthCb::DoCallBack(callbackId, cbHook, data, reply);
+            StubDevAuthCb::DoCallBack(callbackId, cbHook, data, reply, option);
             break;
         default:
             LOGE("Invoke call back cmd id error, %u", code);

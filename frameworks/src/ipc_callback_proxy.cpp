@@ -25,11 +25,11 @@ ProxyDevAuthCb::ProxyDevAuthCb(const sptr<IRemoteObject> &impl) : IRemoteProxy<I
 ProxyDevAuthCb::~ProxyDevAuthCb()
 {}
 
-void ProxyDevAuthCb::DoCallBack(int32_t callbackId, uintptr_t cbHook, MessageParcel &dataParcel, MessageParcel &reply)
+void ProxyDevAuthCb::DoCallBack(int32_t callbackId, uintptr_t cbHook,
+    MessageParcel &dataParcel, MessageParcel &reply, MessageOption &option)
 {
     int32_t ret;
     MessageParcel data;
-    MessageOption option(MessageOption::TF_SYNC);
 
     sptr<IRemoteObject> remote = Remote();
     if (remote == nullptr) {
