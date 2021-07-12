@@ -681,7 +681,7 @@ static bool GaCbOnTransmitWithType(int64_t requestId, const uint8_t *data, uint3
         LOGE("build trans data failed");
         return false;
     }
-    ServiceDevAuth::ActCallback(node->proxyId, CB_ID_ON_TRANS, false,
+    ServiceDevAuth::ActCallback(node->proxyId, CB_ID_ON_TRANS, true,
         reinterpret_cast<uintptr_t>(node->cbCtx.devAuth.onTransmit), dataParcel, reply);
     LOGI("process done, request id: %lld", (long long)requestId);
     if (reply.ReadInt32(ret) && (ret == HC_SUCCESS)) {
@@ -1488,8 +1488,10 @@ int32_t InitProxyAdapt(void)
     g_sdkCbStub[IPC_CALL_BACK_STUB_AUTH_ID] = new(std::nothrow) StubDevAuthCb;
     g_sdkCbStub[IPC_CALL_BACK_STUB_BIND_ID] = new(std::nothrow) StubDevAuthCb;
     if (!g_sdkCbStub[IPC_CALL_BACK_STUB_AUTH_ID] || !g_sdkCbStub[IPC_CALL_BACK_STUB_BIND_ID]) {
+        LOGE("alloc callback stub object failed");
         UnInitProxyAdapt();
         return HC_ERR_ALLOC_MEMORY;
     }
+    LOGI("init callback stub object success");
     return HC_SUCCESS;
 }
