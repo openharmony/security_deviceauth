@@ -389,9 +389,10 @@ static int32_t SaveAuthInfo(const PakeParams *pakeParams, const StandardBindExch
     res = GetAsyTokenManagerInstance()->computeAndSavePsk(pakeParams);
     if (res != HC_SUCCESS) {
         LOGE("ComputeAndSavePsk failed");
+        return res;
     }
     LOGI("Save pubKey and psk success.");
-    return res;
+    return HC_SUCCESS;
 }
 
 int32_t ClientRequestStandardBindExchange(const PakeParams *pakeParams, StandardBindExchangeParams *exchangeParams)

@@ -322,7 +322,7 @@ static int32_t IpcGmCreateGroup(int64_t requestId, const char *appid, const char
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(&replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     DestroyCallCtx(&callCtx, NULL);
@@ -376,7 +376,7 @@ static int32_t IpcGmDelGroup(int64_t requestId, const char *appId, const char *d
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(&replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     DestroyCallCtx(&callCtx, NULL);
@@ -430,7 +430,7 @@ static int32_t IpcGmAddMemberToGroup(int64_t requestId, const char *appId, const
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(&replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     DestroyCallCtx(&callCtx, NULL);
@@ -484,7 +484,7 @@ static int32_t IpcGmDelMemberFromGroup(int64_t requestId, const char *appId, con
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(&replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     DestroyCallCtx(&callCtx, NULL);
@@ -533,7 +533,7 @@ static int32_t IpcGmProcessData(int64_t requestId, const uint8_t *data, uint32_t
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(&replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     DestroyCallCtx(&callCtx, NULL);
@@ -587,7 +587,7 @@ static int32_t IpcGmConfirmRequest(int64_t requestId, const char *appId, const c
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(&replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     DestroyCallCtx(&callCtx, NULL);
@@ -641,7 +641,7 @@ static int32_t IpcGmBindPeer(int64_t requestId, const char *appId, const char *b
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(&replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     DestroyCallCtx(&callCtx, NULL);
@@ -695,7 +695,7 @@ static int32_t IpcGmUnBindPeer(int64_t requestId, const char *appId, const char 
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(&replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     DestroyCallCtx(&callCtx, NULL);
@@ -748,7 +748,7 @@ static int32_t IpcGmProcessLiteData(int64_t requestId, const char *appId, const 
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(&replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     DestroyCallCtx(&callCtx, NULL);
@@ -760,11 +760,13 @@ static int32_t IpcGmProcCredential(int32_t operationCode, const char *credential
 {
     LOGI("starting ...");
     (void)operationCode;
-    if (!IS_STRING_VALID(credential) || (returnJsonStr == NULL)) {
-        LOGE("The input groupType is invalid or credential is NULL!");
+    (void)returnJsonStr;
+    if (!IS_STRING_VALID(credential)) {
+        LOGE("The input groupType is invalid!");
         return HC_ERR_INVALID_PARAMS;
     }
 
+    LOGE("IpcGmProcCredential is currently not supported!");
     return HC_ERR_NOT_SUPPORT;
 }
 
@@ -796,13 +798,13 @@ static int32_t IpcGmGetRegisterInfo(char **registerInfo)
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     LOGI("process done, ret %d", ret);
-    if ((ret != HC_SUCCESS) || (inOutLen != sizeof(int32_t))) {
+    if ((inOutLen != sizeof(int32_t)) || (ret != HC_SUCCESS)) {
         DestroyCallCtx(&callCtx, NULL);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     GetIpcReplyByType(replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT_NUM, (uint8_t *)&ret, &inOutLen);
     if ((ret < IPC_RESULT_NUM_1) || (inOutLen != sizeof(int32_t))) {
@@ -877,7 +879,7 @@ static int32_t IpcGmAddGroupManager(const char *appId, const char *groupId, cons
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(&replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     DestroyCallCtx(&callCtx, NULL);
@@ -931,7 +933,7 @@ static int32_t IpcGmAddGroupFriend(const char *appId, const char *groupId, const
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(&replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     DestroyCallCtx(&callCtx, NULL);
@@ -985,7 +987,7 @@ static int32_t IpcGmDelGroupManager(const char *appId, const char *groupId, cons
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(&replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     DestroyCallCtx(&callCtx, NULL);
@@ -1039,7 +1041,7 @@ static int32_t IpcGmDelGroupFriend(const char *appId, const char *groupId, const
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(&replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     DestroyCallCtx(&callCtx, NULL);
@@ -1110,7 +1112,7 @@ static int32_t IpcGmGetGroupManagers(const char *appId, const char *groupId, cha
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     LOGI("process done, ret %d", ret);
@@ -1187,7 +1189,7 @@ static int32_t IpcGmGetGroupFriends(const char *appId, const char *groupId, char
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     LOGI("process done, ret %d", ret);
@@ -1261,7 +1263,7 @@ static int32_t IpcGmGetGroupInfoById(const char *appId, const char *groupId, cha
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     LOGI("process done, ret %d", ret);
@@ -1339,7 +1341,7 @@ static int32_t IpcGmGetGroupInfo(const char *appId, const char *queryParams, cha
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     LOGI("process done, ret %d", ret);
@@ -1417,7 +1419,7 @@ static int32_t IpcGmGetJoinedGroups(const char *appId, int32_t groupType, char *
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     LOGI("process done, ret %d", ret);
@@ -1494,7 +1496,7 @@ static int32_t IpcGmGetRelatedGroups(const char *appId, const char *peerUdid, ch
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     LOGI("process done, ret %d", ret);
@@ -1583,7 +1585,7 @@ static int32_t IpcGmGetDeviceInfoById(const char *appId, const char *peerUdid, c
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     LOGI("process done, ret %d", ret);
@@ -1661,7 +1663,7 @@ static int32_t IpcGmGetTrustedDevices(const char *appId,
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     LOGI("process done, ret %d", ret);
@@ -1720,7 +1722,7 @@ static bool IpcGmIsDeviceInGroup(const char *appId, const char *groupId, const c
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(&replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     LOGI("process done, ret %d", ret);
@@ -1847,7 +1849,7 @@ static int32_t IpcGaProcessData(int64_t authReqId,
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(&replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     LOGI("process done, ret %d", ret);
@@ -1879,7 +1881,7 @@ static int32_t IpcGaQueryTrustedDeviceNum(void)
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(&replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     LOGI("process done, device num %d", ret);
@@ -1921,7 +1923,7 @@ static bool IpcGaIsTrustedDevice(const char *udid)
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(&replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     LOGI("process done, ret %d", ret);
@@ -1987,7 +1989,7 @@ static int32_t IpcGaGetAuthState(int64_t authReqId, const char *groupId,
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     LOGI("process done, ret %d", ret);
@@ -2048,7 +2050,7 @@ static int32_t IpcGaAuthDevice(int64_t authReqId, const char *authParams, const 
         return HC_ERR_IPC_PROC_FAILED;
     }
     DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLAY;
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
     inOutLen = sizeof(int32_t);
     GetIpcReplyByType(&replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
     LOGI("process done, ret %d", ret);
