@@ -86,10 +86,11 @@ int32_t GenerateEcPakeParams(PakeBaseParams *params, Uint8Buff *secret)
         LOGE("HashToPoint from secret to base failed, res: %d.", res);
         goto err;
     }
-
-    res = params->loader->computePublicKey(&params->eskSelf, &params->base, X25519, &params->epkSelf);
+    KeyBuff eskSelfBuff = { params->eskSelf.val, params->eskSelf.length, false };
+    KeyBuff baseBuff = { params->base.val, params->base.length, false };
+    res = params->loader->agreeSharedSecret(&eskSelfBuff, &baseBuff, X25519, &params->epkSelf);
     if (res != HC_SUCCESS) {
-        LOGE("ComputePublicKey failed, res: %d.", res);
+        LOGE("AgreeSharedSecret failed, res: %d.", res);
         goto err;
     }
     return res;

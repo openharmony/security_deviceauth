@@ -31,6 +31,7 @@ const char *HcFmtLogData(const char *funName, char *out, int32_t outSz, const ch
 
 #include "hilog/log.h"
 
+#ifndef LITE_DEVICE
 #define DEVAUTH_FMT_BUFFSZ 1024
 
 #define LOGD(fmt, ...) do { \
@@ -68,16 +69,26 @@ const char *HcFmtLogData(const char *funName, char *out, int32_t outSz, const ch
         (void)HiLogPrint(LOG_CORE, LOG_WARN, LOG_DOMAIN, \
             "[DEVAUTH]", "%{public}s: " fmt, __FUNCTION__, ##__VA_ARGS__); \
 } while (0)
+#else
+#define LOGD(fmt, ...) ((void)HiLogPrint(LOG_CORE, LOG_DEBUG, LOG_DOMAIN, \
+    "[DEVAUTH]", "%{public}s: " fmt, __FUNCTION__, ##__VA_ARGS__))
+#define LOGE(fmt, ...) ((void)HiLogPrint(LOG_CORE, LOG_ERROR, LOG_DOMAIN, \
+    "[DEVAUTH]", "%{public}s: " fmt, __FUNCTION__, ##__VA_ARGS__))
+#define LOGI(fmt, ...) ((void)HiLogPrint(LOG_CORE, LOG_INFO, LOG_DOMAIN, \
+    "[DEVAUTH]", "%{public}s: " fmt, __FUNCTION__, ##__VA_ARGS__))
+#define LOGW(fmt, ...) ((void)HiLogPrint(LOG_CORE, LOG_WARN, LOG_DOMAIN, \
+    "[DEVAUTH]", "%{public}s: " fmt, __FUNCTION__, ##__VA_ARGS__))
+#endif
 
 #else
 
 #include <stdio.h>
 #include <stdlib.h>
 
-#define LOGD(fmt, ...) printf("[D][%s]" fmt "\n", __FUNCTION__, ##__VA_ARGS__)
-#define LOGE(fmt, ...) printf("[E][%s]" fmt "\n", __FUNCTION__, ##__VA_ARGS__)
-#define LOGI(fmt, ...) printf("[I][%s]" fmt "\n", __FUNCTION__, ##__VA_ARGS__)
-#define LOGW(fmt, ...) printf("[W][%s]" fmt "\n", __FUNCTION__, ##__VA_ARGS__)
+#define LOGD(fmt, ...) printf("[D][DEVAUTH]%s: " fmt "\n", __FUNCTION__, ##__VA_ARGS__)
+#define LOGE(fmt, ...) printf("[E][DEVAUTH]%s: " fmt "\n", __FUNCTION__, ##__VA_ARGS__)
+#define LOGI(fmt, ...) printf("[I][DEVAUTH]%s: " fmt "\n", __FUNCTION__, ##__VA_ARGS__)
+#define LOGW(fmt, ...) printf("[W][DEVAUTH]%s: " fmt "\n", __FUNCTION__, ##__VA_ARGS__)
 #endif
 
 #endif

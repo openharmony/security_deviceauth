@@ -39,7 +39,7 @@ public:
     static int32_t SetRemoteObject(sptr<IRemoteObject> &object);
     static void SetCbDeathRecipient(int32_t cbStubIdx, int32_t cbDataIdx);
     static void ResetRemoteObject(int32_t idx);
-    static void ActCallback(int32_t objIdx, int32_t callbackId,
+    static void ActCallback(int32_t objIdx, int32_t callbackId, bool sync,
         uintptr_t cbHook, MessageParcel &dataParcel, MessageParcel &reply);
 
 private:

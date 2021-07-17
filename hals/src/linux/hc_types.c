@@ -53,12 +53,12 @@ uint32_t HcStrlen(const char *str)
 
 const char *HcFmtLogData(const char *funName, char *out, int32_t outSz, const char *fmtStr, ...)
 {
-    int32_t ret = 0;
-    int32_t cnt = 0;
+    int32_t ret;
+    int32_t cnt;
     int32_t n = 0;
     va_list arglist;
 
-    cnt = sprintf_s(out, outSz, "%s ", funName);
+    cnt = sprintf_s(out, outSz, "%s: ", funName);
     if (cnt <= 0) {
         return NULL;
     }
@@ -66,7 +66,7 @@ const char *HcFmtLogData(const char *funName, char *out, int32_t outSz, const ch
     va_start(arglist, fmtStr);
     ret = vsprintf_s(out + n, outSz - n, fmtStr, arglist);
     va_end(arglist);
-    return ret > 0 ? (const char *)out : NULL;
+    return (ret > 0) ? ((const char *)out) : NULL;
 }
 
 #ifdef __cplusplus
