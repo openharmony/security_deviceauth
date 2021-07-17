@@ -30,8 +30,8 @@ static enum HksKeyAlg g_algToHksAlgorithm[] = {
 static int32_t BaseCheckParams(const Uint8Buff **inParams, const char **paramTags, uint32_t len)
 {
     for (uint32_t i = 0; i < len; i++) {
-        CHECK_PTR_RETURN_ERROR_CODE(inParams[i], paramTags[i]);
-        CHECK_PTR_RETURN_ERROR_CODE(inParams[i]->val, paramTags[i]);
+        CHECK_PTR_RETURN_HAL_ERROR_CODE(inParams[i], paramTags[i]);
+        CHECK_PTR_RETURN_HAL_ERROR_CODE(inParams[i]->val, paramTags[i]);
         CHECK_LEN_ZERO_RETURN_ERROR_CODE(inParams[i]->length, paramTags[i]);
     }
     return HAL_SUCCESS;
@@ -72,12 +72,12 @@ static int32_t InitHks()
 
 static int32_t Sha256(const Uint8Buff *message, Uint8Buff *hash)
 {
-    CHECK_PTR_RETURN_ERROR_CODE(message, "message");
-    CHECK_PTR_RETURN_ERROR_CODE(message->val, "message->val");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(message, "message");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(message->val, "message->val");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(message->length, "message->length");
 
-    CHECK_PTR_RETURN_ERROR_CODE(hash, "hash");
-    CHECK_PTR_RETURN_ERROR_CODE(hash->val, "hash->val");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(hash, "hash");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(hash->val, "hash->val");
     CHECK_LEN_EQUAL_RETURN(hash->length, SHA256_LEN, "hash->length");
 
     struct HksBlob srcBlob = { message->length, message->val };
@@ -107,8 +107,8 @@ static int32_t Sha256(const Uint8Buff *message, Uint8Buff *hash)
 
 static int32_t GenerateRandom(Uint8Buff *rand)
 {
-    CHECK_PTR_RETURN_ERROR_CODE(rand, "rand");
-    CHECK_PTR_RETURN_ERROR_CODE(rand->val, "rand->val");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(rand, "rand");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(rand->val, "rand->val");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(rand->length, "rand->length");
 
     struct HksBlob randBlob = { rand->length, rand->val };
@@ -123,8 +123,8 @@ static int32_t GenerateRandom(Uint8Buff *rand)
 
 static int32_t CheckKeyExist(const Uint8Buff *keyAlias)
 {
-    CHECK_PTR_RETURN_ERROR_CODE(keyAlias, "keyAlias");
-    CHECK_PTR_RETURN_ERROR_CODE(keyAlias->val, "keyAlias->val");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(keyAlias, "keyAlias");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(keyAlias->val, "keyAlias->val");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(keyAlias->length, "keyAlias->length");
 
     struct HksBlob keyAliasBlob = { keyAlias->length, keyAlias->val };
@@ -139,8 +139,8 @@ static int32_t CheckKeyExist(const Uint8Buff *keyAlias)
 
 static int32_t DeleteKey(const Uint8Buff *keyAlias)
 {
-    CHECK_PTR_RETURN_ERROR_CODE(keyAlias, "keyAlias");
-    CHECK_PTR_RETURN_ERROR_CODE(keyAlias->val, "keyAlias->val");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(keyAlias, "keyAlias");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(keyAlias->val, "keyAlias->val");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(keyAlias->length, "keyAlias->length");
 
     struct HksBlob keyAliasBlob = { keyAlias->length, keyAlias->val };
@@ -268,10 +268,10 @@ static int32_t CheckAesGcmEncryptParam(const Uint8Buff *key, const Uint8Buff *pl
         return ret;
     }
 
-    CHECK_PTR_RETURN_ERROR_CODE(encryptInfo, "encryptInfo");
-    CHECK_PTR_RETURN_ERROR_CODE(encryptInfo->aad, "aad");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(encryptInfo, "encryptInfo");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(encryptInfo->aad, "aad");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(encryptInfo->aadLen, "aadLen");
-    CHECK_PTR_RETURN_ERROR_CODE(encryptInfo->nonce, "nonce");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(encryptInfo->nonce, "nonce");
     CHECK_LEN_LOWER_RETURN(encryptInfo->nonceLen, HKS_AE_NONCE_LEN, "nonceLen");
     CHECK_LEN_LOWER_RETURN(outCipher->length, plain->length + HKS_AE_TAG_LEN, "outCipher");
 
@@ -343,10 +343,10 @@ static int32_t CheckAesGcmDecryptParam(const Uint8Buff *key, const Uint8Buff *ci
         return ret;
     }
 
-    CHECK_PTR_RETURN_ERROR_CODE(decryptInfo, "decryptInfo");
-    CHECK_PTR_RETURN_ERROR_CODE(decryptInfo->aad, "aad");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(decryptInfo, "decryptInfo");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(decryptInfo->aad, "aad");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(decryptInfo->aadLen, "aadLen");
-    CHECK_PTR_RETURN_ERROR_CODE(decryptInfo->nonce, "nonce");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(decryptInfo->nonce, "nonce");
     CHECK_LEN_LOWER_RETURN(decryptInfo->nonceLen, HKS_AE_NONCE_LEN, "nonceLen");
     CHECK_LEN_LOWER_RETURN(outPlain->length, cipher->length - HKS_AE_TAG_LEN, "outPlain");
 
@@ -410,12 +410,17 @@ static int32_t AesGcmDecrypt(const Uint8Buff *key, const Uint8Buff *cipher,
 
 static int32_t HashToPoint(const Uint8Buff *hash, Algorithm algo, Uint8Buff *outEcPoint)
 {
-    CHECK_PTR_RETURN_ERROR_CODE(hash, "hash");
-    CHECK_PTR_RETURN_ERROR_CODE(hash->val, "hash->va");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(hash, "hash");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(hash->val, "hash->va");
     CHECK_LEN_EQUAL_RETURN(hash->length, SHA256_LEN, "hash->length");
-    CHECK_PTR_RETURN_ERROR_CODE(outEcPoint, "outEcPoint");
-    CHECK_PTR_RETURN_ERROR_CODE(outEcPoint->val, "outEcPoint->va");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(outEcPoint, "outEcPoint");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(outEcPoint->val, "outEcPoint->va");
     CHECK_LEN_EQUAL_RETURN(outEcPoint->length, SHA256_LEN, "outEcPoint->length");
+
+    if (algo != X25519) {
+        LOGE("Invalid algo: %d.", algo);
+        return HAL_ERR_INVALID_PARAM;
+    }
 
     struct HksBlob hashBlob = { hash->length, hash->val };
     struct HksBlob pointBlob = { outEcPoint->length, outEcPoint->val };
@@ -476,14 +481,14 @@ static int32_t ConstructAgreeWithStorageParams(struct HksParamSet **paramSet, ui
 static int32_t AgreeSharedSecretWithStorage(const KeyBuff *priKey, const KeyBuff *pubKey, Algorithm algo,
     uint32_t sharedKeyLen, const Uint8Buff *sharedKeyAlias)
 {
-    CHECK_PTR_RETURN_ERROR_CODE(priKey, "priKey");
-    CHECK_PTR_RETURN_ERROR_CODE(priKey->key, "priKey->key");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(priKey, "priKey");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(priKey->key, "priKey->key");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(priKey->keyLen, "priKey->keyLen");
-    CHECK_PTR_RETURN_ERROR_CODE(pubKey, "pubKey");
-    CHECK_PTR_RETURN_ERROR_CODE(pubKey->key, "pubKey->key");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(pubKey, "pubKey");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(pubKey->key, "pubKey->key");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(pubKey->keyLen, "pubKey->keyLen");
-    CHECK_PTR_RETURN_ERROR_CODE(sharedKeyAlias, "sharedKeyAlias");
-    CHECK_PTR_RETURN_ERROR_CODE(sharedKeyAlias->val, "sharedKeyAlias->val");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(sharedKeyAlias, "sharedKeyAlias");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(sharedKeyAlias->val, "sharedKeyAlias->val");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(sharedKeyAlias->length, "sharedKeyAlias->length");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(sharedKeyLen, "sharedKeyLen");
 
@@ -507,14 +512,14 @@ static int32_t AgreeSharedSecretWithStorage(const KeyBuff *priKey, const KeyBuff
 
 static int32_t AgreeSharedSecret(const KeyBuff *priKey, const KeyBuff *pubKey, Algorithm algo, Uint8Buff *sharedKey)
 {
-    CHECK_PTR_RETURN_ERROR_CODE(priKey, "priKey");
-    CHECK_PTR_RETURN_ERROR_CODE(priKey->key, "priKey->key");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(priKey, "priKey");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(priKey->key, "priKey->key");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(priKey->keyLen, "priKey->keyLen");
-    CHECK_PTR_RETURN_ERROR_CODE(pubKey, "pubKey");
-    CHECK_PTR_RETURN_ERROR_CODE(pubKey->key, "pubKey->key");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(pubKey, "pubKey");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(pubKey->key, "pubKey->key");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(pubKey->keyLen, "pubKey->keyLen");
-    CHECK_PTR_RETURN_ERROR_CODE(sharedKey, "sharedKey");
-    CHECK_PTR_RETURN_ERROR_CODE(sharedKey->val, "sharedKey->val");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(sharedKey, "sharedKey");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(sharedKey->val, "sharedKey->val");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(sharedKey->length, "sharedKey->length");
 
     struct HksBlob priKeyBlob = { priKey->keyLen, priKey->key };
@@ -561,7 +566,7 @@ static int32_t BigNumExpMod(const Uint8Buff *base, const Uint8Buff *exp, const c
         return ret;
     }
 
-    CHECK_PTR_RETURN_ERROR_CODE(bigNumHex, "bigNumHex");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(bigNumHex, "bigNumHex");
     uint32_t primeLen = strlen(bigNumHex) / BYTE_TO_HEX_OPER_LENGTH;
     if ((primeLen != BIG_PRIME_LEN_384) && (primeLen != BIG_PRIME_LEN_256)) {
         LOGE("Not support big number len %d", outNum->length);
@@ -631,11 +636,11 @@ static int32_t ConstructGenerateKeyPairWithStorageParams(struct HksParamSet **pa
 static int32_t GenerateKeyPairWithStorage(const Uint8Buff *keyAlias, uint32_t keyLen, Algorithm algo,
     const ExtraInfo *exInfo)
 {
-    CHECK_PTR_RETURN_ERROR_CODE(keyAlias, "keyAlias");
-    CHECK_PTR_RETURN_ERROR_CODE(keyAlias->val, "keyAlias->val");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(keyAlias, "keyAlias");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(keyAlias->val, "keyAlias->val");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(keyAlias->length, "keyAlias->length");
-    CHECK_PTR_RETURN_ERROR_CODE(exInfo, "exInfo");
-    CHECK_PTR_RETURN_ERROR_CODE(exInfo->authId.val, "authId->val");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(exInfo, "exInfo");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(exInfo->authId.val, "authId->val");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(exInfo->authId.length, "authId->length");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(keyLen, "keyLen");
 
@@ -723,11 +728,11 @@ static int32_t ConstructGenerateKeyPairParams(struct HksParamSet **paramSet, Alg
 
 static int32_t GenerateKeyPair(Algorithm algo, Uint8Buff *outPriKey, Uint8Buff *outPubKey)
 {
-    CHECK_PTR_RETURN_ERROR_CODE(outPriKey, "outPriKey");
-    CHECK_PTR_RETURN_ERROR_CODE(outPriKey->val, "outPriKey->key");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(outPriKey, "outPriKey");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(outPriKey->val, "outPriKey->key");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(outPriKey->length, "outPriKey->keyLen");
-    CHECK_PTR_RETURN_ERROR_CODE(outPubKey, "outPubKey");
-    CHECK_PTR_RETURN_ERROR_CODE(outPubKey->val, "outPubKey->key");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(outPubKey, "outPubKey");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(outPubKey->val, "outPubKey->key");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(outPubKey->length, "outPubKey->keyLen");
 
     if (outPriKey->length != outPubKey->length) {
@@ -774,11 +779,11 @@ err:
 
 static int32_t ExportPublicKey(const Uint8Buff *keyAlias, Uint8Buff *outPubKey)
 {
-    CHECK_PTR_RETURN_ERROR_CODE(keyAlias, "keyAlias");
-    CHECK_PTR_RETURN_ERROR_CODE(keyAlias->val, "keyAlias->val");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(keyAlias, "keyAlias");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(keyAlias->val, "keyAlias->val");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(keyAlias->length, "keyAlias->length");
-    CHECK_PTR_RETURN_ERROR_CODE(outPubKey, "outPubKey");
-    CHECK_PTR_RETURN_ERROR_CODE(outPubKey->val, "outPubKey->val");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(outPubKey, "outPubKey");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(outPubKey->val, "outPubKey->val");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(outPubKey->length, "outPubKey->length");
 
     struct HksBlob keyAliasBlob = { keyAlias->length, keyAlias->val };
@@ -973,14 +978,14 @@ static int32_t ConstructImportPublicKeyParams(struct HksParamSet **paramSet, Alg
 static int32_t ImportPublicKey(const Uint8Buff *keyAlias, const Uint8Buff *pubKey, Algorithm algo,
     const ExtraInfo *exInfo)
 {
-    CHECK_PTR_RETURN_ERROR_CODE(keyAlias, "keyAlias");
-    CHECK_PTR_RETURN_ERROR_CODE(keyAlias->val, "keyAlias->val");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(keyAlias, "keyAlias");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(keyAlias->val, "keyAlias->val");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(keyAlias->length, "keyAlias->length");
-    CHECK_PTR_RETURN_ERROR_CODE(pubKey, "pubKey");
-    CHECK_PTR_RETURN_ERROR_CODE(pubKey->val, "pubKey->val");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(pubKey, "pubKey");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(pubKey->val, "pubKey->val");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(pubKey->length, "pubKey->length");
-    CHECK_PTR_RETURN_ERROR_CODE(exInfo, "exInfo");
-    CHECK_PTR_RETURN_ERROR_CODE(exInfo->authId.val, "authId->val");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(exInfo, "exInfo");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(exInfo->authId.val, "authId->val");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(exInfo->authId.length, "authId->length");
     CHECK_LEN_HIGHER_RETURN(exInfo->pairType, PAIR_TYPE_END - 1, "pairType");
 
@@ -1004,53 +1009,6 @@ static int32_t ImportPublicKey(const Uint8Buff *keyAlias, const Uint8Buff *pubKe
     ret = HksImportKey(&keyAliasBlob, paramSet, &pubKeyBlob);
     if (ret != HKS_SUCCESS) {
         LOGE("Hks importKey failed, ret: %d", ret);
-        HksFreeParamSet(&paramSet);
-        return HAL_FAILED;
-    }
-
-    HksFreeParamSet(&paramSet);
-    return HAL_SUCCESS;
-}
-
-static int32_t ComputePublicKey(const Uint8Buff *priKey, const Uint8Buff *base, Algorithm algo, Uint8Buff *pubKey)
-{
-    CHECK_PTR_RETURN_ERROR_CODE(priKey, "priKey");
-    CHECK_PTR_RETURN_ERROR_CODE(priKey->val, "priKey->val");
-    CHECK_LEN_ZERO_RETURN_ERROR_CODE(priKey->length, "priKey->length");
-    CHECK_PTR_RETURN_ERROR_CODE(base, "base");
-    CHECK_PTR_RETURN_ERROR_CODE(base->val, "base->val");
-    CHECK_LEN_ZERO_RETURN_ERROR_CODE(base->length, "base->length");
-    CHECK_PTR_RETURN_ERROR_CODE(pubKey, "sharedKey");
-    CHECK_PTR_RETURN_ERROR_CODE(pubKey->val, "pubKey->val");
-    CHECK_LEN_ZERO_RETURN_ERROR_CODE(pubKey->length, "pubKey->length");
-
-    struct HksBlob priKeyBlob = { priKey->length, priKey->val };
-    struct HksBlob pubKeyBlob = { base->length, base->val };
-    struct HksBlob sharedKeyBlob = { pubKey->length, pubKey->val };
-
-    struct HksParamSet *paramSet = NULL;
-    struct HksParam agreeParam[] = {
-        {
-            .tag = HKS_TAG_ALGORITHM,
-            .uint32Param = g_algToHksAlgorithm[algo] // only support HKS_ALG_X25519 now
-        }, {
-            .tag = HKS_TAG_KEY_SIZE,
-            .uint32Param = pubKey->length * BITS_PER_BYTE
-        }, {
-            .tag = HKS_TAG_IS_KEY_ALIAS,
-            .boolParam = false
-        }
-    };
-
-    int32_t ret = ConstructParamSet(&paramSet, agreeParam, CAL_ARRAY_SIZE(agreeParam));
-    if (ret != HAL_SUCCESS) {
-        LOGE("Construct param set failed, ret = %d", ret);
-        return ret;
-    }
-
-    ret = HksAgreeKey(paramSet, &priKeyBlob, &pubKeyBlob, &sharedKeyBlob);
-    if (ret != HKS_SUCCESS) {
-        LOGE("Agree key failed, ret = %d", ret);
         HksFreeParamSet(&paramSet);
         return HAL_FAILED;
     }
@@ -1141,29 +1099,29 @@ bool CheckDlPublicKey(const Uint8Buff *key, const char *primeHex)
 }
 
 static const AlgLoader g_huksLoader = {
-    InitHks,
-    Sha256,
-    GenerateRandom,
-    ComputeHmac,
-    ComputeHkdf,
-    NULL,
-    CheckKeyExist,
-    DeleteKey,
-    AesGcmEncrypt,
-    AesGcmDecrypt,
-    HashToPoint,
-    AgreeSharedSecretWithStorage,
-    AgreeSharedSecret,
-    BigNumExpMod,
-    GenerateKeyPairWithStorage,
-    GenerateKeyPair,
-    ExportPublicKey,
-    Sign,
-    Verify,
-    ImportPublicKey,
-    ComputePublicKey,
-    CheckDlPublicKey,
-    NULL
+    .initAlg = InitHks,
+    .sha256 = Sha256,
+    .generateRandom = GenerateRandom,
+    .computeHmac = ComputeHmac,
+    .computeHkdf = ComputeHkdf,
+    .importAsymmetricKey = NULL,
+    .checkKeyExist = CheckKeyExist,
+    .deleteKey = DeleteKey,
+    .aesGcmEncrypt = AesGcmEncrypt,
+    .aesGcmDecrypt = AesGcmDecrypt,
+    .hashToPoint = HashToPoint,
+    .agreeSharedSecretWithStorage = AgreeSharedSecretWithStorage,
+    .agreeSharedSecret = AgreeSharedSecret,
+    .bigNumExpMod = BigNumExpMod,
+    .generateKeyPairWithStorage = GenerateKeyPairWithStorage,
+    .generateKeyPair = GenerateKeyPair,
+    .exportPublicKey = ExportPublicKey,
+    .sign = Sign,
+    .verify = Verify,
+    .importPublicKey = ImportPublicKey,
+    .checkDlPublicKey = CheckDlPublicKey,
+    .checkEcPublicKey = NULL,
+    .bigNumCompare = NULL
 };
 
 const AlgLoader *GetRealLoaderInstance()

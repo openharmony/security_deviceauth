@@ -11,31 +11,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import("deviceauth_env.gni")
-import("hals/deviceauth_hals.gni")
+if (defined(ohos_lite)) {
+  import("//build/lite/config/component/lite_component.gni")
+  lite_component("hichain_3_0") {
+    features = [
+      "services:deviceauth",
+      "services:deviceauth_service",
+      "services:deviceauth_sdk",
+    ]
+  }
+} else {
+  import("//build/ohos.gni")
+  import("deviceauth_env.gni")
+  group("deviceauth_build") {
+    deps = [
+      "services:deviceauth",
+    ]
+  }
 
-group("deviceauth_build") {
-  deps = [
-    "${hals_path}:${hal_module_name}",
-    "services:deviceauth",
-  ]
-}
+  group("deviceauth_service_build") {
+    deps = [
+      "services:deviceauth_service",
+    ]
+  }
 
-group("deviceauth_service_build") {
-  deps = [
-    "${hals_path}:${hal_module_name}",
-    "services:deviceauth_service",
-  ]
-}
-
-group("deviceauth_sdk_build") {
-  deps = [
-    "${hals_path}:${hal_module_name}",
-    "services:deviceauth_sdk",
-  ]
-}
-
-group("deviceauth_test_build") {
-  testonly = true
-  deps = [ "test/unittest/deviceauth:deviceauth_llt" ]
+  group("deviceauth_sdk_build") {
+    deps = [
+      "services:deviceauth_sdk",
+    ]
+  }
+  
+  group("deviceauth_test_build") {
+    testonly = true
+    deps = [ "test/unittest/deviceauth:deviceauth_llt" ]
+  }
 }
