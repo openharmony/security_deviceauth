@@ -91,6 +91,12 @@ int32_t InitIpcCallBackList(void)
 
 static void ResetIpcCallBackNode(IpcCallBackNode &node)
 {
+    char errStr[] = "invalid";
+    char *appId = errStr;
+    if ((node.appId[0] != 0) && (node.appId[sizeof(node.appId) - 1] == 0)) {
+        appId = node.appId;
+    }
+    LOGI("appid is %s ", appId);
     ServiceDevAuth::ResetRemoteObject(node.proxyId);
     SetIpcCallBackNodeDefault(node);
     return;

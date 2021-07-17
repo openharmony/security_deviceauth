@@ -11,86 +11,120 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import("//build/ohos.gni")
+if (defined(ohos_lite)) {
+  import("//build/lite/config/component/lite_component.gni")
+} else {
+  import("//build/ohos.gni")
+}
 import("deviceauth_hals.gni")
 
-hal_common_files = [
-  "src/common/hc_parcel.c",
-  "src/common/hc_string.c",
-  "src/common/hc_task_thread.c",
-  "src/common/hc_tlv_parser.c",
-  "src/common/json_utils.c",
-  "src/common/common_util.c",
-  "src/common/alg_loader.c",
-]
+if (defined(ohos_lite)) {
+  static_library("deviceauth_hal_linux") {
+    include_dirs = hals_inc_path
+    include_dirs += [
+      "//base/security/deviceauth/interfaces/innerkits",
+      "//base/security/deviceauth/services/common/inc",
+      "//third_party/cJSON",
+      "//utils/native/lite/include",
+      "//base/security/huks/huawei_property/include",
+      "//base/hiviewdfx/hilog_lite/interfaces/native/innerkits/hilog",
+      "//third_party/bounds_checking_function/include"
+    ]
 
-ohos_static_library("deviceauth_hal_linux") {
-  subsystem_name = "security"
+    sources = hal_common_files
+    sources += [
+      "src/dev_info/3516/hc_dev_info.c",
+      "src/linux/lite/mbedtls_hash_to_point.c",
+      "src/linux/lite/huks_adapter.c",
+      "src/linux/hc_condition.c",
+      "src/linux/hc_file.c",
+      "src/linux/hc_init_protection.c",
+      "src/linux/hc_mutex.c",
+      "src/linux/hc_thread.c",
+      "src/linux/hc_time.c",
+      "src/linux/hc_types.c",
+    ]
 
-  include_dirs = hals_inc_path
-  include_dirs += [
-    "//third_party/cJSON",
-    "//utils/native/base/include",
-    "//third_party/openssl/include/",
-    "//base/security/huks/interfaces/innerkits/huks_standard/main/include",
-    "//base/startup/syspara_lite/interfaces/innerkits/native/syspara/include"
-  ]
+    cflags = [ "-DHILOG_ENABLE" ]
+    defines = [ "LITE_DEVICE" ]
 
-  sources = hal_common_files
-  sources += [
-    "src/dev_info/3516/hc_dev_info.c",
-    "src/linux/L2/crypto_hash_to_point.c",
-    "src/linux/L2/huks_adapter.c",
-    "src/linux/hc_condition.c",
-    "src/linux/hc_file.c",
-    "src/linux/hc_init_protection.c",
-    "src/linux/hc_mutex.c",
-    "src/linux/hc_thread.c",
-    "src/linux/hc_time.c",
-    "src/linux/hc_types.c",
-  ]
+    deps = [
+      "//base/security/huks/interfaces/innerkits/huks_lite:huks_3.0_sdk",
+      "//build/lite/config/component/openssl:openssl_shared",
+      "//third_party/bounds_checking_function:libsec_shared",
+      "//third_party/mbedtls:mbedtls_shared",
+      "//utils/native/lite:utils",
+      "//base/hiviewdfx/hilog_lite/frameworks/featured:hilog_shared",
+      "//build/lite/config/component/cJSON:cjson_shared"
+    ]
+  }
+  if (ohos_kernel_type == "liteos_m") {
+    static_library("deviceauth_hal_liteos") {
+      include_dirs = hals_inc_path
+      include_dirs += [
+        "//third_party/cJSON",
+        "//utils/native/lite/include"
+      ]
+  
+      sources = hal_common_files
+      sources += [
+        "src/dev_info/watch/hc_dev_info.c",
+        "src/liteos/L0/hc_init_protection.c",
+        "src/liteos/L0/huks_adapter.c",
+        "src/liteos/hc_condition.c",
+        "src/liteos/hc_file.c",
+        "src/liteos/hc_mutex.c",
+        "src/liteos/hc_thread.c",
+        "src/liteos/hc_time.c",
+        "src/liteos/hc_types.c",
+      ]
+  
+      cflags = [ "-DHILOG_ENABLE" ]
+      deps = [
+        "//base/security/huks/interfaces/innerkits/huks_lite:huks_3.0_sdk",
+        "//build/lite/config/component/openssl:openssl_shared",
+        "//third_party/bounds_checking_function:libsec_shared",
+        "//third_party/mbedtls:mbedtls_shared",
+        "//utils/native/lite:utils",
+        "//base/hiviewdfx/hilog_lite/frameworks/featured:hilog_shared",
+        "//build/lite/config/component/cJSON:cjson_shared"
+      ]
+    }
+  }
+} else {
+  ohos_static_library("deviceauth_hal_linux") {
+    subsystem_name = "security"
 
-  cflags = [ "-DHILOG_ENABLE" ]
+    include_dirs = hals_inc_path
+    include_dirs += [
+      "//third_party/cJSON",
+      "//utils/native/base/include",
+      "//third_party/openssl/include/",
+      "//base/security/huks/interfaces/innerkits/huks_standard/main/include",
+      "//base/startup/syspara_lite/interfaces/innerkits/native/syspara/include"
+    ]
 
-  deps = [
-    "//base/security/huks/interfaces/innerkits/huks_standard/main:libhukssdk",
-    "//third_party/cJSON:cjson_static",
-    "//third_party/openssl:libcrypto_static",
-    "//utils/native/base:utils",
-    "//base/startup/syspara_lite/interfaces/innerkits/native/syspara:syspara"
-  ]
-
-  external_deps = [ "hiviewdfx_hilog_native:libhilog" ]
-}
-
-ohos_static_library("deviceauth_hal_liteos") {
-  subsystem_name = "security"
-
-  include_dirs = hals_inc_path
-  include_dirs += [
-    "//third_party/cJSON",
-    "//utils/native/base/include",
-  ]
-
-  sources = hal_common_files
-  sources += [
-    "src/dev_info/watch/hc_dev_info.c",
-    "src/liteos/L0/hc_init_protection.c",
-    "src/liteos/L0/huks_adapter.c",
-    "src/liteos/hc_condition.c",
-    "src/liteos/hc_file.c",
-    "src/liteos/hc_mutex.c",
-    "src/liteos/hc_thread.c",
-    "src/liteos/hc_time.c",
-    "src/liteos/hc_types.c",
-  ]
-
-  cflags = [ "-DHILOG_ENABLE" ]
-
-  deps = [
-    "//third_party/cJSON:cjson",
-    "//utils/native/base:utils",
-  ]
-
-  external_deps = [ "hiviewdfx_hilog_native:libhilog" ]
+    sources = hal_common_files
+    sources += [
+      "src/dev_info/3516/hc_dev_info.c",
+      "src/linux/standard/crypto_hash_to_point.c",
+      "src/linux/standard/huks_adapter.c",
+      "src/linux/hc_condition.c",
+      "src/linux/hc_file.c",
+      "src/linux/hc_init_protection.c",
+      "src/linux/hc_mutex.c",
+      "src/linux/hc_thread.c",
+      "src/linux/hc_time.c",
+      "src/linux/hc_types.c",
+    ]
+    cflags = [ "-DHILOG_ENABLE" ]
+    deps = [
+      "//base/security/huks/interfaces/innerkits/huks_standard/main:libhukssdk",
+      "//third_party/cJSON:cjson_static",
+      "//third_party/openssl:libcrypto_static",
+      "//utils/native/base:utils",
+      "//base/startup/syspara_lite/interfaces/innerkits/native/syspara:syspara"
+    ]
+    external_deps = [ "hiviewdfx_hilog_native:libhilog" ]
+  }
 }
