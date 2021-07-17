@@ -19,7 +19,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#if defined(_LINUX) || defined(_UNIX)
+#if defined(__LINUX__) || defined(_UNIX)
 #define DEVICE_AUTH_API_PUBLIC __attribute__ ((visibility("default")))
 #else
 #define DEVICE_AUTH_API_PUBLIC

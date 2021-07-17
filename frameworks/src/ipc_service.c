@@ -208,9 +208,9 @@ static int32_t IpcServiceGmCreateGroup(const IpcDataInfo *ipcParams, int32_t par
     LOGI("starting ...");
     inOutLen = sizeof(int64_t);
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_REQID, (uint8_t *)&requestId, &inOutLen);
-    if ((ret != HC_SUCCESS) || (inOutLen != sizeof(int64_t))) {
+    if ((inOutLen != sizeof(int64_t)) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_REQID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
     if (ret != HC_SUCCESS) {
@@ -223,11 +223,10 @@ static int32_t IpcServiceGmCreateGroup(const IpcDataInfo *ipcParams, int32_t par
         return ret;
     }
     ret = AddReqIdByAppId(appId, requestId);
-    if (ret != HC_SUCCESS) {
+    if (ret != 0) {
         LOGE("bind request id by app id failed");
-	return ret;
+        return ret;
     }
-
     callRet = g_devGroupMgrMethod.createGroup(requestId, appId, createParams);
     ret = IpcEncodeCallReplay(outCache, PARAM_TYPE_IPC_RESULT, (const uint8_t *)&callRet, sizeof(int32_t));
     LOGI("process done, call ret %d, ipc ret %d", callRet, ret);
@@ -246,9 +245,9 @@ static int32_t IpcServiceGmDelGroup(const IpcDataInfo *ipcParams, int32_t paramN
     LOGI("starting ...");
     inOutLen = sizeof(int64_t);
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_REQID, (uint8_t *)&requestId, &inOutLen);
-    if ((ret != HC_SUCCESS) || (inOutLen != sizeof(int64_t))) {
+    if ((inOutLen != sizeof(int64_t)) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_REQID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
     if (ret != HC_SUCCESS) {
@@ -279,9 +278,9 @@ static int32_t IpcServiceGmAddMemberToGroup(const IpcDataInfo *ipcParams, int32_
     LOGI("starting ...");
     inOutLen = sizeof(int64_t);
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_REQID, (uint8_t *)&requestId, &inOutLen);
-    if ((ret != HC_SUCCESS) || (inOutLen != sizeof(int64_t))) {
+    if ((inOutLen != sizeof(int64_t)) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_REQID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_ADD_PARAMS, (uint8_t *)&addParams, NULL);
     if (ret != HC_SUCCESS) {
@@ -297,6 +296,7 @@ static int32_t IpcServiceGmAddMemberToGroup(const IpcDataInfo *ipcParams, int32_
     if (ret != HC_SUCCESS) {
         return ret;
     }
+
     callRet = g_devGroupMgrMethod.addMemberToGroup(requestId, appId, addParams);
     ret = IpcEncodeCallReplay(outCache, PARAM_TYPE_IPC_RESULT, (const uint8_t *)&callRet, sizeof(int32_t));
     LOGI("process done, call ret %d, ipc ret %d", callRet, ret);
@@ -315,9 +315,9 @@ static int32_t IpcServiceGmDelMemberFromGroup(const IpcDataInfo *ipcParams, int3
     LOGI("starting ...");
     inOutLen = sizeof(int64_t);
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_REQID, (uint8_t *)&requestId, &inOutLen);
-    if ((ret != HC_SUCCESS) || (inOutLen != sizeof(int64_t))) {
+    if ((inOutLen != sizeof(int64_t)) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_REQID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
     if (ret != HC_SUCCESS) {
@@ -348,16 +348,16 @@ static int32_t IpcServiceGmProcessData(const IpcDataInfo *ipcParams, int32_t par
     LOGI("starting ...");
     inOutLen = sizeof(int64_t);
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_REQID, (uint8_t *)&requestId, &inOutLen);
-    if ((ret != HC_SUCCESS) || (inOutLen != sizeof(int64_t))) {
+    if ((inOutLen != sizeof(int64_t)) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_REQID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
 
     dataLen = 0;
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_COMM_DATA, (uint8_t *)&data, &dataLen);
-    if ((ret != HC_SUCCESS) || (dataLen <= 0)) {
+    if ((dataLen <= 0) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d, data length %d", PARAM_TYPE_COMM_DATA, dataLen);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = BindRequestIdWithAppId((const char *)data);
     if (ret != HC_SUCCESS) {
@@ -381,9 +381,9 @@ static int32_t IpcServiceGmConfirmRequest(const IpcDataInfo *ipcParams, int32_t 
     LOGI("starting ...");
     inOutLen = sizeof(int64_t);
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_REQID, (uint8_t *)&requestId, &inOutLen);
-    if ((ret != HC_SUCCESS) || (inOutLen != sizeof(int64_t))) {
+    if ((inOutLen != sizeof(int64_t)) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_REQID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&cfmParams, NULL);
     if (ret != HC_SUCCESS) {
@@ -414,9 +414,9 @@ static int32_t IpcServiceGmBindPeer(const IpcDataInfo *ipcParams, int32_t paramN
     LOGI("starting ...");
     inOutLen = sizeof(int64_t);
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_REQID, (uint8_t *)&requestId, &inOutLen);
-    if ((ret != HC_SUCCESS) || (inOutLen != sizeof(int64_t))) {
+    if ((inOutLen != sizeof(int64_t)) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_REQID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
     if (ret != HC_SUCCESS) {
@@ -447,9 +447,9 @@ static int32_t IpcServiceGmUnBindPeer(const IpcDataInfo *ipcParams, int32_t para
     LOGI("starting ...");
     inOutLen = sizeof(int64_t);
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_REQID, (uint8_t *)&requestId, &inOutLen);
-    if ((ret != HC_SUCCESS) || (inOutLen != sizeof(int64_t))) {
+    if ((inOutLen != sizeof(int64_t)) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_REQID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
     if (ret != HC_SUCCESS) {
@@ -481,26 +481,26 @@ static int32_t IpcServiceGmProcessLiteData(const IpcDataInfo *ipcParams, int32_t
     LOGI("starting ...");
     inOutLen = sizeof(int64_t);
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_REQID, (uint8_t *)&requestId, &inOutLen);
-    if ((ret != HC_SUCCESS) || (inOutLen != sizeof(int64_t))) {
+    if ((inOutLen != sizeof(int64_t)) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_REQID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
-    if ((ret != HC_SUCCESS) || (appId == NULL)) {
+    if ((appId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_APPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
 
     dataLen = 0;
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_COMM_DATA, (uint8_t *)&data, &dataLen);
-    if ((ret != HC_SUCCESS) || (dataLen <= 0)) {
+    if ((dataLen <= 0) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_COMM_DATA);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     AddReqIdByAppId(appId, requestId);
     callRet = g_devGroupMgrMethod.processLiteData(requestId, appId, data, dataLen);
     ret = IpcEncodeCallReplay(outCache, PARAM_TYPE_IPC_RESULT, (const uint8_t *)&callRet, sizeof(int32_t));
-    LOGI("process done, call ret %d, ipc ret %d", callRet, ret);
+    LOGI("process done, call ret %d, ipc ret %d, dataLen %d", callRet, ret, dataLen);
     return ret;
 }
 
@@ -516,20 +516,20 @@ static int32_t IpcServiceGmSaveCredential(const IpcDataInfo *ipcParams, int32_t 
     LOGI("starting ...");
     inOutLen = sizeof(int32_t);
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_OPCODE, (uint8_t *)&opCode, &inOutLen);
-    if ((ret != HC_SUCCESS) || (inOutLen != sizeof(int32_t))) {
+    if ((inOutLen != sizeof(int32_t)) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_OPCODE);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_CREDENTIAL, (uint8_t *)&credential, NULL);
-    if ((ret != HC_SUCCESS) || (credential == NULL)) {
+    if ((credential == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_CREDENTIAL);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     callRet = g_devGroupMgrMethod.processCredential(opCode, credential, &returnJsonStr);
     ret = IpcEncodeCallReplay(outCache, PARAM_TYPE_IPC_RESULT, (const uint8_t *)&callRet, sizeof(int32_t));
     LOGI("process done, call ret %d, ipc ret %d", callRet, ret);
     if ((ret == HC_SUCCESS) && (returnJsonStr != NULL)) {
-        ret += IpcEncodeCallReplay(outCache, PARAM_TYPE_REQ_INFO,
+        ret += IpcEncodeCallReplay(outCache, PARAM_TYPE_REG_INFO,
             (const uint8_t *)returnJsonStr, strlen(returnJsonStr) + 1);
         g_devGroupMgrMethod.destroyInfo(&returnJsonStr);
     } else {
@@ -572,19 +572,19 @@ static int32_t IpcServiceGmAddGroupManager(const IpcDataInfo *ipcParams, int32_t
 
     LOGI("starting ...");
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
-    if ((ret != HC_SUCCESS) || (appId == NULL)) {
+    if ((appId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_APPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_GROUPID, (uint8_t *)&groupId, NULL);
-    if ((ret != HC_SUCCESS) || (groupId == NULL)) {
+    if ((groupId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_GROUPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_MGR_APPID, (uint8_t *)&managerAppId, NULL);
-    if ((ret != HC_SUCCESS) || (managerAppId == NULL)) {
+    if ((managerAppId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_MGR_APPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     callRet = g_devGroupMgrMethod.addGroupManager(appId, groupId, managerAppId);
     ret = IpcEncodeCallReplay(outCache, PARAM_TYPE_IPC_RESULT, (const uint8_t *)&callRet, sizeof(int32_t));
@@ -602,19 +602,19 @@ static int32_t IpcServiceGmAddGroupFriend(const IpcDataInfo *ipcParams, int32_t 
 
     LOGI("starting ...");
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
-    if ((ret != HC_SUCCESS) || (appId == NULL)) {
+    if ((appId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_APPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_GROUPID, (uint8_t *)&groupId, NULL);
-    if ((ret != HC_SUCCESS) || (groupId == NULL)) {
+    if ((groupId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_GROUPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_FRIEND_APPID, (uint8_t *)&friendAppId, NULL);
-    if ((ret != HC_SUCCESS) || (friendAppId == NULL)) {
+    if ((friendAppId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_FRIEND_APPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     callRet = g_devGroupMgrMethod.addGroupFriend(appId, groupId, friendAppId);
     ret = IpcEncodeCallReplay(outCache, PARAM_TYPE_IPC_RESULT, (const uint8_t *)&callRet, sizeof(int32_t));
@@ -632,19 +632,19 @@ static int32_t IpcServiceGmDelGroupManager(const IpcDataInfo *ipcParams, int32_t
 
     LOGI("starting ...");
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
-    if ((ret != HC_SUCCESS) || (appId == NULL)) {
+    if ((appId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_APPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_GROUPID, (uint8_t *)&groupId, NULL);
-    if ((ret != HC_SUCCESS) || (groupId == NULL)) {
+    if ((groupId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_GROUPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_MGR_APPID, (uint8_t *)&managerAppId, NULL);
-    if ((ret != HC_SUCCESS) || (managerAppId == NULL)) {
+    if ((managerAppId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_MGR_APPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     callRet = g_devGroupMgrMethod.deleteGroupManager(appId, groupId, managerAppId);
     ret = IpcEncodeCallReplay(outCache, PARAM_TYPE_IPC_RESULT, (const uint8_t *)&callRet, sizeof(int32_t));
@@ -662,19 +662,19 @@ static int32_t IpcServiceGmDelGroupFriend(const IpcDataInfo *ipcParams, int32_t 
 
     LOGI("starting ...");
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
-    if ((ret != HC_SUCCESS) || (appId == NULL)) {
+    if ((appId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_APPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_GROUPID, (uint8_t *)&groupId, NULL);
-    if ((ret != HC_SUCCESS) || (groupId == NULL)) {
+    if ((groupId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_GROUPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_FRIEND_APPID, (uint8_t *)&friendAppId, NULL);
-    if ((ret != HC_SUCCESS) || (friendAppId == NULL)) {
+    if ((friendAppId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_FRIEND_APPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     callRet = g_devGroupMgrMethod.deleteGroupFriend(appId, groupId, friendAppId);
     ret = IpcEncodeCallReplay(outCache, PARAM_TYPE_IPC_RESULT, (const uint8_t *)&callRet, sizeof(int32_t));
@@ -693,14 +693,14 @@ static int32_t IpcServiceGmGetGroupManagers(const IpcDataInfo *ipcParams, int32_
 
     LOGI("starting ...");
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
-    if ((ret != HC_SUCCESS) || (appId == NULL)) {
+    if ((appId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_APPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_GROUPID, (uint8_t *)&groupId, NULL);
-    if ((ret != HC_SUCCESS) || (groupId == NULL)) {
+    if ((groupId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_GROUPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
 
     callRet = g_devGroupMgrMethod.getGroupManagers(appId, groupId, &managers, &managersNum);
@@ -729,14 +729,14 @@ static int32_t IpcServiceGmGetGroupFriends(const IpcDataInfo *ipcParams, int32_t
 
     LOGI("starting ...");
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
-    if ((ret != HC_SUCCESS) || (appId == NULL)) {
+    if ((appId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_APPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_GROUPID, (uint8_t *)&groupId, NULL);
-    if ((ret != HC_SUCCESS) || (groupId == NULL)) {
+    if ((groupId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_GROUPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
 
     callRet = g_devGroupMgrMethod.getGroupFriends(appId, groupId, &friends, &friendsNum);
@@ -764,14 +764,14 @@ static int32_t IpcServiceGmGetGroupInfoById(const IpcDataInfo *ipcParams, int32_
 
     LOGI("starting ...");
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
-    if ((ret != HC_SUCCESS) || (appId == NULL)) {
+    if ((appId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_APPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_GROUPID, (uint8_t *)&groupId, NULL);
-    if ((ret != HC_SUCCESS) || (groupId == NULL)) {
+    if ((groupId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_GROUPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
 
     callRet = g_devGroupMgrMethod.getGroupInfoById(appId, groupId, &groupInfo);
@@ -799,14 +799,14 @@ static int32_t IpcServiceGmGetGroupInfo(const IpcDataInfo *ipcParams, int32_t pa
 
     LOGI("starting ...");
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
-    if ((ret != HC_SUCCESS) || (appId == NULL)) {
+    if ((appId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_APPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_QUERY_PARAMS, (uint8_t *)&queryParams, NULL);
-    if ((ret != HC_SUCCESS) || (queryParams == NULL)) {
+    if ((queryParams == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_QUERY_PARAMS);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
 
     callRet = g_devGroupMgrMethod.getGroupInfo(appId, queryParams, &outGroups, &groupNum);
@@ -836,15 +836,15 @@ static int32_t IpcServiceGmGetJoinedGroups(const IpcDataInfo *ipcParams, int32_t
 
     LOGI("starting ...");
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
-    if ((ret != HC_SUCCESS) || (appId == NULL)) {
+    if ((appId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_APPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     inOutLen = sizeof(groupType);
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_GROUP_TYPE, (uint8_t *)&groupType, &inOutLen);
-    if ((ret != HC_SUCCESS || (inOutLen != sizeof(groupType)))) {
+    if ((inOutLen != sizeof(groupType)) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_GROUP_TYPE);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
 
     callRet = g_devGroupMgrMethod.getJoinedGroups(appId, groupType, &outGroups, &groupNum);
@@ -873,14 +873,14 @@ static int32_t IpcServiceGmGetRelatedGroups(const IpcDataInfo *ipcParams, int32_
 
     LOGI("starting ...");
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
-    if ((ret != HC_SUCCESS) || (appId == NULL)) {
+    if ((appId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_APPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_UDID, (uint8_t *)&peerUdid, NULL);
-    if ((ret != HC_SUCCESS) || (peerUdid == NULL)) {
+    if ((peerUdid == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_UDID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
 
     callRet = g_devGroupMgrMethod.getRelatedGroups(appId, peerUdid, &outGroups, &groupNum);
@@ -909,19 +909,19 @@ static int32_t IpcServiceGmGetDeviceInfoById(const IpcDataInfo *ipcParams, int32
 
     LOGI("starting ...");
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
-    if ((ret != HC_SUCCESS) || (appId == NULL)) {
+    if ((appId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_APPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_UDID, (uint8_t *)&peerUdid, NULL);
-    if ((ret != HC_SUCCESS) || (peerUdid == NULL)) {
+    if ((peerUdid == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_UDID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_GROUPID, (uint8_t *)&groupId, NULL);
-    if ((ret != HC_SUCCESS) || (groupId == NULL)) {
+    if ((groupId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_GROUPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
 
     callRet = g_devGroupMgrMethod.getDeviceInfoById(appId, peerUdid, groupId, &outDevInfo);
@@ -950,14 +950,14 @@ static int32_t IpcServiceGmGetTrustedDevices(const IpcDataInfo *ipcParams, int32
 
     LOGI("starting ...");
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
-    if ((ret != HC_SUCCESS) || (appId == NULL)) {
+    if ((appId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_APPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_GROUPID, (uint8_t *)&groupId, NULL);
-    if ((ret != HC_SUCCESS) || (groupId == NULL)) {
+    if ((groupId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_GROUPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
 
     callRet = g_devGroupMgrMethod.getTrustedDevices(appId, groupId, &outDevInfo, &outDevNum);
@@ -987,19 +987,19 @@ static int32_t IpcServiceGmIsDeviceInGroup(const IpcDataInfo *ipcParams, int32_t
 
     LOGI("starting ...");
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
-    if ((ret != HC_SUCCESS) || (appId == NULL)) {
+    if ((appId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_APPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_UDID, (uint8_t *)&udid, NULL);
-    if ((ret != HC_SUCCESS) || (udid == NULL)) {
+    if ((udid == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_UDID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_GROUPID, (uint8_t *)&groupId, NULL);
-    if ((ret != HC_SUCCESS) || (groupId == NULL)) {
+    if ((groupId == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_GROUPID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
 
     bRet = g_devGroupMgrMethod.isDeviceInGroup(appId, groupId, udid);
@@ -1023,14 +1023,14 @@ static int32_t IpcServiceGaProcessData(const IpcDataInfo *ipcParams, int32_t par
     LOGI("starting ...");
     inOutLen = sizeof(authReqId);
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_REQID, (uint8_t *)&authReqId, &inOutLen);
-    if ((ret != HC_SUCCESS) || (inOutLen != sizeof(authReqId))) {
+    if ((inOutLen != sizeof(authReqId)) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_REQID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_COMM_DATA, (uint8_t *)&data, (int32_t *)&dataLen);
-    if ((ret != HC_SUCCESS) || (data == NULL) || (dataLen == 0)) {
+    if ((data == NULL) || (dataLen == 0) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_COMM_DATA);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_DEV_AUTH_CB, (uint8_t *)&gaCallback, NULL);
     if (ret != HC_SUCCESS) {
@@ -1086,9 +1086,9 @@ static int32_t IpcServiceGaIsTrustedDevice(const IpcDataInfo *ipcParams, int32_t
 
     LOGI("starting ...");
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_COMM_DATA, (uint8_t *)&udid, &udidLen);
-    if ((ret != HC_SUCCESS) || (udid == NULL) || (udidLen == 0)) {
+    if ((udid == NULL) || (udidLen == 0) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_COMM_DATA);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
 
     bRet = g_groupAuthMgrMethod.isTrustedDevice(udid);
@@ -1112,9 +1112,9 @@ static int32_t IpcServiceGaGetAuthState(const IpcDataInfo *ipcParams, int32_t pa
     LOGI("starting ...");
     inOutLen = sizeof(authReqId);
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_REQID, (uint8_t *)&authReqId, &inOutLen);
-    if ((ret != HC_SUCCESS) || (inOutLen != sizeof(authReqId))) {
+    if ((inOutLen != sizeof(authReqId)) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_REQID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_GROUPID, (uint8_t *)&groupId, NULL);
     if (ret != HC_SUCCESS) {
@@ -1147,14 +1147,14 @@ static int32_t IpcServiceGaAuthDevice(const IpcDataInfo *ipcParams, int32_t para
     LOGI("starting ...");
     inOutLen = sizeof(authReqId);
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_REQID, (uint8_t *)&authReqId, &inOutLen);
-    if ((ret != HC_SUCCESS) || (inOutLen != sizeof(authReqId))) {
+    if ((inOutLen != sizeof(authReqId)) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_REQID);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_AUTH_PARAMS, (uint8_t *)&authParams, NULL);
-    if ((ret != HC_SUCCESS) || (authParams == NULL)) {
+    if ((authParams == NULL) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_AUTH_PARAMS);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_DEV_AUTH_CB, (uint8_t *)&gaCallback, NULL);
     if (ret != HC_SUCCESS) {
@@ -1196,9 +1196,9 @@ static int32_t IpcServiceGaInformDevDisconnection(const IpcDataInfo *ipcParams, 
 
     LOGI("starting ...");
     ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_COMM_DATA, (uint8_t *)&udid, &udidLen);
-    if ((ret != HC_SUCCESS) || (udid == NULL) || (udidLen == 0)) {
+    if ((udid == NULL) || (udidLen == 0) || (ret != HC_SUCCESS)) {
         LOGE("get param error, type %d", PARAM_TYPE_COMM_DATA);
-        return ret;
+        return HC_ERR_IPC_BAD_PARAM;
     }
 
     g_groupAuthMgrMethod.informDeviceDisconnection(udid);
