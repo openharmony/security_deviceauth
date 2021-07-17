@@ -13,22 +13,33 @@
  * limitations under the License.
  */
 
-#ifndef IPC_CALLBACK_PROXY_H
-#define IPC_CALLBACK_PROXY_H
+#ifndef IPC_IFACE_H
+#define IPC_IFACE_H
 
-#include "ipc_iface.h"
-#include "iremote_proxy.h"
+#include <cstdint>
+#include "iremote_broker.h"
+#include "message_parcel.h"
 
 namespace OHOS {
-class ProxyDevAuthCb : public IRemoteProxy<ICommIpcCallback> {
+class IMethodsIpcCall : public IRemoteBroker {
 public:
-    explicit ProxyDevAuthCb(const sptr<IRemoteObject> &impl);
-    ~ProxyDevAuthCb();
-    virtual void DoCallBack(int32_t callbackId, uintptr_t cbHook,
-        MessageParcel &dataParcel, MessageParcel &reply) override;
-private:
-    static inline BrokerDelegator<ProxyDevAuthCb> delegator_;
+    enum {
+        DEV_AUTH_CALL_REQUEST = 1,
+    };
+    DECLARE_INTERFACE_DESCRIPTOR(u"MethodsIpcCall");
 };
+
+class ICommIpcCallback : public IRemoteBroker {
+public:
+    enum {
+        DEV_AUTH_CALLBACK_REQUEST = 1,
+    };
+    DECLARE_INTERFACE_DESCRIPTOR(u"CommIpcCallback");
+    virtual void DoCallBack(int32_t callbackId, uintptr_t cbHook,
+        MessageParcel &dataParcel, MessageParcel &reply, MessageOption &option) = 0;
+};
+
+const int32_t DEV_AUTH_CALL_WAIT_TIME = 30; /* second */
 }
 
 #endif

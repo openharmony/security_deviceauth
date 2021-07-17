@@ -13,7 +13,7 @@
 
 import("//base/security/deviceauth/deviceauth_env.gni")
 
-if (target_os == "liteos") {
+if (target_os == "liteos" || (defined(ohos_lite) && ohos_kernel_type == "liteos_m")) {
   hals_inc_path = [
     "${hals_path}/inc/common",
     "${hals_path}/inc/liteos",
@@ -28,3 +28,13 @@ if (target_os == "liteos") {
   ]
   hal_module_name = "deviceauth_hal_linux"
 }
+
+hal_common_files = [
+  "src/common/hc_parcel.c",
+  "src/common/hc_string.c",
+  "src/common/hc_task_thread.c",
+  "src/common/hc_tlv_parser.c",
+  "src/common/json_utils.c",
+  "src/common/common_util.c",
+  "src/common/alg_loader.c",
+]

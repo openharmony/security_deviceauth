@@ -27,15 +27,15 @@
 #define CHECK_LEN_ZERO_RETURN_ERROR_CODE(len, paramTag) \
     do { \
         if ((len) == 0) { \
-            LOGE("%s is invalid length", (paramTag)); \
+            LOGE("%s is invalid length.", (paramTag)); \
             return HAL_ERR_INVALID_LEN; \
         } \
     } while (0)
 
-#define CHECK_PTR_RETURN_ERROR_CODE(ptr, paramTag) \
+#define CHECK_PTR_RETURN_HAL_ERROR_CODE(ptr, paramTag) \
     do { \
         if ((ptr) == NULL) { \
-            LOGE("%s is null ptr", (paramTag)); \
+            LOGE("%s is null.", (paramTag)); \
             return HAL_ERR_NULL_PTR; \
         } \
     } while (0)

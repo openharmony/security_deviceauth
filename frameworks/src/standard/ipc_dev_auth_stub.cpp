@@ -271,17 +271,22 @@ void ServiceDevAuth::ResetRemoteObject(int32_t idx)
     return;
 }
 
-void ServiceDevAuth::ActCallback(int32_t objIdx, int32_t callbackId,
+void ServiceDevAuth::ActCallback(int32_t objIdx, int32_t callbackId, bool sync,
     uintptr_t cbHook, MessageParcel &dataParcel, MessageParcel &reply)
 {
     if ((objIdx < 0) || (objIdx >= MAX_CBSTUB_SIZE) || (!g_cbStub[objIdx].inUse)) {
         LOGW("nothing to do, callback id %d, remote object id %d", callbackId, objIdx);
         return;
     }
-
+    MessageOption option(MessageOption::TF_SYNC);
+    option.SetWaitTime(DEV_AUTH_CALL_WAIT_TIME);
+    if (!sync) {
+        option.SetFlags(MessageOption::TF_ASYNC);
+        option.SetWaitTime(0);
+    }
     std::lock_guard<std::mutex> autoLock(g_cBMutex);
     sptr<ICommIpcCallback> proxy = iface_cast<ICommIpcCallback>(g_cbStub[objIdx].cbStub);
-    proxy->DoCallBack(callbackId, cbHook, dataParcel, reply);
+    proxy->DoCallBack(callbackId, cbHook, dataParcel, reply, option);
     return;
 }
 

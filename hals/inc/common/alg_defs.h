@@ -96,9 +96,6 @@ typedef int32_t (*AgreeSharedSecretWithStorageFunc)(const KeyBuff *priKey, const
 typedef int32_t (*AgreeSharedSecretFunc)(const KeyBuff *priKey, const KeyBuff *pubKey, Algorithm algo,
     Uint8Buff *sharedKey);
 
-typedef int32_t (*ComputePublicKeyFunc)(const Uint8Buff *priKey, const Uint8Buff *base, Algorithm algo,
-    Uint8Buff *pubKey);
-
 typedef int32_t (*BigNumExpModFunc)(const Uint8Buff *base, const Uint8Buff *exp, const char *bigNumHex,
     Uint8Buff *outNum);
 
@@ -122,6 +119,8 @@ typedef bool (*CheckEcPublicKeyFunc)(const Uint8Buff *pubKey, Algorithm algo);
 
 typedef bool (*CheckDlPublicKeyFunc)(const Uint8Buff *key, const char *primeHex);
 
+typedef int32_t (*BigNumCompareFunc)(const Uint8Buff *x, const Uint8Buff *y);
+
 typedef struct {
     InitAlgFunc initAlg;
     Sha256Func sha256;
@@ -143,9 +142,9 @@ typedef struct {
     SignFunc sign;
     VerifyFunc verify;
     ImportPublicKeyFunc importPublicKey;
-    ComputePublicKeyFunc computePublicKey;
     CheckDlPublicKeyFunc checkDlPublicKey;
     CheckEcPublicKeyFunc checkEcPublicKey;
+    BigNumCompareFunc bigNumCompare;
 } AlgLoader;
 
 #endif

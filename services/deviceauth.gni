@@ -124,16 +124,23 @@ deviceauth_files = [
   "${services_path}/session/src/session_manager.c",
 ]
 
-build_flags = []
+build_flags = [ "-Werror" ]
 
 if (target_os == "linux") {
-  build_flags += [ "-D_LINUX" ]
+  build_flags += [ "-D__LINUX__" ]
+}
+
+ipc_src_suffix = "cpp"
+ipc_adapt_path = "standard"
+if (defined(ohos_lite)) {
+  ipc_src_suffix = "c"
+  ipc_adapt_path = "lite"
 }
 
 deviceauth_ipc_files = [
-  "${frameworks_path}/src/ipc_adapt.cpp",
-  "${frameworks_path}/src/ipc_dev_auth_proxy.cpp",
-  "${frameworks_path}/src/ipc_dev_auth_stub.cpp",
-  "${frameworks_path}/src/ipc_callback_proxy.cpp",
-  "${frameworks_path}/src/ipc_callback_stub.cpp",
+  "${frameworks_path}/src/${ipc_adapt_path}/ipc_adapt.${ipc_src_suffix}",
+  "${frameworks_path}/src/${ipc_adapt_path}/ipc_dev_auth_proxy.${ipc_src_suffix}",
+  "${frameworks_path}/src/${ipc_adapt_path}/ipc_dev_auth_stub.${ipc_src_suffix}",
+  "${frameworks_path}/src/${ipc_adapt_path}/ipc_callback_proxy.${ipc_src_suffix}",
+  "${frameworks_path}/src/${ipc_adapt_path}/ipc_callback_stub.${ipc_src_suffix}",
 ]

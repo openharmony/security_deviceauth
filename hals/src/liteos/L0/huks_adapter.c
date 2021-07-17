@@ -25,8 +25,8 @@
 static int32_t BaseCheckParams(const Uint8Buff **inParams, const char **paramTags, uint32_t len)
 {
     for (uint32_t i = 0; i < len; i++) {
-        CHECK_PTR_RETURN_ERROR_CODE(inParams[i], paramTags[i]);
-        CHECK_PTR_RETURN_ERROR_CODE(inParams[i]->val, paramTags[i]);
+        CHECK_PTR_RETURN_HAL_ERROR_CODE(inParams[i], paramTags[i]);
+        CHECK_PTR_RETURN_HAL_ERROR_CODE(inParams[i]->val, paramTags[i]);
         CHECK_LEN_ZERO_RETURN_ERROR_CODE(inParams[i]->length, paramTags[i]);
     }
     return HAL_SUCCESS;
@@ -93,12 +93,12 @@ static int32_t InitHks()
 
 static int32_t Sha256(const Uint8Buff *message, Uint8Buff *hash)
 {
-    CHECK_PTR_RETURN_ERROR_CODE(message, "message");
-    CHECK_PTR_RETURN_ERROR_CODE(message->val, "message->val");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(message, "message");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(message->val, "message->val");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(message->length, "message->length");
 
-    CHECK_PTR_RETURN_ERROR_CODE(hash, "hash");
-    CHECK_PTR_RETURN_ERROR_CODE(hash->val, "hash->val");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(hash, "hash");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(hash->val, "hash->val");
     CHECK_LEN_EQUAL_RETURN(hash->length, SHA256_LEN, "hash->length");
 
     struct HksBlob srcBlob = { message->length, message->val };
@@ -128,8 +128,8 @@ static int32_t Sha256(const Uint8Buff *message, Uint8Buff *hash)
 
 static int32_t GenerateRandom(Uint8Buff *rand)
 {
-    CHECK_PTR_RETURN_ERROR_CODE(rand, "rand");
-    CHECK_PTR_RETURN_ERROR_CODE(rand->val, "rand->val");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(rand, "rand");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(rand->val, "rand->val");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(rand->length, "rand->length");
 
     struct HksBlob randBlob = { rand->length, rand->val };
@@ -144,8 +144,8 @@ static int32_t GenerateRandom(Uint8Buff *rand)
 
 static int32_t CheckKeyExist(const Uint8Buff *keyAlias)
 {
-    CHECK_PTR_RETURN_ERROR_CODE(keyAlias, "keyAlias");
-    CHECK_PTR_RETURN_ERROR_CODE(keyAlias->val, "keyAlias->val");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(keyAlias, "keyAlias");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(keyAlias->val, "keyAlias->val");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(keyAlias->length, "keyAlias->length");
 
     struct HksBlob keyAliasBlob = { keyAlias->length, keyAlias->val };
@@ -160,8 +160,8 @@ static int32_t CheckKeyExist(const Uint8Buff *keyAlias)
 
 static int32_t DeleteKey(const Uint8Buff *keyAlias)
 {
-    CHECK_PTR_RETURN_ERROR_CODE(keyAlias, "keyAlias");
-    CHECK_PTR_RETURN_ERROR_CODE(keyAlias->val, "keyAlias->val");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(keyAlias, "keyAlias");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(keyAlias->val, "keyAlias->val");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(keyAlias->length, "keyAlias->length");
 
     struct HksBlob keyAliasBlob = { keyAlias->length, keyAlias->val };
@@ -289,10 +289,10 @@ static int32_t CheckAesGcmEncryptParam(const Uint8Buff *key, const Uint8Buff *pl
         return ret;
     }
 
-    CHECK_PTR_RETURN_ERROR_CODE(encryptInfo, "encryptInfo");
-    CHECK_PTR_RETURN_ERROR_CODE(encryptInfo->aad, "aad");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(encryptInfo, "encryptInfo");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(encryptInfo->aad, "aad");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(encryptInfo->aadLen, "aadLen");
-    CHECK_PTR_RETURN_ERROR_CODE(encryptInfo->nonce, "nonce");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(encryptInfo->nonce, "nonce");
     CHECK_LEN_LOWER_RETURN(encryptInfo->nonceLen, HKS_AE_NONCE_LEN, "nonceLen");
     CHECK_LEN_LOWER_RETURN(outCipher->length, plain->length + HKS_AE_TAG_LEN, "outCipher");
 
@@ -364,10 +364,10 @@ static int32_t CheckAesGcmDecryptParam(const Uint8Buff *key, const Uint8Buff *ci
         return ret;
     }
 
-    CHECK_PTR_RETURN_ERROR_CODE(decryptInfo, "decryptInfo");
-    CHECK_PTR_RETURN_ERROR_CODE(decryptInfo->aad, "aad");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(decryptInfo, "decryptInfo");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(decryptInfo->aad, "aad");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(decryptInfo->aadLen, "aadLen");
-    CHECK_PTR_RETURN_ERROR_CODE(decryptInfo->nonce, "nonce");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(decryptInfo->nonce, "nonce");
     CHECK_LEN_LOWER_RETURN(decryptInfo->nonceLen, HKS_AE_NONCE_LEN, "nonceLen");
     CHECK_LEN_LOWER_RETURN(outPlain->length, cipher->length - HKS_AE_TAG_LEN, "outPlain");
 
