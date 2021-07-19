@@ -13,7 +13,7 @@
 
 if (defined(ohos_lite)) {
   import("//build/lite/config/component/lite_component.gni")
-  lite_component("hichain_3_0") {
+  lite_component("deviceauth_lite") {
     features = [
       "services:deviceauth",
       "services:deviceauth_service",
