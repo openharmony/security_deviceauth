@@ -69,7 +69,7 @@ static int32_t CbStubOnRemoteReply(void *ipcMsg, IpcIo *reply)
         ret = SendReply(NULL, ipcMsg, &replyErr);
     } else {
         LOGI("callback - SendReply done");
-        ret = SendReply(NULL, ipcMsg, &reply);
+        ret = SendReply(NULL, ipcMsg, reply);
     }
     return ret;
 }
