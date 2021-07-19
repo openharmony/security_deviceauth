@@ -135,6 +135,7 @@ int32_t ActCall(const IClientProxy *clientInst, ProxyDevAuthData *dataCtx)
         LOGE("proxy invalid");
         return HC_ERROR;
     }
+    LOGI("start to invoke ipc call...");
     ipcRet = clientInst->Invoke((IClientProxy *)clientInst, DEV_AUTH_CALL_REQUEST,
         dataCtx->data, (IOwner)(dataCtx->reply), CliInvokeRetCallback);
     LOGI("invoke call done, ipc result(%d)", ipcRet);
