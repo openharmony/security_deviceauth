@@ -31,45 +31,6 @@ const char *HcFmtLogData(const char *funName, char *out, int32_t outSz, const ch
 
 #include "hilog/log.h"
 
-#ifndef LITE_DEVICE
-#define DEVAUTH_FMT_BUFFSZ 1024
-
-#define LOGD(fmt, ...) do { \
-    char fmtCache[DEVAUTH_FMT_BUFFSZ]; \
-    fmtCache[0] = 0; \
-    const char *fmtInfo = HcFmtLogData(__FUNCTION__, fmtCache, sizeof(fmtCache), fmt, ##__VA_ARGS__); \
-    fmtInfo ? (void)HiLogPrint(LOG_CORE, LOG_DEBUG, LOG_DOMAIN, "[DEVAUTH]", "%{public}s", fmtCache) : \
-        (void)HiLogPrint(LOG_CORE, LOG_DEBUG, LOG_DOMAIN, \
-            "[DEVAUTH]", "%{public}s: " fmt, __FUNCTION__, ##__VA_ARGS__); \
-} while (0)
-
-#define LOGE(fmt, ...) do { \
-    char fmtCache[DEVAUTH_FMT_BUFFSZ]; \
-    fmtCache[0] = 0; \
-    const char *fmtInfo = HcFmtLogData(__FUNCTION__, fmtCache, sizeof(fmtCache), fmt, ##__VA_ARGS__); \
-    fmtInfo ? (void)HiLogPrint(LOG_CORE, LOG_ERROR, LOG_DOMAIN, "[DEVAUTH]", "%{public}s", fmtCache) : \
-        (void)HiLogPrint(LOG_CORE, LOG_ERROR, LOG_DOMAIN, \
-            "[DEVAUTH]", "%{public}s: " fmt, __FUNCTION__, ##__VA_ARGS__); \
-} while (0)
-
-#define LOGI(fmt, ...) do { \
-    char fmtCache[DEVAUTH_FMT_BUFFSZ]; \
-    fmtCache[0] = 0; \
-    const char *fmtInfo = HcFmtLogData(__FUNCTION__, fmtCache, sizeof(fmtCache), fmt, ##__VA_ARGS__); \
-    fmtInfo ? (void)HiLogPrint(LOG_CORE, LOG_INFO, LOG_DOMAIN, "[DEVAUTH]", "%{public}s", fmtCache) : \
-        (void)HiLogPrint(LOG_CORE, LOG_INFO, LOG_DOMAIN, \
-            "[DEVAUTH]", "%{public}s: " fmt, __FUNCTION__, ##__VA_ARGS__); \
-} while (0)
-
-#define LOGW(fmt, ...) do { \
-    char fmtCache[DEVAUTH_FMT_BUFFSZ]; \
-    fmtCache[0] = 0; \
-    const char *fmtInfo = HcFmtLogData(__FUNCTION__, fmtCache, sizeof(fmtCache), fmt, ##__VA_ARGS__); \
-    fmtInfo ? (void)HiLogPrint(LOG_CORE, LOG_WARN, LOG_DOMAIN, "[DEVAUTH]", "%{public}s", fmtCache) : \
-        (void)HiLogPrint(LOG_CORE, LOG_WARN, LOG_DOMAIN, \
-            "[DEVAUTH]", "%{public}s: " fmt, __FUNCTION__, ##__VA_ARGS__); \
-} while (0)
-#else
 #define LOGD(fmt, ...) ((void)HiLogPrint(LOG_CORE, LOG_DEBUG, LOG_DOMAIN, \
     "[DEVAUTH]", "%{public}s: " fmt, __FUNCTION__, ##__VA_ARGS__))
 #define LOGE(fmt, ...) ((void)HiLogPrint(LOG_CORE, LOG_ERROR, LOG_DOMAIN, \
@@ -78,7 +39,6 @@ const char *HcFmtLogData(const char *funName, char *out, int32_t outSz, const ch
     "[DEVAUTH]", "%{public}s: " fmt, __FUNCTION__, ##__VA_ARGS__))
 #define LOGW(fmt, ...) ((void)HiLogPrint(LOG_CORE, LOG_WARN, LOG_DOMAIN, \
     "[DEVAUTH]", "%{public}s: " fmt, __FUNCTION__, ##__VA_ARGS__))
-#endif
 
 #else
 
