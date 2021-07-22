@@ -1626,7 +1626,7 @@ void ShowIpcSvcInfo(const SvcIdentity *svc)
 #endif
 }
 
-int32_t InitProxyAadpt(void)
+int32_t InitProxyAdapt(void)
 {
     int32_t ret;
 
@@ -1652,7 +1652,7 @@ int32_t InitProxyAadpt(void)
     return HC_SUCCESS;
 }
 
-void UnInitProxyAadpt(void)
+void UnInitProxyAdapt(void)
 {
     g_proxyInstance = NULL;
     if (UnregisterIpcCallback(g_sdkCbStub.stubIdentity)) {
