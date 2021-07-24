@@ -24,6 +24,34 @@
 extern "C" {
 #endif
 
+static void CbProxyFormReplyData(int32_t reqRetVal, IpcIo *replyDst, const IpcIo *replySrc)
+{
+    errno_t eno;
+
+    if (!IpcIoAvailable((IpcIo *)replySrc)) {
+        LOGE("reply context is not available");
+        *(int32_t *)(replyDst->bufferCur) = -1;
+        replyDst->bufferLeft = sizeof(int32_t);
+        return;
+    }
+    if (reqRetVal != 0) {
+        *(int32_t *)(replyDst->bufferCur) = reqRetVal;
+        replyDst->bufferLeft = sizeof(int32_t);
+        return;
+    }
+
+    LOGI("with reply data, length(%zu), flag(%u)", replySrc->bufferLeft, replySrc->flag);
+    eno = memcpy_s(replyDst->bufferCur, replyDst->bufferLeft, replySrc->bufferCur, replySrc->bufferLeft);
+    if (eno != EOK) {
+        replyDst->flag = 0;
+        LOGE("memory copy reply data failed");
+        return;
+    }
+    replyDst->bufferLeft = replySrc->bufferLeft;
+    LOGI("out reply data, length(%zu)", replyDst->bufferLeft);
+    return;
+}
+
 void CbProxySendRequest(SvcIdentity sid, int32_t callbackId, uintptr_t cbHook, IpcIo *data, IpcIo *reply)
 {
     int32_t ret;
@@ -31,7 +59,6 @@ void CbProxySendRequest(SvcIdentity sid, int32_t callbackId, uintptr_t cbHook, I
     int32_t dataSz;
     uintptr_t outMsg = 0x0;
     IpcIo replyTmp;
-    errno_t eno;
 
     ShowIpcSvcInfo(&(sid));
     reqData = (IpcIo *)InitIpcDataCache(IPC_DATA_BUFF_MAX_SZ);
@@ -51,23 +78,16 @@ void CbProxySendRequest(SvcIdentity sid, int32_t callbackId, uintptr_t cbHook, I
         return;
     }
     int32_t callFlag = ((reply != NULL) ? 0 : 1);
+    callFlag = 0;
     ret = SendRequest(NULL, sid, DEV_AUTH_CALLBACK_REQUEST, reqData, &replyTmp, callFlag, &outMsg);
-    LOGI("SendRequest done, return(%d)", ret);
-    if ((ret == 0) && (reply != NULL) && (IpcIoAvailable(&replyTmp))) {
-        LOGI("with reply data, length(%zu), flag(%u)", replyTmp.bufferLeft, replyTmp.flag);
-        eno = memcpy_s(reply->bufferCur, reply->bufferLeft, replyTmp.bufferCur, replyTmp.bufferLeft);
-        if (eno != EOK) {
-            reply->flag = 0;
-            HcFree((void *)reqData);
-            FreeBuffer(NULL, (void *)outMsg);
-            LOGE("memory copy reply data failed");
-            return;
-        }
-        reply->bufferLeft = replyTmp.bufferLeft;
-        LOGI("out reply data, length(%zu), flag(%u)", reply->bufferLeft, reply->flag);
-    }
-    FreeBuffer(NULL, (void *)outMsg);
+    LOGI("SendRequest(%d) done, return(%d)", callFlag, ret);
     HcFree((void *)reqData);
+    if (reply == NULL) {
+        FreeBuffer(NULL, (void *)outMsg);
+        return;
+    }
+    CbProxyFormReplyData(ret, reply, &replyTmp);
+    FreeBuffer(NULL, (void *)outMsg);
     return;
 }
 

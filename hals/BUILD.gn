@@ -26,7 +26,7 @@ if (defined(ohos_lite)) {
       "//base/security/deviceauth/services/common/inc",
       "//third_party/cJSON",
       "//utils/native/lite/include",
-      "//base/security/huks/huawei_property/include",
+      "//base/security/huks/interfaces/innerkits/huks_standard/main/include",
       "//base/hiviewdfx/hilog_lite/interfaces/native/innerkits/hilog",
       "//third_party/bounds_checking_function/include"
     ]
