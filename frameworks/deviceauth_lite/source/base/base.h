@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Huawei Device Co., Ltd.
+ * Copyright (c) 2020-2021 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -99,13 +99,13 @@
 /* AES */
 #define HC_AES_ADD_LEN              64
 
-/* IV */
-#define HC_IV_MAX_LEN               12
+/* nonce */
+#define HC_AES_GCM_NONCE_LEN        12
 
 #define BYTE_TO_HEX_OPER_LENGTH     2
 #define VERSION_LENGTH              30
 
-#define HC_MAX_KEY_TYPE_NUM         6
+#define HC_MAX_KEY_TYPE_NUM         7
 #define HC_MAX_PAIR_TYPE_NUM        2
 #define HC_KEY_TYPE_PAIR_LEN        2
 

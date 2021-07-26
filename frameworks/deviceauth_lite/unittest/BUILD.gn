@@ -19,14 +19,13 @@ unittest("deviceauth_test") {
   output_extension = "bin"
   output_dir = "$root_out_dir/test/unittest/security"
   sources = [
-    "deviceauth_test.cpp",
+    "deviceauth_test.cpp"
   ]
   include_dirs = [
-    "//base/security/deviceauth/interfaces/innerkits/deviceauth_lite",
-    "//base/security/huks/interfaces/innerkits/huks_lite",
+    "//base/security/deviceauth/interfaces/innerkits/deviceauth_lite"
   ]
   deps = [
     "//base/security/deviceauth/frameworks/deviceauth_lite/source:hichainsdk",
-    "//base/security/huks/frameworks/huks_lite/source:huks",
+    "//base/security/huks/interfaces/innerkits/huks_lite:huks_3.0_sdk"
   ]
 }

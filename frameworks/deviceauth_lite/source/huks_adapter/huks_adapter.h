@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Huawei Device Co., Ltd.
+ * Copyright (c) 2020-2021 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -26,9 +26,20 @@
         } \
     } while (0)
 
+#define array_size(arr) ((sizeof(arr)) / (sizeof(arr)[0]))
+
 enum huks_adapter_error_code {
+    ERROR_CODE_NO_PEER_PUBLIC_KEY = -10,
     ERROR_CODE_FAILED = -1,
-    ERROR_CODE_SUCCESS
+    ERROR_CODE_INIT_PARAM_SET = -2,
+    ERROR_CODE_ADD_PARAM = -3,
+    ERROR_CODE_BUILD_PARAM_SET = -4,
+    ERROR_CODE_GENERATE_KEY = -5,
+    ERROR_CODE_FRESH_PARAM_SET = -6,
+    ERROR_CODE_GET_PUB_KEY_FROM_PARAM_SET = -7,
+    ERROR_CODE_GET_PRIV_KEY_FROM_PARAM_SET = -8,
+    ERROR_CODE_NO_SPACE = -9,
+    ERROR_CODE_SUCCESS = 0
 };
 
 enum huks_key_alias_type {
@@ -51,9 +62,6 @@ struct huks_key_type {
     uint8_t reserved1;
     uint8_t reserved2;
 };
-
-#define HKS_ERROR_INVALID_KEY_FILE ((int32_t)-1015)
-#define HKS_ERROR_READ_FILE_FAIL ((int32_t)-1003)
 
 enum huks_derived_type {
     HUKS_DERIVED_TYPE_KEK = KEY_ALIAS_KEK,
