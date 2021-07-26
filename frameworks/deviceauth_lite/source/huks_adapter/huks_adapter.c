@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Huawei Device Co., Ltd.
+ * Copyright (c) 2020-2021 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,41 +14,26 @@
  */
 
 #include "huks_adapter.h"
-#include <securec.h>
 #include <stdio.h>
+#include "securec.h"
+#include "commonutil.h"
+#include "hks_api.h"
+#include "hks_param.h"
 #include "log.h"
 #include "mem_stat.h"
-#include "commonutil.h"
-#include "hks_file_api.h"
-#include "hks_client.h"
 
-#define HC_HKDF_KEY_LEN    128
-#define HC_AES_GCM_KEY_LEN 128
+#define X25519_KEY_LEN 256
+#define ED25519_KEY_LEN 256
+#define X25519_KEY_PARAM_SET_SIZE 128 /* priv key size: 32, pub key size: 32, add two tag, no larger than 128 */
+#define DEFAULT_PARAM_SET_OUT_SIZE 1024
 #define HC_PARAM_CHAIN_LEN 255
-#define HC_PARAM_KEY_LEN   256
+#define HC_PARAM_KEY_LEN 256
+#define BITS_PER_BYTE 8
+#define HC_CCM_NONCE_LEN 7
 
 #if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
 static const uint8_t g_factor[] = "hichain_key_enc_key";
 static const int32_t g_cert_chain_cnt = 4;
-
-void build_keyparam_ext(struct hks_key_param *param)
-{
-    param->key_param_ext.wrap_flag = 1; /* 1: use tee interface */
-    param->key_param_ext.storage_flag = 1; /* reserve */
-
-    param->key_param_ext.data_creator.type = HKS_BLOB_TYPE_RAW;
-    param->key_param_ext.data_creator.size = 0;
-    param->key_param_ext.data_creator.data = NULL;
-
-    param->key_param_ext.data_owner.type = HKS_BLOB_TYPE_RAW;
-    param->key_param_ext.data_owner.size = 0;
-    param->key_param_ext.data_owner.data = NULL;
-
-    param->key_param_ext.ext_info.type = HKS_BLOB_TYPE_RAW;
-    param->key_param_ext.ext_info.size = 0;
-    param->key_param_ext.ext_info.data = NULL;
-}
-
 #endif
 
 union huks_key_type_union {
@@ -68,9 +53,9 @@ union huks_key_type_union {
     }
 
 #define CONVERT_TO_BLOB(T, field_name) \
-    struct hks_blob convert_to_blob_from_##T(struct T *val) \
+    struct HksBlob convert_to_blob_from_##T(struct T *val) \
     { \
-        struct hks_blob hks_blob_val; \
+        struct HksBlob hks_blob_val; \
         (void)memset_s(&hks_blob_val, sizeof(hks_blob_val), 0, sizeof(hks_blob_val)); \
         check_ptr_return_val(val->field_name, hks_blob_val); \
         check_num_return_val(val->length, hks_blob_val); \
@@ -92,17 +77,18 @@ CONVERT_TO_BLOB(stpk, stpk)
 CONVERT_TO_BLOB(stsk, stsk)
 CONVERT_TO_BLOB(hc_auth_id, auth_id)
 
-static const uint8_t G_KEY_TYPE_PAIRS[HC_MAX_KEY_TYPE_NUM][HC_KEY_TYPE_PAIR_LEN] = {
+static const uint8_t g_key_type_pairs[HC_MAX_KEY_TYPE_NUM][HC_KEY_TYPE_PAIR_LEN] = {
     { 0x00, 0x00 }, /* ACCESSOR_PK */
     { 0x00, 0x01 }, /* CONTROLLER_PK */
     { 0x00, 0x02 }, /* ed25519 KEYPAIR */
-    { 0x00, 0x03 }, /* KEK ,key encryption key, used only by DeviceAuthService */
-    { 0x00, 0x04 }, /* DEK,data encryption key, used only by upper apps */
-    { 0x00, 0x05 }  /* key tmp */
+    { 0x00, 0x03 }, /* KEK, key encryption key, used only by DeviceAuthService */
+    { 0x00, 0x04 }, /* DEK, data encryption key, used only by upper apps */
+    { 0x00, 0x05 }, /* key tmp */
+    { 0x00, 0x06 }  /* PSK, preshared key index */
 };
 
-static const char *g_large_prime_number_hex_348 =
-     "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74"\
+static const char *g_large_prime_number_hex_384 =
+    "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74"\
     "020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F1437"\
     "4FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED"\
     "EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF05"\
@@ -161,33 +147,72 @@ static int32_t hks_hex_string_to_byte(const char *src, uint8_t *dst, uint32_t ds
     return ERROR_CODE_SUCCESS;
 }
 
+static int32_t construct_param_set(struct HksParamSet **out, const struct HksParam *in_param,
+    const uint32_t in_param_num)
+{
+    struct HksParamSet *param_set = NULL;
+    int32_t status = HksInitParamSet(&param_set);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("init param set failed, status=%d", status);
+        return ERROR_CODE_INIT_PARAM_SET;
+    }
+
+    status = HksAddParams(param_set, in_param, in_param_num);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("add digest param failed, status=%d", status);
+        HksFreeParamSet(&param_set);
+        return ERROR_CODE_ADD_PARAM;
+    }
+
+    status = HksBuildParamSet(&param_set);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("build param set failed, status=%d", status);
+        HksFreeParamSet(&param_set);
+        return ERROR_CODE_BUILD_PARAM_SET;
+    }
+
+    *out = param_set;
+    return ERROR_CODE_SUCCESS;
+}
+
 static struct sha256_value sha256(const struct uint8_buff *message)
 {
     struct sha256_value sha256_value;
     (void)memset_s(&sha256_value, sizeof(sha256_value), 0, sizeof(sha256_value));
 
-    struct hks_blob src_data = {
-        .data = message->val,
-        .size = message->length,
-        .type = HKS_BLOB_TYPE_RAW
-    };
-    struct hks_blob hash;
-    (void)memset_s(&hash, sizeof(hash), 0, sizeof(hash));
+    struct HksBlob src_data = { message->length, message->val };
+
+    struct HksBlob hash = { 0, NULL };
     hash.data = (uint8_t *)MALLOC(HC_SHA256_LEN * sizeof(uint8_t));
     if (hash.data == NULL) {
         LOGE("SHA256 malloc failed");
         return sha256_value;
     }
     hash.size = HC_SHA256_LEN;
-    int32_t hks_status = hks_hash(HKS_ALG_HASH_SHA_256, &src_data, &hash);
-    if ((hks_status == 0) && (hash.size == HC_SHA256_LEN)) {
+
+    struct HksParamSet *param_set = NULL;
+    struct HksParam digest_param[] = {
+        {
+            .tag = HKS_TAG_DIGEST,
+            .uint32Param = HKS_DIGEST_SHA256
+        }
+    };
+    int32_t status = construct_param_set(&param_set, digest_param, array_size(digest_param));
+    if (status != ERROR_CODE_SUCCESS) {
+        safe_free(hash.data);
+        LOGE("construct param set in the sha256 failed, status=%d", status);
+        return sha256_value;
+    }
+    status = HksHash(param_set, &src_data, &hash);
+    if ((status == 0) && (hash.size == HC_SHA256_LEN)) {
         (void)memcpy_s(sha256_value.sha256_value, sizeof(sha256_value.sha256_value), hash.data, HC_SHA256_LEN);
         sha256_value.length = HC_SHA256_LEN;
     } else {
-        LOGE("SHA256 failed, status=%d", hks_status);
+        LOGE("SHA256 failed, status=%d", status);
         sha256_value.length = 0;
     }
     safe_free(hash.data);
+    HksFreeParamSet(&param_set);
     return sha256_value;
 }
 
@@ -231,11 +256,11 @@ int32_t CheckDlSpekePublicKey(const struct var_buffer *key, uint32_t bigNumLen)
 {
     if (key == NULL) {
         LOGE("Param is null.");
-        return HC_INPUT_ERROR;
+        return HC_INPUT_PTR_NULL;
     }
     const char *primeHex = NULL;
     if (bigNumLen == HC_BIG_PRIME_MAX_LEN_384) {
-        primeHex = g_large_prime_number_hex_348;
+        primeHex = g_large_prime_number_hex_384;
     } else {
         primeHex = g_large_prime_number_hex_256;
     }
@@ -247,7 +272,7 @@ int32_t CheckDlSpekePublicKey(const struct var_buffer *key, uint32_t bigNumLen)
     }
     uint8_t *primeVal = (uint8_t *)MALLOC(primeLen);
     if (primeVal == NULL) {
-        LOGE("Malloc primeval failed.");
+        LOGE("Malloc primeVal failed.");
         return HC_MALLOC_FAILED;
     }
     if (hex_string_to_byte(primeHex, strlen(primeHex), primeVal) != ERROR_CODE_SUCCESS) {
@@ -286,8 +311,8 @@ int32_t cal_bignum_exp(struct var_buffer *base, struct var_buffer *exp,
         return HC_LARGE_PRIME_NUMBER_LEN_UNSUPPORT;
     }
 
-    struct hks_blob a = { HKS_BLOB_TYPE_RAW, base->data, base->length };
-    struct hks_blob e = { HKS_BLOB_TYPE_RAW, exp->data, exp->length };
+    struct HksBlob big_num_a = { base->length, base->data };
+    struct HksBlob big_num_e = { exp->length, exp->data };
 
     uint8_t *large_num = (uint8_t *)MALLOC(big_num_len);
     if (large_num == NULL) {
@@ -299,30 +324,30 @@ int32_t cal_bignum_exp(struct var_buffer *base, struct var_buffer *exp,
     int32_t status;
 
     if (big_num_len == HC_BIG_PRIME_MAX_LEN_384) {
-        status = hks_hex_string_to_byte(g_large_prime_number_hex_348, large_num, big_num_len);
+        status = hks_hex_string_to_byte(g_large_prime_number_hex_384, large_num, big_num_len);
     } else {
         status = hks_hex_string_to_byte(g_large_prime_number_hex_256, large_num, big_num_len);
     }
-
     if (status != ERROR_CODE_SUCCESS) {
         FREE(large_num);
         return ERROR_CODE_FAILED;
     }
-    struct hks_blob n = { HKS_BLOB_TYPE_RAW, large_num, big_num_len };
-    struct hks_blob x = { 0, out_result->big_num, big_num_len };
+
+    struct HksBlob big_num_n = { big_num_len, large_num };
+    struct HksBlob big_num_x = { big_num_len, out_result->big_num };
     if (big_num_len > sizeof(out_result->big_num)) {
         LOGE("The big num array is shorter than the expected output len.");
         FREE(large_num);
         return ERROR_CODE_FAILED;
     }
 
-    status = hks_bn_exp_mod(&x, &a, &e, &n);
+    status = HksBnExpMod(&big_num_x, &big_num_a, &big_num_e, &big_num_n);
     FREE(large_num);
     if (status != ERROR_CODE_SUCCESS) {
         LOGE("Huks bn exp mod error, status=%d", status);
         return ERROR_CODE_FAILED;
     }
-    out_result->length = x.size;
+    out_result->length = big_num_x.size;
 
     return ERROR_CODE_SUCCESS;
 }
@@ -336,12 +361,9 @@ struct random_value generate_random(uint32_t length)
         return rand;
     }
 
-    struct hks_blob hks_rand;
-    hks_rand.type = HKS_BLOB_TYPE_RAW;
-    hks_rand.data = rand.random_value;
-    hks_rand.size = length;
-    int32_t status = hks_generate_random(&hks_rand);
-    if (status == 0) {
+    struct HksBlob hks_rand = { length, rand.random_value };
+    int32_t status = HksGenerateRandom(NULL, &hks_rand);
+    if (status == ERROR_CODE_SUCCESS) {
         rand.length = hks_rand.size;
     } else {
         LOGE("Huks generate random failed, status: %d", status);
@@ -356,29 +378,38 @@ int32_t compute_hmac(struct var_buffer *key, const struct uint8_buff *message, s
     check_ptr_return_val(message, HC_INPUT_ERROR);
     check_ptr_return_val(out_hmac, HC_INPUT_ERROR);
 
-    struct hks_blob hks_key;
-    hks_key.size = key->length;
-    hks_key.data = key->data;
-    hks_key.type = HKS_KEY_USAGE_EXPORT;
-    uint32_t alg = HKS_ALG_HMAC(HKS_ALG_HASH_SHA_256);
+    struct HksBlob hks_key = { key->length, key->data };
+    struct HksBlob src_data = { message->length, message->val };
+    struct HksBlob output = { HC_HMAC_LEN, out_hmac->hmac };
+    struct HksParamSet *param_set = NULL;
 
-    struct hks_blob src_data;
-    src_data.type = HKS_BLOB_TYPE_RAW;
-    src_data.size = message->length;
-    src_data.data = message->val;
-
-    struct hks_blob output;
-    output.type = HKS_BLOB_TYPE_RAW;
-    output.data = out_hmac->hmac;
-    output.size = HC_HMAC_LEN;
+    struct HksParam hmac_param[] = {
+        {
+            .tag = HKS_TAG_PURPOSE,
+            .uint32Param = HKS_KEY_PURPOSE_MAC
+        }, {
+            .tag = HKS_TAG_DIGEST,
+	    .uint32Param = HKS_DIGEST_SHA256
+        }, {
+            .tag = HKS_TAG_IS_KEY_ALIAS, /* temporary key, is_key_alias is set to false determined using REE for MAC */
+            .boolParam = false
+        }
+    };
+    int32_t status = construct_param_set(&param_set, hmac_param, array_size(hmac_param));
+    if (status == ERROR_CODE_SUCCESS) {
+        LOGE("construct HMAC param set failed, status=%d", status);
+        return ERROR_CODE_BUILD_PARAM_SET;
+    }
 
     /* make hmac */
-    int32_t status = hks_hmac(&hks_key, alg, &src_data, &output);
-    if (status != 0) {
+    status = HksMac(&hks_key, param_set, &src_data, &output);
+    if (status != ERROR_CODE_SUCCESS) {
         LOGE("Huks hmac failed, status: %d", status);
+        HksFreeParamSet(&param_set);
         return ERROR_CODE_FAILED;
     }
     out_hmac->length = output.size;
+    HksFreeParamSet(&param_set);
 
     return ERROR_CODE_SUCCESS;
 }
@@ -391,71 +422,87 @@ int32_t compute_hkdf(struct var_buffer *shared_secret, struct hc_salt *salt,
     check_ptr_return_val(out_hkdf, HC_INPUT_ERROR);
     check_ptr_return_val(key_info, HC_INPUT_ERROR);
 
-    struct hks_blob derived_key;
-    derived_key.type = HKS_BLOB_TYPE_RAW;
-    derived_key.data = out_hkdf->data;
-    derived_key.size = hkdf_len;
-    /* derived key param */
-    struct hks_key_param key_param;
-
-    (void)memset_s(&key_param, sizeof(key_param), 0, sizeof(key_param));
-    key_param.key_len = HC_HKDF_KEY_LEN;
-    key_param.key_type = HKS_KEY_TYPE_DERIVE;
-    key_param.key_usage = HKS_KEY_USAGE_DERIVE;
-    key_param.key_mode = HKS_ALG_HKDF(HKS_ALG_HASH_SHA_256);
-    key_param.key_pad = HKS_PADDING_NONE;
-#if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
-    build_keyparam_ext(&key_param);
-#endif
+    struct HksBlob derived_key = { hkdf_len, out_hkdf->data };
+    struct HksBlob hks_salt = { salt->length, salt->salt };
+    struct HksBlob hks_key_info = { (uint32_t)strlen(key_info), (uint8_t *)key_info };
 
     /* original key */
-    struct hks_blob kdf_key;
-    kdf_key.size = shared_secret->length;
-    kdf_key.data = shared_secret->data;
-    kdf_key.type = (uint8_t)HKS_KEY_TYPE_AES;
+    struct HksBlob kdf_key = { shared_secret->length, shared_secret->data };
 
-    struct hks_blob hks_salt;
-    hks_salt.type = HKS_BLOB_TYPE_RAW;
-    hks_salt.data = salt->salt;
-    hks_salt.size = salt->length;
+    /* derived key param */
+    struct HksParamSet *param_set = NULL;
+    struct HksParam hkdf_param[] = {
+        {
+            .tag = HKS_TAG_PURPOSE,
+            .uint32Param = HKS_KEY_PURPOSE_DERIVE
+        }, {
+            .tag = HKS_TAG_ALGORITHM,
+            .uint32Param = HKS_ALG_HKDF
+        }, {
+            .tag = HKS_TAG_DIGEST,
+            .uint32Param = HKS_DIGEST_SHA256
+        }, {
+            .tag = HKS_TAG_SALT,
+            .blob = hks_salt
+        }, {
+            .tag = HKS_TAG_INFO,
+            .blob = hks_key_info
+        }, {
+            .tag = HKS_TAG_IS_KEY_ALIAS,
+            .boolParam = false
+	}
+    };
+    int32_t status = construct_param_set(&param_set, hkdf_param, array_size(hkdf_param));
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("construct hkdf param set failed, status=%d", status);
+        return ERROR_CODE_BUILD_PARAM_SET;
+    }
 
-    struct hks_blob label;
-    label.type = HKS_BLOB_TYPE_RAW;
-    label.data = (uint8_t *)key_info;
-    label.size = (uint32_t)strlen(key_info);
     /* make hkdf */
-    int32_t status = hks_key_derivation(&derived_key, &key_param, &kdf_key, &hks_salt, &label);
-    if (status != 0) {
+    status = HksDeriveKey(param_set, &kdf_key, &derived_key);
+    if (status != ERROR_CODE_SUCCESS) {
         LOGE("Huks key derivation failed, status: %d", status);
+        HksFreeParamSet(&param_set);
         return ERROR_CODE_FAILED;
     }
     out_hkdf->length = derived_key.size;
 
+    HksFreeParamSet(&param_set);
     return ERROR_CODE_SUCCESS;
 }
 
-static void init_aes_gcm_encrypt_key_params(struct hks_key_param *key_params)
+static int32_t init_aes_gcm_encrypt_param_set(struct HksParamSet **param_set,
+    struct random_value *nonce, struct aes_aad *aad, uint32_t key_byte_size)
 {
-    (void)memset_s(key_params, sizeof(*key_params), 0, sizeof(*key_params));
-    key_params->key_type = HKS_KEY_TYPE_AES;
-    key_params->key_len = HC_AES_GCM_KEY_LEN;
-    key_params->key_usage = HKS_KEY_USAGE_ENCRYPT;
-    key_params->key_mode = HKS_ALG_GCM;
-    key_params->key_pad = HKS_PADDING_NONE;
-#if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
-    build_keyparam_ext(key_params);
-#endif
-}
+    struct HksParam encrypt_param[] = {
+        {
+            .tag = HKS_TAG_PURPOSE,
+            .uint32Param = HKS_KEY_PURPOSE_ENCRYPT
+        }, {
+            .tag = HKS_TAG_ALGORITHM,
+            .uint32Param = HKS_ALG_AES
+        }, {
+            .tag = HKS_TAG_BLOCK_MODE,
+            .uint32Param = HKS_MODE_GCM
+        }, {
+            .tag = HKS_TAG_PADDING,
+            .uint32Param = HKS_PADDING_NONE
+        }, {
+            .tag = HKS_TAG_NONCE,
+            .blob = { nonce->length, nonce->random_value }
+        }, {
+            .tag = HKS_TAG_ASSOCIATED_DATA,
+            .blob = { aad->length, aad->aad }
+        }, {
+            .tag = HKS_TAG_IS_KEY_ALIAS,
+            .boolParam = false
+        }, {
+            .tag = HKS_TAG_KEY_SIZE,
+            .uint32Param = key_byte_size * BITS_PER_BYTE
+        }
+    };
 
-static void crypt_param_fill(struct random_value *iv, struct aes_aad *aad, struct hks_crypt_param *param)
-{
-    (void)memset_s(param, sizeof(*param), 0, sizeof(*param));
-    param->nonce.data = iv->random_value;
-    param->nonce.size = iv->length;
-    param->nonce.type = HKS_BLOB_TYPE_IV;
-    param->aad.data = aad->aad;
-    param->aad.size = aad->length;
-    param->aad.type = HKS_BLOB_TYPE_AAD;
+    return construct_param_set(param_set, encrypt_param, array_size(encrypt_param));
 }
 
 int32_t aes_gcm_encrypt(struct var_buffer *key, const struct uint8_buff *plain,
@@ -465,63 +512,72 @@ int32_t aes_gcm_encrypt(struct var_buffer *key, const struct uint8_buff *plain,
     check_ptr_return_val(plain, HC_INPUT_ERROR);
     check_ptr_return_val(aad, HC_INPUT_ERROR);
     check_ptr_return_val(out_cipher, HC_INPUT_ERROR);
-
-    struct random_value iv = generate_random(HC_IV_MAX_LEN);
-    if (iv.length == 0) {
-        LOGE("Generate random to make iv failed");
+    struct random_value nonce = generate_random(HC_AES_GCM_NONCE_LEN);
+    if (nonce.length == 0) {
+        LOGE("Generate random to make nonce failed");
         return HC_GEN_RANDOM_FAILED;
     }
-    struct hks_blob hks_key = {
-        .type = HKS_BLOB_TYPE_KEY,
-        .data = key->data,
-        .size = key->length
-    };
-    struct hks_key_param key_params;
 
-    init_aes_gcm_encrypt_key_params(&key_params);
-    struct hks_crypt_param crypt_param;
+    struct HksBlob hks_key = { key->length, key->data };
+    struct HksBlob hks_plain_text = { plain->length, plain->val };
 
-    crypt_param_fill(&iv, aad, &crypt_param);
-    struct hks_blob hks_plain_text;
-    hks_plain_text.type = HKS_BLOB_TYPE_PLAIN_TEXT;
-    hks_plain_text.data = plain->val;
-    hks_plain_text.size = plain->length;
-
-    struct hks_blob tag_cipher;
-    tag_cipher.type = HKS_BLOB_TYPE_CIPHER_TEXT;
-    tag_cipher.size = hks_plain_text.size + HKS_ENCRYPT_MAX_TAG_SIZE + HC_IV_MAX_LEN;
-    tag_cipher.data = (uint8_t *)MALLOC(tag_cipher.size);
-    check_ptr_return_val(tag_cipher.data, ERROR_CODE_FAILED);
-    int32_t status = hks_aead_encrypt(&hks_key, &key_params, &crypt_param, &hks_plain_text, &tag_cipher);
-    if (status != 0) {
-        LOGE("Huks aead encrypt error, status: %d", status);
-        safe_free(tag_cipher.data);
+    if (memcpy_s(out_cipher->val, out_cipher->size, nonce.random_value, nonce.length) != EOK) {
+        LOGE("memcpy nonce fail");
         return ERROR_CODE_FAILED;
     }
-    if (memcpy_s(out_cipher->val, out_cipher->size, iv.random_value, iv.length) != EOK) {
-        safe_free(tag_cipher.data);
-        return memory_copy_error(__func__, __LINE__);
+
+    struct HksBlob tag_cipher = { out_cipher->size - nonce.length, out_cipher->val + nonce.length };
+    struct HksParamSet *param_set = NULL;
+    int32_t status = init_aes_gcm_encrypt_param_set(&param_set, &nonce, aad, hks_key.size);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("init encrypt param set failed, status=%d", status);
+        return ERROR_CODE_BUILD_PARAM_SET;
     }
-    if (memcpy_s(out_cipher->val + iv.length, out_cipher->size - iv.length, tag_cipher.data, tag_cipher.size) != EOK) {
-        safe_free(tag_cipher.data);
-        return memory_copy_error(__func__, __LINE__);
+
+    status = HksEncrypt(&hks_key, param_set, &hks_plain_text, &tag_cipher);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("Huks aead encrypt error, status: %d", status);
+        HksFreeParamSet(&param_set);
+        return ERROR_CODE_FAILED;
     }
-    out_cipher->length = tag_cipher.size + iv.length;
-    safe_free(tag_cipher.data);
+
+    out_cipher->length = tag_cipher.size + nonce.length;
+    HksFreeParamSet(&param_set);
     return ERROR_CODE_SUCCESS;
 }
 
-static void init_aes_gcm_decrypt_key_params(struct hks_key_param *key_params)
+static int32_t init_aes_gcm_decrypt_param_set(struct HksParamSet **param_set,
+    const struct uint8_buff *cipher, struct aes_aad *aad, uint32_t key_byte_size)
 {
-    (void)memset_s(key_params, sizeof(*key_params), 0, sizeof(*key_params));
-    key_params->key_type = HKS_KEY_TYPE_AES;
-    key_params->key_usage = HKS_KEY_USAGE_DECRYPT;
-    key_params->key_mode = HKS_ALG_GCM;
-    key_params->key_pad = HKS_PADDING_NONE;
-    key_params->key_len = HC_AES_GCM_KEY_LEN;
-#if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
-    build_keyparam_ext(key_params);
-#endif
+    struct HksParam decrypt_param[] = {
+        {
+            .tag = HKS_TAG_PURPOSE,
+            .uint32Param = HKS_KEY_PURPOSE_DECRYPT
+        }, {
+            .tag = HKS_TAG_ALGORITHM,
+            .uint32Param = HKS_ALG_AES
+        }, {
+            .tag = HKS_TAG_BLOCK_MODE,
+            .uint32Param = HKS_MODE_GCM
+        }, {
+            .tag = HKS_TAG_PADDING,
+            .uint32Param = HKS_PADDING_NONE
+        }, {
+            .tag = HKS_TAG_NONCE,
+            .blob = { HC_AES_GCM_NONCE_LEN, cipher->val }
+        }, {
+            .tag = HKS_TAG_ASSOCIATED_DATA,
+            .blob = { aad->length, aad->aad }
+        }, {
+            .tag = HKS_TAG_IS_KEY_ALIAS,
+            .boolParam = false
+        }, {
+            .tag = HKS_TAG_KEY_SIZE,
+            .uint32Param = key_byte_size * BITS_PER_BYTE
+        }
+    };
+
+    return construct_param_set(param_set, decrypt_param, array_size(decrypt_param));
 }
 
 int32_t aes_gcm_decrypt(struct var_buffer *key, const struct uint8_buff *cipher,
@@ -532,51 +588,45 @@ int32_t aes_gcm_decrypt(struct var_buffer *key, const struct uint8_buff *cipher,
     check_ptr_return_val(aad, HC_INPUT_ERROR);
     check_ptr_return_val(out_plain, HC_INPUT_ERROR);
 
-    struct hks_blob hks_key = {
-        .type = HKS_BLOB_TYPE_KEY,
-        .data = key->data,
-        .size = key->length
-    };
-    struct hks_key_param key_params;
-    init_aes_gcm_decrypt_key_params(&key_params);
-    struct hks_crypt_param crypt_param; /* param filling */
-    uint8_t iv[HC_IV_MAX_LEN];
-
-    (void)memset_s(iv, sizeof(iv), 0, sizeof(iv));
-    if (cipher->length < sizeof(iv)) {
-        LOGE("Cipher length is short than iv max length");
+    if (cipher->length < HC_AES_GCM_NONCE_LEN) {
+        LOGE("Cipher length is short than nonce max length");
         return ERROR_CODE_FAILED;
     }
-    (void)memcpy_s(iv, HC_IV_MAX_LEN, cipher->val, sizeof(iv));
-    crypt_param.nonce.data = iv;
-    crypt_param.nonce.size = sizeof(iv);
-    crypt_param.aad.data = aad->aad;
-    crypt_param.aad.size = aad->length;
 
-    struct hks_blob cipher_text_with_tag;
-    (void)memset_s(&cipher_text_with_tag, sizeof(cipher_text_with_tag), 0, sizeof(cipher_text_with_tag));
-    cipher_text_with_tag.data = cipher->val + sizeof(iv);
-    cipher_text_with_tag.size = cipher->length - sizeof(iv);
+    struct HksBlob hks_key = { key->length, key->data };
+    struct HksBlob nonce_blob = { HC_AES_GCM_NONCE_LEN, cipher->val };
+    struct HksBlob cipher_text_with_tag = { cipher->length - nonce_blob.size, cipher->val + nonce_blob.size };
+    struct HksBlob plain_text = { 0, NULL };
 
-    struct hks_blob plain_text;
-    (void)memset_s(&plain_text, sizeof(plain_text), 0, sizeof(plain_text));
-    plain_text.data = (uint8_t *)MALLOC(cipher_text_with_tag.size - HKS_SALT_MAX_SIZE);
+    plain_text.data = (uint8_t *)MALLOC(cipher_text_with_tag.size - HKS_AE_TAG_LEN);
     check_ptr_return_val(plain_text.data, ERROR_CODE_FAILED);
-    plain_text.size = cipher_text_with_tag.size - HKS_SALT_MAX_SIZE;
-    int32_t status = hks_aead_decrypt(&hks_key, &key_params, &crypt_param, &plain_text, &cipher_text_with_tag);
-    if (status != 0) {
+    plain_text.size = cipher_text_with_tag.size - HKS_AE_TAG_LEN;
+
+    struct HksParamSet *param_set = NULL;
+    int32_t status = init_aes_gcm_decrypt_param_set(&param_set, cipher, aad, hks_key.size);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("init encrypt param set failed, status=%d", status);
+        safe_free(plain_text.data);
+        return ERROR_CODE_BUILD_PARAM_SET;
+    }
+
+    status = HksDecrypt(&hks_key, param_set, &cipher_text_with_tag, &plain_text);
+    if (status != ERROR_CODE_SUCCESS) {
         LOGE("Huks aead decrypt failed, status: %d", status);
         safe_free(plain_text.data);
+        HksFreeParamSet(&param_set);
         return ERROR_CODE_FAILED;
     }
 
     if (memcpy_s(out_plain->val, out_plain->size, plain_text.data, plain_text.size) != EOK) {
         safe_free(plain_text.data);
-        return memory_copy_error(__func__, __LINE__);
+        HksFreeParamSet(&param_set);
+        return ERROR_CODE_FAILED;
     }
     out_plain->length = plain_text.size;
-    safe_free(plain_text.data);
 
+    safe_free(plain_text.data);
+    HksFreeParamSet(&param_set);
     return status;
 }
 
@@ -690,7 +740,7 @@ struct hc_key_alias generate_key_alias(const struct service_id *service_id,
     }
 
     uint32_t key_type_pair_size = HC_KEY_TYPE_PAIR_LEN;
-    const uint8_t *key_type_pair = G_KEY_TYPE_PAIRS[key_type];
+    const uint8_t *key_type_pair = g_key_type_pairs[key_type];
     uint32_t total_len = service_id->length + auth_id->length + key_type_pair_size;
     struct uint8_buff key_alias_buff;
 
@@ -725,38 +775,116 @@ struct hc_key_alias generate_key_alias(const struct service_id *service_id,
     return key_alias;
 }
 
+static int32_t init_x25519_generate_key_input_param_set(struct HksParamSet **input_param_set)
+{
+    struct HksParam key_param[] = {
+        {
+            .tag = HKS_TAG_KEY_STORAGE_FLAG,
+            .uint32Param = HKS_STORAGE_TEMP
+        }, {
+            .tag = HKS_TAG_PURPOSE,
+            .uint32Param = HKS_KEY_PURPOSE_SIGN | HKS_KEY_PURPOSE_VERIFY
+        }, {
+            .tag = HKS_TAG_ALGORITHM,
+            .uint32Param = HKS_ALG_X25519
+        }, {
+            .tag = HKS_TAG_KEY_SIZE,
+            .uint32Param = X25519_KEY_LEN
+        }, {
+            .tag = HKS_TAG_IS_ALLOWED_WRAP,
+            .boolParam = true
+        }
+    };
+
+    int32_t status = construct_param_set(input_param_set, key_param, array_size(key_param));
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("construct encrypt param set failed, status=%d", status);
+        return ERROR_CODE_BUILD_PARAM_SET;
+    }
+
+    return ERROR_CODE_SUCCESS;
+}
+
+static int32_t parse_x25519_output_param_set(struct HksParamSet *output_param_set,
+    struct st_key_pair *out_key_pair)
+{
+    int32_t status = HksFreshParamSet(output_param_set, false); /* false means fresh by local, not though IPC */
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("fresh param set failed, status:%d", status);
+        return ERROR_CODE_FRESH_PARAM_SET;
+    }
+
+    struct HksParam *pub_key_param = NULL;
+    status = HksGetParam(output_param_set, HKS_TAG_ASYMMETRIC_PUBLIC_KEY_DATA, &pub_key_param);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("get pub key from param set failed, status:%d", status);
+        return ERROR_CODE_GET_PUB_KEY_FROM_PARAM_SET;
+    }
+
+    struct HksParam *priv_key_param = NULL;
+    status = HksGetParam(output_param_set, HKS_TAG_ASYMMETRIC_PRIVATE_KEY_DATA, &priv_key_param);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("get priv key from param set failed, status:%d", status);
+        return ERROR_CODE_GET_PRIV_KEY_FROM_PARAM_SET;
+    }
+
+    if (memcpy_s(out_key_pair->st_public_key.stpk, HC_ST_PUBLIC_KEY_LEN,
+        pub_key_param->blob.data, pub_key_param->blob.size) != EOK) {
+        LOGE("parse x25519 output param set memcpy public key failed!");
+        return ERROR_CODE_FAILED;
+    }
+    out_key_pair->st_public_key.length = pub_key_param->blob.size;
+
+    if (memcpy_s(out_key_pair->st_private_key.stsk, HC_ST_PRIVATE_KEY_LEN,
+        priv_key_param->blob.data, priv_key_param->blob.size) != EOK) {
+        LOGE("parse x25519 output param set memcpy private key failed!");
+        return ERROR_CODE_FAILED;
+    }
+    out_key_pair->st_private_key.length = priv_key_param->blob.size;
+
+    return ERROR_CODE_SUCCESS;
+}
+
 int32_t generate_st_key_pair(struct st_key_pair *out_key_pair)
 {
     check_ptr_return_val(out_key_pair, HC_INPUT_ERROR);
-    int32_t error_code = ERROR_CODE_FAILED;
     (void)memset_s(out_key_pair, sizeof(*out_key_pair), 0, sizeof(*out_key_pair));
 
-    struct hks_key_param key_param;
-    (void)memset_s(&key_param, sizeof(key_param), 0, sizeof(key_param));
-    key_param.key_type = HKS_KEY_TYPE_ECC_KEYPAIR(HKS_ECC_CURVE_CURVE25519);
-    key_param.key_usage = HKS_KEY_USAGE_DERIVE;
-    key_param.key_mode = HKS_ALG_ECDH(HKS_ALG_SELECT_RAW);
-
-#if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
-    build_keyparam_ext(&key_param);
-#endif
-
-    struct hks_blob public_key;
-    (void)memset_s(&public_key, sizeof(public_key), 0, sizeof(public_key));
-    public_key.data = out_key_pair->st_public_key.stpk;
-    public_key.size = HC_ST_PUBLIC_KEY_LEN;
-
-    struct hks_blob private_key;
-    (void)memset_s(&private_key, sizeof(private_key), 0, sizeof(private_key));
-    private_key.data = out_key_pair->st_private_key.stsk;
-    private_key.size = HC_ST_PRIVATE_KEY_LEN;
-    int32_t hks_status = hks_generate_asymmetric_key(&key_param, &private_key, &public_key);
-    if (hks_status == 0) {
-        out_key_pair->st_public_key.length = public_key.size;
-        out_key_pair->st_private_key.length = private_key.size;
-        error_code = ERROR_CODE_SUCCESS;
+    struct HksParamSet *input_param_set = NULL;
+    int32_t status = init_x25519_generate_key_input_param_set(&input_param_set);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("init x25519 generate key input param set failed! status:%d", status);
+        return status;
     }
-    return error_code;
+
+    struct HksParamSet *output_param_set = (struct HksParamSet *)MALLOC(X25519_KEY_PARAM_SET_SIZE);
+    if (output_param_set == NULL) {
+        LOGE("allocate buffer for output param set failed");
+        HksFreeParamSet(&input_param_set);
+        return ERROR_CODE_FAILED;
+    }
+
+    (void)memset_s(output_param_set, X25519_KEY_PARAM_SET_SIZE, 0, X25519_KEY_PARAM_SET_SIZE);
+    output_param_set->paramSetSize = X25519_KEY_PARAM_SET_SIZE;
+
+    do {
+        status = HksGenerateKey(NULL, input_param_set, output_param_set);
+        if (status != ERROR_CODE_SUCCESS) {
+            LOGE("generate x25519 key failed! status:%d", status);
+            status = ERROR_CODE_GENERATE_KEY;
+	    break;
+        }
+
+	status = parse_x25519_output_param_set(output_param_set, out_key_pair);
+        if (status != ERROR_CODE_SUCCESS) {
+            LOGE("parse x25519 output param set failed! status:%d", status);
+	    break;
+        }
+    } while (0);
+
+    HksFreeParamSet(&input_param_set);
+    safe_free(output_param_set);
+    return status;
 }
 
 int32_t generate_lt_key_pair(struct hc_key_alias *key_alias, const struct hc_auth_id *auth_id)
@@ -764,41 +892,54 @@ int32_t generate_lt_key_pair(struct hc_key_alias *key_alias, const struct hc_aut
     check_ptr_return_val(key_alias, HC_INPUT_ERROR);
     check_ptr_return_val(auth_id, HC_INPUT_ERROR);
 
-    int32_t error_code = ERROR_CODE_FAILED;
-    struct hks_blob hks_key_alias = convert_to_blob_from_hc_key_alias(key_alias);
-
-    check_num_return_val(hks_key_alias.size, error_code);
-    hks_key_alias.type = HKS_BLOB_TYPE_ALIAS;
-
-    struct hks_key_param key_param;
-    (void)memset_s(&key_param, sizeof(key_param), 0, sizeof(key_param));
-    key_param.key_type = HKS_KEY_TYPE_EDDSA_KEYPAIR_ED25519;
-    key_param.key_usage = HKS_KEY_USAGE_SIGN | HKS_KEY_USAGE_VERIFY;
-    key_param.key_mode = HKS_ALG_GCM;
+    struct HksBlob key_alias_blob = convert_to_blob_from_hc_key_alias(key_alias);
+    check_num_return_val(key_alias_blob.size, ERROR_CODE_FAILED);
 
     struct hc_auth_id tmp_id = *auth_id;
+    struct HksParamSet *param_set = NULL;
+    struct HksParam key_param[] = {
+        {
+            .tag = HKS_TAG_ALGORITHM,
+            .uint32Param = HKS_ALG_ED25519
+        }, {
+            .tag = HKS_TAG_KEY_STORAGE_FLAG,
+            .uint32Param = HKS_STORAGE_PERSISTENT
+        }, {
+            .tag = HKS_TAG_PURPOSE,
+            .uint32Param = HKS_KEY_PURPOSE_SIGN | HKS_KEY_PURPOSE_VERIFY
+        }, {
+            .tag = HKS_TAG_KEY_SIZE,
+            .uint32Param = ED25519_KEY_LEN
+        }, {
+            .tag = HKS_TAG_PADDING,
+            .uint32Param = HKS_PADDING_NONE
+        }, {
+            .tag = HKS_TAG_DIGEST,
+            .uint32Param = HKS_DIGEST_SHA256
+        }, {
+            .tag = HKS_TAG_KEY_AUTH_ID,
+            .blob = convert_to_blob_from_hc_auth_id(&tmp_id)
+        }, {
+            .tag = HKS_TAG_IS_ALLOWED_WRAP,
+            .boolParam = true 
+        }
+    };
 
-#if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
-    key_param.key_len = HC_PARAM_KEY_LEN; /* interface regulations */
-    key_param.key_domain = HKS_ECC_CURVE_ED25519;
-    key_param.key_pad = HKS_PADDING_NONE;
-    key_param.key_digest = HKS_ALG_HASH_SHA_256;
-    key_param.key_param_ext.key_auth_id = convert_to_blob_from_hc_auth_id(&tmp_id);
-    key_param.key_param_ext.key_auth_id.type = HKS_BLOB_TYPE_AUTH_ID;
-    build_keyparam_ext(&key_param);
-#else
-    key_param.key_len = HC_LT_PUBLIC_KEY_LEN;
-    key_param.key_auth_id = convert_to_blob_from_hc_auth_id(&tmp_id);
-    key_param.key_auth_id.type = HKS_BLOB_TYPE_AUTH_ID;
-#endif
-
-    int32_t hks_status = hks_generate_key(&hks_key_alias, &key_param);
-    if (hks_status == 0) {
-        error_code = ERROR_CODE_SUCCESS;
-    } else {
-        LOGE("Hks generate failed, status=%d", hks_status);
+    int32_t status = construct_param_set(&param_set, key_param, array_size(key_param));
+    if (status == ERROR_CODE_SUCCESS) {
+        LOGE("construct encrypt param set failed, status=%d", status);
+        return ERROR_CODE_BUILD_PARAM_SET;
     }
-    return error_code;
+
+    status = HksGenerateKey(&key_alias_blob, param_set, NULL);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("Hks generate failed, status=%d", status);
+        HksFreeParamSet(&param_set);
+        return ERROR_CODE_GENERATE_KEY;
+    }
+
+    HksFreeParamSet(&param_set);
+    return ERROR_CODE_SUCCESS;
 }
 
 int32_t export_lt_public_key(struct hc_key_alias *key_alias, struct ltpk *out_public_key)
@@ -806,41 +947,104 @@ int32_t export_lt_public_key(struct hc_key_alias *key_alias, struct ltpk *out_pu
     check_ptr_return_val(key_alias, HC_INPUT_ERROR);
     check_ptr_return_val(out_public_key, HC_INPUT_ERROR);
 
-    int32_t error_code = ERROR_CODE_FAILED;
-    struct hks_blob hks_key_alias = convert_to_blob_from_hc_key_alias(key_alias);
+    struct HksBlob key_alias_blob = convert_to_blob_from_hc_key_alias(key_alias);
+    check_num_return_val(key_alias_blob.size, ERROR_CODE_FAILED);
 
-    hks_key_alias.type = HKS_BLOB_TYPE_ALIAS;
-    check_num_return_val(hks_key_alias.size, error_code);
-
-    struct hks_blob key;
-    (void)memset_s(&key, sizeof(key), 0, sizeof(key));
-    key.data = out_public_key->ltpk;
-    key.size = HC_LT_PUBLIC_KEY_LEN;
-    int32_t hks_status = hks_export_public_key(&hks_key_alias, &key);
-    if (hks_status == 0) {
-        out_public_key->length = key.size;
-        error_code = ERROR_CODE_SUCCESS;
-    } else {
+    struct HksBlob key = { HC_LT_PUBLIC_KEY_LEN, out_public_key->ltpk };
+    int32_t hks_status = HksExportPublicKey(&key_alias_blob, NULL, &key);
+    if (hks_status != ERROR_CODE_SUCCESS) {
         LOGE("Export public key failed, status=%d", hks_status);
+        return ERROR_CODE_FAILED;
     }
-    return error_code;
+    out_public_key->length = key.size;
+
+    return ERROR_CODE_SUCCESS;
 }
 
-int32_t delete_lt_public_key(struct hc_key_alias *key_alias)
+int32_t delete_key(struct hc_key_alias *key_alias)
 {
     check_ptr_return_val(key_alias, HC_INPUT_ERROR);
-    int32_t error_code = ERROR_CODE_FAILED;
-    struct hks_blob hks_key_alias = convert_to_blob_from_hc_key_alias(key_alias);
 
-    check_num_return_val(hks_key_alias.size, error_code);
-    hks_key_alias.type = HKS_BLOB_TYPE_ALIAS;
-    int32_t hks_status = hks_delete_key(&hks_key_alias);
-    if (hks_status == 0) {
-        error_code = ERROR_CODE_SUCCESS;
-    } else {
+    struct HksBlob key_alias_blob = convert_to_blob_from_hc_key_alias(key_alias);
+    check_num_return_val(key_alias_blob.size, ERROR_CODE_FAILED);
+
+    int32_t hks_status = HksDeleteKey(&key_alias_blob, NULL);
+    if (hks_status != ERROR_CODE_SUCCESS) {
+        LOGE("Delete key failed, status=%d", hks_status);
+        return ERROR_CODE_FAILED;
+    }
+
+    return ERROR_CODE_SUCCESS;
+}
+
+/*
+ * delete long time public key
+ *
+ * @key_alias: long time public key alias
+ * @return 0 -- success, others -- failed
+ */
+int32_t delete_lt_public_key(struct hc_key_alias *key_alias)
+{
+    int32_t hks_status = delete_key(key_alias);
+    if (hks_status != ERROR_CODE_SUCCESS) {
         LOGE("Delete lt public key failed, status=%d", hks_status);
     }
-    return error_code;
+
+    return hks_status;
+}
+
+static int32_t init_import_lt_public_key_param_set(struct HksParamSet **param_set,
+    const int32_t user_type, const int32_t pair_type, struct hc_auth_id *auth_id)
+{
+#if !(defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
+    union huks_key_type_union huks_key_type;
+    huks_key_type.type_struct.user_type = (uint8_t)user_type;
+    huks_key_type.type_struct.pair_type = (uint8_t)pair_type;
+    huks_key_type.type_struct.reserved1 = (uint8_t)0;
+    huks_key_type.type_struct.reserved2 = (uint8_t)0;
+#endif
+
+    (void)pair_type;
+    struct HksParam key_param[] = {
+        {
+            .tag = HKS_TAG_ALGORITHM,
+            .uint32Param = HKS_ALG_ED25519
+        }, {
+            .tag = HKS_TAG_KEY_SIZE,
+            .uint32Param = ED25519_KEY_LEN
+        }, {
+            .tag = HKS_TAG_PADDING,
+            .uint32Param = HKS_PADDING_NONE
+        }, {
+            .tag = HKS_TAG_DIGEST,
+            .uint32Param = HKS_DIGEST_SHA256
+        }, {
+            .tag = HKS_TAG_KEY_AUTH_ID,
+            .blob = convert_to_blob_from_hc_auth_id(auth_id)
+        }, {
+            .tag = HKS_TAG_IS_ALLOWED_WRAP,
+            .boolParam = true 
+        },
+#if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
+        {
+            .tag = HKS_TAG_PURPOSE,
+            .uint32Param = HKS_KEY_PURPOSE_VERIFY
+        }, {
+            .tag = HKS_TAG_KEY_ROLE,
+            .uint32Param = user_type
+        }
+#else
+        {
+            .tag = HKS_TAG_PURPOSE,
+            .uint32Param = HKS_KEY_PURPOSE_VERIFY
+        }, {
+            .tag = HKS_TAG_KEY_ROLE,
+            .uint32Param = (uint32_t)huks_key_type.key_type
+        }
+#endif
+    };
+
+    return construct_param_set(param_set, key_param, array_size(key_param));
 }
 
 int32_t import_lt_public_key(struct hc_key_alias *key_alias, struct ltpk *peer_public_key,
@@ -856,57 +1060,37 @@ int32_t import_lt_public_key(struct hc_key_alias *key_alias, struct ltpk *peer_p
     check_ptr_return_val(peer_public_key, HC_INPUT_ERROR);
     check_ptr_return_val(auth_id, HC_INPUT_ERROR);
 
-    int32_t error_code = ERROR_CODE_FAILED;
-    struct hks_blob hks_key_alias = convert_to_blob_from_hc_key_alias(key_alias);
-    if (hks_key_alias.size == 0) {
+    struct HksBlob key_alias_blob = convert_to_blob_from_hc_key_alias(key_alias);
+    if (key_alias_blob.size == 0) {
         LOGE("Convert key alias to blob failed");
-        return error_code;
+        return ERROR_CODE_FAILED;
     }
-    hks_key_alias.type = HKS_BLOB_TYPE_ALIAS;
 
-    struct hks_blob ltpk_key = convert_to_blob_from_ltpk(peer_public_key);
-    if (ltpk_key.size == 0) {
+    struct HksBlob ltpk_key_blob = convert_to_blob_from_ltpk(peer_public_key);
+    if (ltpk_key_blob.size == 0) {
         LOGE("Convert ltpk key to blob failed");
-        return error_code;
+        return ERROR_CODE_FAILED;
     }
-    ltpk_key.type = HKS_BLOB_TYPE_KEY;
-    struct hks_key_param key_param;
-    (void)memset_s(&key_param, sizeof(key_param), 0, sizeof(key_param));
-    key_param.key_type = HKS_KEY_TYPE_EDDSA_PUBLIC_KEY_ED25519;
-    key_param.key_len = ltpk_key.size;
-    key_param.key_mode = HKS_ALG_GCM;
-    key_param.key_pad = HKS_PADDING_NONE;
-#if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
-    key_param.key_usage = HKS_KEY_USAGE_VERIFY;
-    key_param.key_param_ext.key_role = user_type;
-    key_param.key_param_ext.key_auth_id = convert_to_blob_from_hc_auth_id(auth_id);
-    key_param.key_param_ext.key_auth_id.type = HKS_BLOB_TYPE_AUTH_ID;
-    build_keyparam_ext(&key_param);
-#else
-    union huks_key_type_union huks_key_type;
-    huks_key_type.type_struct.user_type = (uint8_t)user_type;
-    huks_key_type.type_struct.pair_type = (uint8_t)pair_type;
-    huks_key_type.type_struct.reserved1 = (uint8_t)0;
-    huks_key_type.type_struct.reserved2 = (uint8_t)0;
-    key_param.key_usage = HKS_KEY_USAGE_ENCRYPT | HKS_KEY_USAGE_DECRYPT;
-    key_param.key_role = (uint32_t)huks_key_type.key_type;
-    key_param.key_auth_id = convert_to_blob_from_hc_auth_id(auth_id);
-    key_param.key_auth_id.type = HKS_BLOB_TYPE_AUTH_ID;
-#endif
 
-    int32_t hks_status = hks_import_public_key(&hks_key_alias, &key_param, &ltpk_key);
+    struct HksParamSet *param_set = NULL;
+    int32_t status = init_import_lt_public_key_param_set(&param_set, user_type, pair_type, auth_id);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("init import lt public key input param set failed! status:%d", status);
+        return status;
+    }
 
-    return hks_status;
+    status = HksImportKey(&key_alias_blob, param_set, &ltpk_key_blob);
+
+    HksFreeParamSet(&param_set);
+    return status;
 }
 
 int32_t check_lt_public_key_exist(struct hc_key_alias *key_alias)
 {
     check_ptr_return_val(key_alias, HC_INPUT_ERROR);
     check_num_return_val(key_alias->length, HC_INPUT_ERROR);
-
-    struct hks_blob hks_key_alias = convert_to_blob_from_hc_key_alias(key_alias);
-    hks_key_alias.type = HKS_BLOB_TYPE_ALIAS;
-    int32_t hks_status = hks_is_key_exist(&hks_key_alias);
+    struct HksBlob key_alias_blob = convert_to_blob_from_hc_key_alias(key_alias);
+    int32_t hks_status = HksKeyExist(&key_alias_blob, NULL);
     if (hks_status == 0) {
         return ERROR_CODE_SUCCESS;
     } else {
@@ -915,99 +1099,136 @@ int32_t check_lt_public_key_exist(struct hc_key_alias *key_alias)
     }
 }
 
-static int32_t init_key_alias_list(struct hks_blob *key_alias_list, int32_t len)
+int32_t check_key_exist(struct hc_key_alias *key_alias)
 {
-    (void)memset_s(key_alias_list, sizeof(struct hks_blob) * len, 0, sizeof(struct hks_blob) * len);
+    check_ptr_return_val(key_alias, HC_INPUT_ERROR);
+    check_num_return_val(key_alias->length, HC_INPUT_ERROR);
+    struct HksBlob key_alias_blob = convert_to_blob_from_hc_key_alias(key_alias);
+    int32_t hks_status = HksKeyExist(&key_alias_blob, NULL);
+    if (hks_status == 0) {
+        return ERROR_CODE_SUCCESS;
+    } else {
+        LOGI("Check key exist failed, status = %d", hks_status);
+        return ERROR_CODE_FAILED;
+    }
+}
+
+static int32_t init_key_info_list(struct HksKeyInfo *key_info_list, int32_t len)
+{
+    (void)memset_s(key_info_list, sizeof(struct HksKeyInfo) * len, 0, sizeof(struct HksKeyInfo) * len);
     for (int32_t i = 0; i < len; ++i) {
-        struct hks_blob key_alias_tmp;
-        key_alias_tmp.data = (uint8_t *)MALLOC(HC_KEY_ALIAS_MAX_LEN);
-        if (key_alias_tmp.data == NULL) {
-            return -1;
+        struct HksKeyInfo key_info_tmp;
+
+        key_info_tmp.alias.data = (uint8_t *)MALLOC(HC_KEY_ALIAS_MAX_LEN);
+        if (key_info_tmp.alias.data == NULL) {
+            LOGE("allocate space for key info alias data failed");
+            return ERROR_CODE_NO_SPACE;
         }
-        (void)memset_s(key_alias_tmp.data, HC_KEY_ALIAS_MAX_LEN, 0, HC_KEY_ALIAS_MAX_LEN);
-        key_alias_tmp.size = HC_KEY_ALIAS_MAX_LEN;
-        key_alias_tmp.type = HKS_BLOB_TYPE_ALIAS;
-        key_alias_list[i] = key_alias_tmp;
+        (void)memset_s(key_info_tmp.alias.data, HC_KEY_ALIAS_MAX_LEN, 0, HC_KEY_ALIAS_MAX_LEN);
+        key_info_tmp.alias.size = HC_KEY_ALIAS_MAX_LEN;
+
+        key_info_tmp.paramSet = (struct HksParamSet *)MALLOC(DEFAULT_PARAM_SET_OUT_SIZE);
+        if (key_info_tmp.paramSet == NULL) {
+            safe_free(key_info_tmp.alias.data);
+	    key_info_tmp.alias.data = NULL;
+            LOGE("allocate space for key param set failed");
+            return ERROR_CODE_NO_SPACE;
+        }
+        (void)memset_s(key_info_tmp.paramSet, DEFAULT_PARAM_SET_OUT_SIZE, 0, DEFAULT_PARAM_SET_OUT_SIZE);
+        key_info_tmp.paramSet->paramSetSize = DEFAULT_PARAM_SET_OUT_SIZE;
+
+        key_info_list[i] = key_info_tmp;
     }
     return 0;
 }
 
-static int32_t gen_key_param(struct hks_key_param *key_param)
+static int32_t inner_get_lt_info_by_key_info(struct HksKeyInfo *key_info,
+    struct huks_key_type *out_key_type, struct hc_auth_id *out_auth_id)
 {
-#if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
-    key_param->key_param_ext.key_auth_id.data = (uint8_t *)MALLOC(HC_AUTH_ID_BUFF_LEN);
-    if (key_param->key_param_ext.key_auth_id.data == NULL) {
-#else
-    key_param->key_auth_id.data = (uint8_t *)MALLOC(HC_AUTH_ID_BUFF_LEN);
-    if (key_param->key_auth_id.data == NULL) {
-#endif
-        LOGE("Malloc key auth data failed");
+    union huks_key_type_union key_type_union;
+    struct HksParam *key_role = NULL;
+    int32_t status = HksGetParam(key_info->paramSet, HKS_TAG_KEY_ROLE, &key_role);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("get key role from param set failed, status:%d", status);
         return ERROR_CODE_FAILED;
     }
-#if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
-    (void)memset_s(key_param->key_param_ext.key_auth_id.data, HC_AUTH_ID_BUFF_LEN, 0, HC_AUTH_ID_BUFF_LEN);
-    key_param->key_param_ext.key_auth_id.type = HKS_BLOB_TYPE_AUTH_ID;
-    key_param->key_param_ext.key_auth_id.size = HC_AUTH_ID_BUFF_LEN;
-    build_keyparam_ext(key_param);
-#else
-    (void)memset_s(key_param->key_auth_id.data, HC_AUTH_ID_BUFF_LEN, 0, HC_AUTH_ID_BUFF_LEN);
-    key_param->key_auth_id.type = HKS_BLOB_TYPE_AUTH_ID;
-    key_param->key_auth_id.size = HC_AUTH_ID_BUFF_LEN;
-#endif
 
-    return EOK;
+    key_type_union.key_type = key_role->uint32Param;
+    out_key_type->user_type = key_type_union.type_struct.user_type;
+    out_key_type->pair_type = key_type_union.type_struct.pair_type;
+    out_key_type->reserved1 = key_type_union.type_struct.reserved1;
+    out_key_type->reserved2 = key_type_union.type_struct.reserved2;
+
+    struct HksParam *auth_id = NULL;
+    status = HksGetParam(key_info->paramSet, HKS_TAG_KEY_AUTH_ID, &auth_id);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("get auth id from param set failed, status:%d", status);
+        return ERROR_CODE_FAILED;
+    }
+
+    if (memcpy_s(out_auth_id->auth_id, HC_AUTH_ID_BUFF_LEN,
+        auth_id->blob.data, auth_id->blob.size) != EOK) {
+        LOGE("Copy key param failed");
+        return ERROR_CODE_FAILED;
+    }
+    out_auth_id->length = auth_id->blob.size;
+
+    return status;
 }
 
-static int32_t inner_get_lt_info(struct hks_blob key_alias, struct huks_key_type *out_key_type,
-    struct hc_auth_id *out_auth_id)
+static int32_t inner_get_lt_info_by_key_alias(struct HksBlob *key_alias,
+    struct huks_key_type *out_key_type, struct hc_auth_id *out_auth_id)
 {
-    int32_t error_code;
-    struct hks_key_param key_param;
-    (void)memset_s(&key_param, sizeof(key_param), 0, sizeof(key_param));
+    struct HksParamSet *output_param_set = (struct HksParamSet *)MALLOC(DEFAULT_PARAM_SET_OUT_SIZE);
+    if (output_param_set == NULL) {
+        LOGE("allocate space for param set out failed");
+        return ERROR_CODE_FAILED;
+    }
+    (void)memset_s(output_param_set, DEFAULT_PARAM_SET_OUT_SIZE, 0, DEFAULT_PARAM_SET_OUT_SIZE);
+    output_param_set->paramSetSize = DEFAULT_PARAM_SET_OUT_SIZE;
 
-    error_code = gen_key_param(&key_param);
-    if (error_code != EOK) {
+    int32_t status = HksGetKeyParamSet(key_alias, NULL, output_param_set);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("Get huks key param set failed");
         goto get_key_info_free;
     }
-    int32_t status = hks_get_key_param(&key_alias, &key_param);
-    if (status != 0) {
-        LOGE("Get huks key param failed");
+
+    status = HksFreshParamSet(output_param_set, false);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("fresh param set failed, status:%d", status);
+        goto get_key_info_free;
+    }
+
+    struct HksParam *key_role = NULL;
+    status = HksGetParam(output_param_set, HKS_TAG_KEY_ROLE, &key_role);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("get key role from param set failed, status:%d", status);
         goto get_key_info_free;
     }
 
     union huks_key_type_union key_type_union;
+    key_type_union.key_type = key_role->uint32Param;
+    out_key_type->user_type = key_type_union.type_struct.user_type;
+    out_key_type->pair_type = key_type_union.type_struct.pair_type;
+    out_key_type->reserved1 = key_type_union.type_struct.reserved1;
+    out_key_type->reserved2 = key_type_union.type_struct.reserved2;
 
-#if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
-    key_type_union.key_type = key_param.key_param_ext.key_role;
-    *out_key_type = key_type_union.type_struct;
-    out_auth_id->length = key_param.key_param_ext.key_auth_id.size;
-    error_code = memcpy_s(out_auth_id->auth_id, HC_AUTH_ID_BUFF_LEN,
-                          key_param.key_param_ext.key_auth_id.data, key_param.key_param_ext.key_auth_id.size);
-#else
-    key_type_union.key_type = key_param.key_role;
-    *out_key_type = key_type_union.type_struct;
-    out_auth_id->length = key_param.key_auth_id.size;
-    error_code = memcpy_s(out_auth_id->auth_id, HC_AUTH_ID_BUFF_LEN,
-                          key_param.key_auth_id.data, key_param.key_auth_id.size);
-#endif
-    if (error_code != EOK) {
-        LOGE("Copy key param failed");
+    struct HksParam *auth_id = NULL;
+    status = HksGetParam(output_param_set, HKS_TAG_KEY_AUTH_ID, &auth_id);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("get auth id from param set failed, status:%d", status);
         goto get_key_info_free;
     }
 
+    if (memcpy_s(out_auth_id->auth_id, HC_AUTH_ID_BUFF_LEN, auth_id->blob.data, auth_id->blob.size) != EOK) {
+        LOGE("Copy key param failed");
+        goto get_key_info_free;
+    }
+    out_auth_id->length = auth_id->blob.size;
+
 get_key_info_free:
-#if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
-    if (key_param.key_param_ext.key_auth_id.data != NULL) {
-        safe_free(key_param.key_param_ext.key_auth_id.data);
-        key_param.key_param_ext.key_auth_id.data = NULL;
-    }
-#else
-    if (key_param.key_auth_id.data != NULL) {
-        safe_free(key_param.key_auth_id.data);
-        key_param.key_auth_id.data = NULL;
-    }
-#endif
-    return error_code;
+    safe_free(output_param_set);
+    return status;
 }
 
 int32_t get_lt_key_info(struct hc_key_alias *alias, struct huks_key_type *out_key_type, struct hc_auth_id *out_auth_id)
@@ -1016,9 +1237,8 @@ int32_t get_lt_key_info(struct hc_key_alias *alias, struct huks_key_type *out_ke
     check_ptr_return_val(out_key_type, HC_INPUT_ERROR);
     check_ptr_return_val(out_auth_id, HC_INPUT_ERROR);
 
-    struct hks_blob huks_alias = convert_to_blob_from_hc_key_alias(alias);
-    huks_alias.type = HKS_BLOB_TYPE_ALIAS;
-    return inner_get_lt_info(huks_alias, out_key_type, out_auth_id);
+    struct HksBlob alias_blob = convert_to_blob_from_hc_key_alias(alias);
+    return inner_get_lt_info_by_key_alias(&alias_blob, out_key_type, out_auth_id);
 }
 
 int32_t check_key_alias_is_owner(struct hc_key_alias *key_alias)
@@ -1031,12 +1251,12 @@ int32_t check_key_alias_is_owner(struct hc_key_alias *key_alias)
         LOGE("Key is not exist");
         return error_code;
     }
-    struct hks_blob hks_key_alias = convert_to_blob_from_hc_key_alias(key_alias);
-    hks_key_alias.type = HKS_BLOB_TYPE_ALIAS;
+
     struct huks_key_type key_type;
     struct hc_auth_id auth_id;
 
-    error_code = inner_get_lt_info(hks_key_alias, &key_type, &auth_id);
+    struct HksBlob key_alias_blob = convert_to_blob_from_hc_key_alias(key_alias);
+    error_code = inner_get_lt_info_by_key_alias(&key_alias_blob, &key_type, &auth_id);
     if (error_code != ERROR_CODE_SUCCESS) {
         LOGE("Get key info failed");
         return error_code;
@@ -1053,7 +1273,7 @@ int32_t check_key_alias_is_owner(struct hc_key_alias *key_alias)
 }
 
 static uint32_t load_lt_public_key_list(const struct hc_auth_id *owner_id, int32_t trust_user_type,
-    struct hks_blob *key_alias_list, uint32_t list_count, struct hc_auth_id *out_auth_list)
+    struct HksKeyInfo *key_info_list, uint32_t list_count, struct hc_auth_id *out_auth_list)
 {
     uint8_t pair_type = owner_id == NULL ? (uint8_t)HC_PAIR_TYPE_BIND : (uint8_t)HC_PAIR_TYPE_AUTH;
     uint8_t user_type = (uint8_t)trust_user_type;
@@ -1066,7 +1286,16 @@ static uint32_t load_lt_public_key_list(const struct hc_auth_id *owner_id, int32
         return effect_count;
     }
     for (uint32_t i = 0; i < list_count; i++) {
-        err_code = inner_get_lt_info(key_alias_list[i], &key_type, &auth_id);
+        struct HksParam *key_flag_param = NULL;
+        int32_t status = HksGetParam(key_info_list[i].paramSet, HKS_TAG_KEY_FLAG, &key_flag_param);
+        if (status != ERROR_CODE_SUCCESS) {
+            LOGE("get key flag from param set failed, status:%d", status);
+            return ERROR_CODE_FAILED;
+        }
+        if (key_flag_param->uint32Param == HKS_KEY_FLAG_GENERATE_KEY) {
+            continue;
+        }
+        err_code = inner_get_lt_info_by_key_info(&key_info_list[i], &key_type, &auth_id);
         if (err_code != ERROR_CODE_SUCCESS) {
             continue;
         }
@@ -1096,47 +1325,60 @@ int32_t get_lt_public_key_list(const struct hc_auth_id *owner_auth_id, int32_t t
     check_ptr_return_val(out_count, HC_INPUT_ERROR);
 
     int32_t error_code = ERROR_CODE_SUCCESS;
-    struct hks_blob key_alias_list[HC_PUB_KEY_ALIAS_MAX_NUM];
-    int32_t status = init_key_alias_list(key_alias_list, HC_PUB_KEY_ALIAS_MAX_NUM);
-    if (status != 0) {
-        LOGE("Init key alias list failed, status=%d", status);
+    struct HksKeyInfo key_info_list[HC_PUB_KEY_ALIAS_MAX_NUM];
+    int32_t status = init_key_info_list(key_info_list, HC_PUB_KEY_ALIAS_MAX_NUM);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("Init key info list failed, status=%d", status);
         error_code = ERROR_CODE_FAILED;
         goto exit;
     }
+
     uint32_t list_count = HC_PUB_KEY_ALIAS_MAX_NUM;
-    status = hks_get_pub_key_alias_list(key_alias_list, &list_count);
-    if (status != 0) {
-        LOGE("Huks get pub key alias list failed, status=%d", status);
+    status = HksGetKeyInfoList(NULL, key_info_list, &list_count);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("Huks get pub key info list failed, status=%d", status);
         error_code = ERROR_CODE_FAILED;
         goto exit;
     }
+
     /* filter with trust_user_type */
-    uint32_t effect_count = load_lt_public_key_list(owner_auth_id, trust_user_type, key_alias_list,
+    uint32_t effect_count = load_lt_public_key_list(owner_auth_id, trust_user_type, key_info_list,
                                                     list_count, out_auth_list);
     /* output param */
     *out_count = effect_count;
 
 exit:
     for (int32_t i = 0; i < HC_PUB_KEY_ALIAS_MAX_NUM; ++i) {
-        safe_free(key_alias_list[i].data);
+        safe_free(key_info_list[i].alias.data);
+        safe_free(key_info_list[i].paramSet);
     }
     return error_code;
 }
 
-void gen_sign_key_param(struct hks_key_param *key_param)
+static int32_t gen_sign_key_param_set(struct HksParamSet **param_set)
 {
-    key_param->key_type = HKS_KEY_TYPE_EDDSA_KEYPAIR_ED25519;
-    key_param->key_usage = HKS_KEY_USAGE_SIGN; /* huks have cheaked this param */
-    key_param->key_mode = HKS_ALG_GCM;
+    struct HksParam params[] = {
+        {
+            .tag = HKS_TAG_PURPOSE,
+            .uint32Param = HKS_KEY_PURPOSE_SIGN /* correspond to old key usage */
+        }, {
+            .tag = HKS_TAG_ALGORITHM,
+            .uint32Param = HKS_ALG_ED25519 /* alg, correspond to old key type */
+        }, {
+            .tag = HKS_TAG_PADDING,
+            .uint32Param = HKS_PADDING_NONE
+        }, {
+            .tag = HKS_TAG_DIGEST,
+            .uint32Param = HKS_DIGEST_SHA256
+        }
+    };
 
-#if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
-    key_param->key_pad = HKS_PADDING_NONE;
-    key_param->key_domain = HKS_ECC_CURVE_ED25519;
-    key_param->key_len = HC_PARAM_KEY_LEN; /* interface regulations */
-    key_param->key_digest = HKS_ALG_HASH_SHA_256;
+    int32_t status = construct_param_set(param_set, params, array_size(params));
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("construct param set for sign failed, status:%d", status);
+    }
 
-    build_keyparam_ext(key_param);
-#endif
+    return status;
 }
 
 int32_t sign(struct hc_key_alias *key_alias, const struct uint8_buff *message, struct signature *out_signature)
@@ -1146,70 +1388,78 @@ int32_t sign(struct hc_key_alias *key_alias, const struct uint8_buff *message, s
     check_ptr_return_val(out_signature, HC_INPUT_ERROR);
     check_num_return_val(key_alias->length, HC_INPUT_ERROR);
 
-    int32_t error_code = ERROR_CODE_FAILED;
-    struct hks_blob hks_key_alias = convert_to_blob_from_hc_key_alias(key_alias);
-    if (hks_key_alias.size == 0) {
+    struct HksBlob key_alias_blob = convert_to_blob_from_hc_key_alias(key_alias);
+    if (key_alias_blob.size == 0) {
         LOGE("Convert hks key alias to blob failed");
-        return error_code;
+        return ERROR_CODE_FAILED;
     }
-    hks_key_alias.type = HKS_BLOB_TYPE_ALIAS;
 
-#if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
-    struct hks_blob hash;
-    hash.data = message->val;
-    hash.size = message->length;
-    if (hash.size == 0) {
-        LOGE("Message to blob failed");
-        return error_code;
-    }
-#else
     struct sha256_value sha256_value = sha256(message);
     if (sha256_value.length == 0) {
         LOGE("Get sha256 hash failed");
-        return error_code;
+        return ERROR_CODE_FAILED;
     }
-    struct hks_blob hash = convert_to_blob_from_sha256_value(&sha256_value);
+
+    struct HksBlob hash = convert_to_blob_from_sha256_value(&sha256_value);
     if (hash.size == 0) {
         LOGE("Convert sha256 hash to blob failed");
-        return error_code;
+        return ERROR_CODE_FAILED;
     }
-#endif
 
-    struct hks_key_param key_param;
-    (void)memset_s(&key_param, sizeof(key_param), 0, sizeof(key_param));
-    gen_sign_key_param(&key_param);
+    struct HksParamSet *key_param_set = NULL;
+    int32_t hks_status = gen_sign_key_param_set(&key_param_set);
+    if (hks_status != ERROR_CODE_SUCCESS) {
+        LOGE("gen sign key param set failed, status:%d", hks_status);
+        return ERROR_CODE_FAILED;
+    }
 
-    struct hks_blob signature;
-    (void)memset_s(&signature, sizeof(signature), 0, sizeof(signature));
-    signature.data = out_signature->signature;
-    signature.size = HC_SIGNATURE_LEN;
-    int32_t hks_status = hks_asymmetric_sign(&hks_key_alias, &key_param, &hash, &signature);
-    if ((hks_status == 0) && (signature.size == HC_SIGNATURE_LEN)) {
+    struct HksBlob signature = { HC_SIGNATURE_LEN, out_signature->signature };
+    hks_status = HksSign(&key_alias_blob, key_param_set, &hash, &signature);
+    if ((hks_status == ERROR_CODE_SUCCESS) && (signature.size == HC_SIGNATURE_LEN)) {
         out_signature->length = HC_SIGNATURE_LEN;
-        error_code = ERROR_CODE_SUCCESS;
     } else {
         LOGE("Sign failed, status=%d", hks_status);
-        error_code = ERROR_CODE_FAILED;
+        hks_status = ERROR_CODE_FAILED;
     }
-    return error_code;
+
+    HksFreeParamSet(&key_param_set);
+    return hks_status;
 }
 
-void gen_verify_key_param(const int32_t user_type, struct hks_key_param *key_param)
+static int gen_verify_key_param_set(const bool is_keyalias, const uint32_t key_size,
+    const int32_t user_type, struct HksParamSet **param_set)
 {
-#if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
-    key_param->key_pad = HKS_PADDING_NONE;
-    key_param->key_domain = HKS_ECC_CURVE_ED25519;
-    key_param->key_len = HC_PARAM_KEY_LEN; /* interface regulations */
-    key_param->key_digest = HKS_ALG_HASH_SHA_256;
-    key_param->key_type = HKS_KEY_TYPE_EDDSA_KEYPAIR_ED25519;
-    key_param->key_param_ext.key_role = (uint32_t)user_type;
-    build_keyparam_ext(key_param);
-#else
-    key_param->key_role = (uint32_t)user_type;
-    key_param->key_type = HKS_KEY_TYPE_EDDSA_PUBLIC_KEY_ED25519; /* HKS_KEY_TYPE_EDDSA_KEYPAIR_ED25519 */
-#endif
-    key_param->key_usage = HKS_KEY_USAGE_VERIFY;
-    key_param->key_mode = HKS_ALG_GCM;
+    struct HksParam params[] = {
+        {
+            .tag = HKS_TAG_PURPOSE,
+            .uint32Param = HKS_KEY_PURPOSE_VERIFY
+        }, {
+            .tag = HKS_TAG_ALGORITHM,
+            .uint32Param = HKS_ALG_ED25519
+        }, {
+            .tag = HKS_TAG_DIGEST,
+            .uint32Param = HKS_DIGEST_SHA256
+        }, {
+            .tag = HKS_TAG_PADDING,
+            .uint32Param = HKS_PADDING_NONE
+        }, {
+            .tag = HKS_TAG_KEY_ROLE,
+            .uint32Param = (uint32_t)user_type 
+        }, {
+            .tag = HKS_TAG_IS_KEY_ALIAS,
+            .boolParam = is_keyalias
+        }, {
+            .tag = HKS_TAG_KEY_SIZE,
+            .uint32Param = (is_keyalias ? 0 : key_size)
+        }
+    };
+
+    int32_t status = construct_param_set(param_set, params, array_size(params));
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("construct param set for verity failed, status:%d", status);
+    }
+
+    return status;
 }
 
 int32_t verify(struct hc_key_alias *key_alias, const int32_t user_type,
@@ -1221,70 +1471,50 @@ int32_t verify(struct hc_key_alias *key_alias, const int32_t user_type,
     check_num_return_val(key_alias->length, HC_INPUT_ERROR);
 
     int32_t error_code = ERROR_CODE_FAILED;
-    struct hks_blob hks_key_alias = convert_to_blob_from_hc_key_alias(key_alias);
-    if (hks_key_alias.size == 0) {
+    struct HksBlob key_alias_blob = convert_to_blob_from_hc_key_alias(key_alias);
+    if (key_alias_blob.size == 0) {
         LOGE("Convert hks key alias to blob failed");
         return error_code;
     }
-    hks_key_alias.type = HKS_BLOB_TYPE_ALIAS; /* alias pattern */
 
-#if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
-    struct hks_blob hash;
-    hash.data = message->val;
-    hash.size = message->length;
-    if (hash.size == 0) {
-        LOGE("Message to blob failed");
-        return error_code;
-    }
-#else
-    struct sha256_value sha256_value = sha256(message);
-    if (sha256_value.length == 0) {
-        LOGE("Get sha256 hash failed. message val:%s, message length: %d", message->val, message->length);
-        return error_code;
-    }
-
-    struct hks_blob hash = convert_to_blob_from_sha256_value(&sha256_value);
-    if (hash.size == 0) {
-        LOGE("Convert sha256 hash to blob failed");
-        return error_code;
-    }
-#endif
-
-    struct hks_key_param key_param;
-    (void)memset_s(&key_param, sizeof(key_param), 0, sizeof(key_param));
-    gen_verify_key_param(user_type, &key_param);
-
-    struct hks_blob hks_signature = convert_to_blob_from_signature(signature);
-    if (hks_signature.size == 0) {
+    struct HksBlob signature_blob = convert_to_blob_from_signature(signature);
+    if (signature_blob.size == 0) {
         LOGE("Convert hks signature to blob failed");
         return error_code;
     }
 
-    int32_t hks_status = hks_asymmetric_verify(&hks_key_alias, &key_param, &hash, &hks_signature);
+    struct sha256_value sha256_value = sha256(message);
+    if (sha256_value.length == 0) {
+        LOGE("Get sha256 hash failed. message val:%s, message length:%d", message->val, message->length);
+        return error_code;
+    }
+
+    struct HksBlob hash = convert_to_blob_from_sha256_value(&sha256_value);
+    if (hash.size == 0) {
+        LOGE("Convert sha256 hash to blob failed");
+        return error_code;
+    }
+
+    /* true: is key alias, 0: key alias have not key size */
+    struct HksParamSet *key_param_set = NULL;
+    int32_t hks_status = gen_verify_key_param_set(true, 0, user_type, &key_param_set);
+    if (hks_status != ERROR_CODE_SUCCESS) {
+        LOGE("failed to gen verify key param set, status:%d", hks_status);
+        return error_code;
+    }
+
+    hks_status = HksVerify(&key_alias_blob, key_param_set, &hash, &signature_blob);
     if (hks_status == 0) {
         error_code = ERROR_CODE_SUCCESS;
     } else {
         LOGE("Verify failed. status=%d", hks_status);
+        if (check_lt_public_key_exist(key_alias) != ERROR_CODE_SUCCESS) {
+            error_code = ERROR_CODE_NO_PEER_PUBLIC_KEY;
+        }
     }
-    return error_code;
-}
 
-static void gen_verify_with_public_key_param(struct hks_key_param *key_param, const int32_t user_type)
-{
-#if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
-    key_param->key_pad = HKS_PADDING_NONE;
-    key_param->key_domain = HKS_ECC_CURVE_ED25519;
-    key_param->key_len = HC_PARAM_KEY_LEN; /* interface regulations */
-    key_param->key_digest = HKS_ALG_HASH_SHA_256;
-    key_param->key_param_ext.key_role = (uint32_t)user_type;
-    build_keyparam_ext(key_param);
-#else
-    key_param->key_role = (uint32_t)user_type;
-    key_param->key_len = HC_ST_PUBLIC_KEY_LEN;
-#endif
-    key_param->key_type = HKS_KEY_TYPE_EDDSA_PUBLIC_KEY_ED25519;
-    key_param->key_usage = HKS_KEY_USAGE_VERIFY;
-    key_param->key_mode = HKS_ALG_GCM;
+    HksFreeParamSet(&key_param_set);
+    return error_code;
 }
 
 int32_t verify_with_public_key(const int32_t user_type, const struct uint8_buff *message,
@@ -1301,34 +1531,63 @@ int32_t verify_with_public_key(const int32_t user_type, const struct uint8_buff 
         return error_code;
     }
 
-    struct hks_blob hash = convert_to_blob_from_sha256_value(&sha256_value);
+    struct HksBlob hash = convert_to_blob_from_sha256_value(&sha256_value);
     if (hash.size == 0) {
         LOGE("Convert sha256 hash to blob failed");
         return error_code;
     }
 
-    struct hks_key_param key_param;
-    (void)memset_s(&key_param, sizeof(key_param), 0, sizeof(key_param));
-    gen_verify_with_public_key_param(&key_param, user_type);
-    struct hks_blob hks_signature = convert_to_blob_from_signature(signature);
-    if (hks_signature.size == 0) {
+    struct HksBlob signature_blob = convert_to_blob_from_signature(signature);
+    if (signature_blob.size == 0) {
         LOGE("Convert hks signature to blob failed");
         return error_code;
     }
 
-    struct hks_blob hks_public_key;
-    (void)memset_s(&hks_public_key, sizeof(hks_public_key), 0, sizeof(hks_public_key));
-    hks_public_key.data = public_key->data;
-    hks_public_key.size = public_key->length;
-    hks_public_key.type = HKS_BLOB_TYPE_KEY; /* public key pattern */
-    int32_t hks_status = hks_asymmetric_verify(&hks_public_key, &key_param, &hash, &hks_signature);
+    struct HksParamSet *key_param_set = NULL;
+    int32_t hks_status = gen_verify_key_param_set(false, /* false: is public key */
+        public_key->length * BITS_PER_BYTE, user_type, &key_param_set);
+    if (hks_status != ERROR_CODE_SUCCESS) {
+        LOGE("gen verify with public key param set failed, status:%d", hks_status);
+        return error_code;
+    }
+
+    struct HksBlob public_key_blob = { public_key->length, public_key->data };
+    hks_status = HksVerify(&public_key_blob, key_param_set, &hash, &signature_blob);
     if (hks_status == 0) {
         error_code = ERROR_CODE_SUCCESS;
     } else {
         LOGE("Verify failed, status=%d", hks_status);
         error_code = ERROR_CODE_FAILED;
     }
+
+    HksFreeParamSet(&key_param_set);
     return error_code;
+}
+
+static int32_t gen_agreed_key_param_set(struct HksParamSet **param_set)
+{
+    struct HksParam params[] = {
+        {
+            .tag = HKS_TAG_PURPOSE,
+            .uint32Param = HKS_KEY_PURPOSE_DERIVE
+        }, {
+            .tag = HKS_TAG_ALGORITHM,
+            .uint32Param = HKS_ALG_X25519
+        }, {
+            .tag = HKS_TAG_KEY_SIZE,
+            .uint32Param = HC_ST_PUBLIC_KEY_LEN * BITS_PER_BYTE
+        }, {
+            .tag = HKS_TAG_IS_KEY_ALIAS,
+            .boolParam = false
+        }
+    };
+
+    int32_t status = construct_param_set(param_set, params, array_size(params));
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("construct param set for agree key failed, status:%d", status);
+    }
+
+    return status;
 }
 
 int32_t compute_sts_shared_secret(struct stsk *self_private_key, struct stpk *peer_public_key,
@@ -1340,105 +1599,109 @@ int32_t compute_sts_shared_secret(struct stsk *self_private_key, struct stpk *pe
     check_num_return_val(peer_public_key->length, HC_INPUT_ERROR);
     check_ptr_return_val(out_shared_key, HC_INPUT_ERROR);
 
-    int32_t error_code = ERROR_CODE_FAILED;
     (void)memset_s(out_shared_key, sizeof(*out_shared_key), 0, sizeof(*out_shared_key));
-    struct hks_blob key_alias_for_private_key = convert_to_blob_from_stsk(self_private_key);
-    if (key_alias_for_private_key.size == 0) {
+    int32_t error_code = ERROR_CODE_FAILED;
+    struct HksBlob self_private_key_blob = convert_to_blob_from_stsk(self_private_key);
+    if (self_private_key_blob.size == 0) {
         LOGE("Convert key alias for private key to blob failed");
         return error_code;
     }
 
-    struct hks_blob key_alias_for_peer_public_key = convert_to_blob_from_stpk(peer_public_key);
-    if (key_alias_for_peer_public_key.size == 0) {
+    struct HksBlob peer_public_key_blob = convert_to_blob_from_stpk(peer_public_key);
+    if (peer_public_key_blob.size == 0) {
         LOGE("Convert key alias for peer public key to blob failed");
         return error_code;
     }
 
-    struct hks_key_param key_param;
-    (void)memset_s(&key_param, sizeof(key_param), 0, sizeof(key_param));
-    key_param.key_type = HKS_KEY_TYPE_ECC_KEYPAIR_CURVE25519;
-    key_param.key_usage = HKS_KEY_USAGE_DERIVE;
-    key_param.key_len = HC_ST_PUBLIC_KEY_LEN;
-    key_param.key_mode = HKS_ALG_ECDH(HKS_ALG_SELECT_RAW);
+    struct HksParamSet *param_set = NULL;
+    int32_t hks_status = gen_agreed_key_param_set(&param_set);
+    if (hks_status != ERROR_CODE_SUCCESS) {
+        LOGE("gen agreed key param set failed! status:%d", hks_status);
+        return error_code;
+    }
 
-#if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
-    build_keyparam_ext(&key_param);
-#endif
-
-    struct hks_blob key_alias_for_agreed_key = {
-        .data = out_shared_key->sts_shared_secret,
-        .size = HC_STS_SHARED_SECRET_LENGTH,
-        .type = 0
-    };
-    uint32_t agreement_alg = HKS_ALG_ECDH(HKS_ALG_SELECT_RAW);
-    int32_t hks_status = hks_key_agreement(&key_alias_for_agreed_key, &key_param, agreement_alg,
-        &key_alias_for_private_key, &key_alias_for_peer_public_key);
+    struct HksBlob key_alias_for_agreed_key = { HC_STS_SHARED_SECRET_LENGTH, out_shared_key->sts_shared_secret };
+    hks_status = HksAgreeKey(param_set, &self_private_key_blob, &peer_public_key_blob, &key_alias_for_agreed_key);
     if ((hks_status == 0) && (key_alias_for_agreed_key.size == HC_STS_SHARED_SECRET_LENGTH)) {
         out_shared_key->length = key_alias_for_agreed_key.size;
         error_code = ERROR_CODE_SUCCESS;
     } else {
-        LOGE("Key agreement by alias failed");
+        LOGE("Key agreement by alias failed, status:%d", hks_status);
     }
     return error_code;
 }
 
 int32_t key_info_init(void)
 {
-    int32_t hks_status = hks_init();
-#if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
-    return hks_status;
-#else
-    if (hks_status == 0) {
+    int32_t ret = HksInitialize();
+    if (ret == HKS_SUCCESS) {
         return ERROR_CODE_SUCCESS;
-    } else if ((hks_status == HKS_ERROR_INVALID_KEY_FILE) || (hks_status == HKS_ERROR_READ_FILE_FAIL)) {
-        LOGE("Key info init failed, status=%d", hks_status);
-        hks_status = hks_refresh_key_info();
-        if (hks_status == 0) {
-            return ERROR_CODE_SUCCESS;
-        }
-        LOGE("Key info refresh failed, status=%u", hks_status);
+    }
+
+    if ((ret != HKS_ERROR_INVALID_KEY_FILE) && (ret != HKS_ERROR_CRYPTO_ENGINE_ERROR) &&
+        (ret != HKS_ERROR_UPDATE_ROOT_KEY_MATERIAL_FAIL)) {
+        LOGE("Hks: Init hks failed, ret: %d", ret);
         return ERROR_CODE_FAILED;
     }
 
-    return ERROR_CODE_FAILED;
-#endif
+    DBG_OUT("Hks: The local hks file needs to be refreshed!");
+    LOGI("Start to delete local database file!");
+    ret = HksRefreshKeyInfo();
+    if (ret != HKS_SUCCESS) {
+        LOGE("Hks: HksRefreshKeyInfo failed, ret:%d", ret);
+        return ERROR_CODE_FAILED;
+    }
+    ret = HksInitialize();
+    if (ret != HKS_SUCCESS) {
+        LOGE("Hks: Init hks failed, ret:%d", ret);
+        return ERROR_CODE_FAILED;
+    }
+    return ERROR_CODE_SUCCESS;
 }
 
 #if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
-static void init_aes_ccm_decrypt_key_params(struct hks_key_param *key_params)
+static int32_t init_aes_ccm_decrypt_key_params(struct HksParamSet **param_set
+    const struct uint8_buff *cipher, const struct aes_aad *aad)
 {
-    (void)memset_s(key_params, sizeof(*key_params), 0, sizeof(*key_params));
-    key_params->key_type = HKS_KEY_TYPE_AES;
-    key_params->key_usage = HKS_KEY_USAGE_DECRYPT;
-    key_params->key_mode = HKS_ALG_CCM;
-    key_params->key_pad = HKS_PADDING_PKCS7;
-    key_params->key_len = HKS_MAX_KEY_LEN_256;
-    key_params->key_digest = HKS_ALG_HASH_SHA_256;
+    struct HksBlob hks_nonce = { HC_CCM_NONCE_LEN, cipher->val };
+    struct uint8_buff aad_data = { (uint8_t *)aad->aad, aad->length, aad->length };
+    struct sha256_value aad_sha = sha256(&aad_data);
+    struct HksBlob hks_aad = { aad_sha.length, aad_sha.sha256_value };
 
-    build_keyparam_ext(key_params);
-}
+    struct HksParam params[] = {
+        {
+            .tag = HKS_TAG_PURPOSE,
+            .uint32Param = HKS_KEY_PURPOSE_DECRYPT
+        }, {
+            .tag = HKS_TAG_ALGORITHM,
+            .uint32Param = HKS_ALG_AES
+        }, {
+            .tag = HKS_TAG_BLOCK_MODE,
+            .uint32Param = HKS_MODE_CCM
+        }, {
+            .tag = HKS_TAG_PADDING,
+            .uint32Param = HKS_PADDING_NONE
+        }, {
+            .tag = HKS_TAG_DIGEST,
+            .uint32Param = HKS_DIGEST_SHA256
+        }, {
+            .tag = HKS_TAG_KEY_SIZE,
+            .uint32Param = HKS_AES_KEY_SIZE_256
+        }, {
+            .tag = HKS_TAG_NONCE,
+            .blob = hks_nonce 
+        }, {
+            .tag = HKS_TAG_ASSOCIATED_DATA,
+            .blob = hks_aad
+        }
+    };
 
-static int32_t gen_crypt_param(const struct uint8_buff *cipher, struct hks_crypt_param *crypt_param,
-    struct aes_aad *aad)
-{
-    uint8_t iv[HC_IV_MAX_LEN];
-    (void)memset_s(iv, sizeof(iv), 0, sizeof(iv));
-    if (cipher->length < sizeof(iv)) {
-        LOGE("Cipher length is short than iv max length");
-        return ERROR_CODE_FAILED;
+    int32_t status = construct_param_set(param_set, params, array_size(params));
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("construct param set for AES CCM decrypt key failed");
     }
-    (void)memcpy_s(iv, HC_IV_MAX_LEN, cipher->val, sizeof(iv));
-    crypt_param->nonce.data = iv;
-    crypt_param->nonce.size = sizeof(iv);
-    crypt_param->nonce.type = HKS_BLOB_TYPE_IV;
-    crypt_param->aad.data = aad->aad;
-    crypt_param->aad.size = aad->length;
-    crypt_param->aad.type = HKS_BLOB_TYPE_AAD;
-    crypt_param->tag.data = NULL;
-    crypt_param->tag.size = 0;
-    crypt_param->tag.type = HKS_BLOB_TYPE_AAD;
 
-    return EOK;
+    return status;
 }
 
 int32_t aes_ccm_decrypt(struct var_buffer *key, const struct uint8_buff *cipher,
@@ -1448,43 +1711,66 @@ int32_t aes_ccm_decrypt(struct var_buffer *key, const struct uint8_buff *cipher,
     check_ptr_return_val(cipher, HC_INPUT_ERROR);
     check_ptr_return_val(aad, HC_INPUT_ERROR);
     check_ptr_return_val(out_plain, HC_INPUT_ERROR);
-
-    struct hks_blob hks_key = {
-        .type = HKS_BLOB_TYPE_ALIAS,
-        .data = key->data,
-        .size = key->length
-    };
-    struct hks_key_param key_params;
-    init_aes_ccm_decrypt_key_params(&key_params);
-
-    struct hks_crypt_param crypt_param;
-    if (gen_crypt_param(cipher, &crypt_param, aad) != EOK) {
+    if (cipher->length < HC_AES_GCM_NONCE_LEN) {
+        LOGE("cipher length is no larger than salt size");
         return ERROR_CODE_FAILED;
     }
 
-    struct hks_blob cipher_text_with_tag;
-    (void)memset_s(&cipher_text_with_tag, sizeof(cipher_text_with_tag), 0, sizeof(cipher_text_with_tag));
-    cipher_text_with_tag.data = cipher->val;
-    cipher_text_with_tag.size = cipher->length;
-
-    struct hks_blob plain_text;
-    (void)memset_s(&plain_text, sizeof(plain_text), 0, sizeof(plain_text));
-    plain_text.data = (uint8_t *)MALLOC(cipher_text_with_tag.size - HKS_SALT_MAX_SIZE);
-    check_ptr_return_val(plain_text.data, ERROR_CODE_FAILED);
-    plain_text.size = cipher_text_with_tag.size - HKS_SALT_MAX_SIZE;
-    int32_t status = hks_aead_decrypt(&hks_key, &key_params, &crypt_param, &plain_text, &cipher_text_with_tag);
-    if (status != 0) {
-        LOGE("Huks aead decrypt failed, status: %d", status);
-        safe_free(plain_text.data);
+    struct HksParamSet *key_param_set = NULL;
+    int32_t hks_status = init_aes_ccm_decrypt_key_params(&key_param_set, cipher, aad);
+    if (hks_status != ERROR_CODE_SUCCESS) {
+        LOGE("init aes ccm decrypt key param set failed, status:%d", hks_status);
         return ERROR_CODE_FAILED;
     }
 
-    if (memcpy_s(out_plain->val, out_plain->size, plain_text.data, plain_text.size) != EOK) {
-        safe_free(plain_text.data);
-        return memory_copy_error(__func__, __LINE__);
+    struct HksBlob hks_key = { key->length, key->data };
+    struct HksBlob cipher_text_with_tag = { cipher->length - HC_CCM_NONCE_LEN, cipher->val + HC_CCM_NONCE_LEN };
+    struct HksBlob plain_text = { out_plain->size, out_plain->val };
+
+    hks_status = HksDecrypt(&hks_key, key_param_set, &cipher_text_with_tag, &plain_text);
+    if (hks_status != ERROR_CODE_SUCCESS) {
+        LOGE("Huks aead decrypt failed, status:%d", hks_status);
+        HksFreeParamSet(&key_param_set);
+        return ERROR_CODE_FAILED;
     }
     out_plain->length = plain_text.size;
-    safe_free(plain_text.data);
+
+    HksFreeParamSet(&key_param_set);
+    return hks_status;
+}
+
+static int32_t gen_lt_x25519_key_param_set(struct HksParamSet **param_set, const struct hc_auth_id *auth_id)
+{
+    struct hc_auth_id tmp_id = *auth_id;
+    struct HksParam params[] = {
+        {
+            .tag = HKS_TAG_PURPOSE,
+            .uint32Param = HKS_KEY_PURPOSE_SIGN | HKS_KEY_PURPOSE_VERIFY
+        }, {
+            .tag = HKS_TAG_KEY_STORAGE_FLAG,
+            .uint32Param = HKS_STORAGE_PERSISTENT
+        }, {
+            .tag = HKS_TAG_ALGORITHM,
+            .uint32Param = HKS_ALG_X25519
+        }, {
+            .tag = HKS_TAG_PADDING,
+            .uint32Param = HKS_PADDING_NONE
+        }, {
+            .tag = HKS_TAG_DIGEST,
+            .uint32Param = HKS_DIGEST_SHA256
+        }, {
+            .tag = HKS_TAG_KEY_SIZE,
+            .uint32Param = HC_PARAM_KEY_LEN
+        }, {
+            .tag = HKS_TAG_KEY_AUTH_ID,
+            .blob = convert_to_blob_from_hc_auth_id(&tmp_id)
+        }
+    };
+
+    int32_t status = construct_param_set(param_set, params, array_size(params));
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("construct param set for lt x25519 key failed");
+    }
 
     return status;
 }
@@ -1494,37 +1780,65 @@ int32_t generate_lt_X25519_key_pair(struct hc_key_alias *key_alias, const struct
     check_ptr_return_val(key_alias, HC_INPUT_ERROR);
     check_ptr_return_val(auth_id, HC_INPUT_ERROR);
 
-    int32_t error_code = ERROR_CODE_FAILED;
-    struct hks_blob hks_key_alias = convert_to_blob_from_hc_key_alias(key_alias);
+    struct HksBlob key_alias_blob = convert_to_blob_from_hc_key_alias(key_alias);
+    check_num_return_val(key_alias_blob.size, ERROR_CODE_FAILED);
 
-    check_num_return_val(hks_key_alias.size, error_code);
-    hks_key_alias.type = HKS_BLOB_TYPE_ALIAS;
-
-    struct hks_key_param key_param;
-    (void)memset_s(&key_param, sizeof(key_param), 0, sizeof(key_param));
-    key_param.key_type = HKS_KEY_TYPE_ECC_KEYPAIR_CURVE25519;
-    key_param.key_usage = HKS_KEY_USAGE_SIGN | HKS_KEY_USAGE_VERIFY;
-    key_param.key_len = HC_PARAM_KEY_LEN; /* interface regulations */
-    key_param.key_domain = HKS_ECC_CURVE_CURVE25519;
-    key_param.key_pad = HKS_PADDING_NONE;
-    key_param.key_digest = HKS_ALG_HASH_SHA_256;
-
-    struct hc_auth_id tmp_id = *auth_id;
-    key_param.key_param_ext.key_auth_id = convert_to_blob_from_hc_auth_id(&tmp_id);
-    key_param.key_param_ext.key_auth_id.type = HKS_BLOB_TYPE_AUTH_ID;
-    build_keyparam_ext(&key_param);
-
-    int32_t hks_status = hks_generate_key(&hks_key_alias, &key_param);
-    if (hks_status == 0) {
-        error_code = ERROR_CODE_SUCCESS;
-    } else {
-        LOGE("Hks generate failed, status=%d", hks_status);
+    struct HksParamSet *key_param_set = NULL;
+    int32_t status = gen_lt_x25519_key_param_set(&key_param_set, auth_id);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("init lt x25519 key pair param set failed, status:%d", status);
+        return ERROR_CODE_FAILED;
     }
-    if (hks_is_key_exist(&hks_key_alias) == 0) {
+
+    status = HksGenerateKey(&key_alias_blob, key_param_set, NULL);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("Hks generate failed, status:%d", status);
+    }
+
+    if (HksKeyExist(&key_alias_blob, NULL) == 0) {
         LOGI("Generate key success, key exist");
     }
 
-    return error_code;
+    HksFreeParamSet(&key_param_set);
+    return status;
+}
+
+static int32_t gen_key_attestation_param_set(struct HksParamSet **param_set,
+    const struct uint8_buff *challenge, struct HksBlob *key_alias_blob)
+{
+    struct HksBlob hks_challenge = { challenge->length, challenge->val };
+    struct HksBlob temp_key_alias = { key_alias_blob->size, key_alias_blob->data };
+    struct HksParam params[] = {
+        {
+            .tag = HKS_TAG_PURPOSE,
+            .uint32Param = HKS_KEY_PURPOSE_SIGN | HKS_KEY_PURPOSE_VERIFY
+        }, {
+            .tag = HKS_TAG_ALGORITHM,
+            .uint32Param = HKS_ALG_X25519
+        }, {
+            .tag = HKS_TAG_PADDING, /* interface regulations */
+            .uint32Param = HKS_PADDING_NONE
+        }, {
+            .tag = HKS_TAG_KEY_SIZE,
+            .uint32Param = HC_PARAM_CHAIN_LEN
+        }, {
+            .tag = HKS_TAG_ATTESTATION_CHALLENGE,
+            .blob = hks_challenge
+        }, {
+            .tag = HKS_TAG_KEY_STORAGE_FLAG,
+            .uint32Param = HKS_STORAGE_PERSISTENT
+        }, {
+            .tag = HKS_TAG_ATTESTATION_ID_ALIAS,
+            .blob = temp_key_alias
+        }
+    };
+
+    int32_t status = construct_param_set(param_set, params, array_size(params));
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("construct param set for attestation key failed");
+    }
+
+    return status;
 }
 
 int32_t get_key_attestation(const struct uint8_buff *challenge, struct hc_key_alias *sk_alias,
@@ -1536,64 +1850,63 @@ int32_t get_key_attestation(const struct uint8_buff *challenge, struct hc_key_al
     check_ptr_return_val(sk_alias, error_code);
     check_ptr_return_val(out_cert_chain, error_code);
 
-    struct hks_blob hks_key_alias = {
-        .data = sk_alias->key_alias,
-        .size = sk_alias->length,
-        .type = HKS_BLOB_TYPE_ALIAS
-    };
+    struct HksBlob sk_alias_blob = { sk_alias->length, sk_alias->key_alias };
+    struct HksParamSet *key_param_set = NULL;
+    int32_t hks_status = gen_key_attestation_param_set(&key_param_set, challenge, &sk_alias_blob);
+    if (hks_status != ERROR_CODE_SUCCESS) {
+        LOGE("gen key attestation param set failed, status:%d", hks_status);
+        return ERROR_CODE_FAILED;
+    }
 
-    struct hks_attestation_spec hks_attestation;
-    hks_attestation.challenge.data = challenge->val,
-    hks_attestation.challenge.size = challenge->length,
-    hks_attestation.challenge.type = HKS_BLOB_TYPE_RAW,
-    hks_attestation.temporary = 0; /* 0: save attestation result, 1: temporary attestation */
-
-    struct hks_blob cert[g_cert_chain_cnt];
+    struct HksBlob cert[g_cert_chain_cnt];
     for (int32_t i = 0; i < g_cert_chain_cnt; ++i) {
-        struct hks_blob certBlob;
+        struct HksBlob certBlob;
         certBlob.data = out_cert_chain[i].val;
         certBlob.size = out_cert_chain[i].length;
-        certBlob.type = HKS_BLOB_TYPE_RAW;
         cert[i] = certBlob;
     }
 
-    struct hks_cert_chain hks_cert_chains = {
-        .count = g_cert_chain_cnt,
-        .cert = cert
-    };
+    struct HksCertChain hks_cert_chains = { cert, g_cert_chain_cnt };
 
-    struct hks_key_param key_param = {0};
-    key_param.key_type = HKS_KEY_TYPE_ECC_KEYPAIR(HKS_ECC_CURVE_CURVE25519);
-    key_param.key_len = HC_PARAM_CHAIN_LEN; /* interface regulations */
-    key_param.key_domain = HKS_ECC_CURVE_CURVE25519;
-    key_param.key_usage = HKS_KEY_USAGE_SIGN | HKS_KEY_USAGE_VERIFY;
-    key_param.key_pad = HKS_PADDING_NONE;
-    build_keyparam_ext(&key_param);
-
-    int32_t ret = hks_key_attestation(&hks_key_alias, &key_param, &hks_attestation, &hks_cert_chains);
-    if (ret != ERROR_CODE_SUCCESS) {
-        LOGE("Key attestaion failed, errCode is %d", ret);
+    hks_status = HksAttestKey(&sk_alias_blob, key_param_set, &hks_cert_chains);
+    if (hks_status != ERROR_CODE_SUCCESS) {
+        LOGE("Key attestaion failed, errCode is %d", hks_status);
     }
+
     LOGI("hks_key_attestation finish");
+
     for (int32_t i = 0; i < g_cert_chain_cnt; ++i) {
         out_cert_chain[i].length = hks_cert_chains.cert[i].size;
     }
 
-    return ret;
+    HksFreeParamSet(&key_param_set);
+    return hks_status;
 }
 
-static void gen_key_alias_and_param(struct hks_blob *hks_key_alias, struct hks_key_param *key_param,
-    struct hc_key_alias *sk_alias)
+static int32_t gen_get_cert_chain_param_set(struct HksParamSet **param_set)
 {
-    hks_key_alias->data = sk_alias->key_alias,
-    hks_key_alias->size = sk_alias->length,
-    hks_key_alias->type = HKS_BLOB_TYPE_ALIAS;
-    key_param->key_type = HKS_KEY_TYPE_ECC_KEYPAIR(HKS_ECC_CURVE_CURVE25519);
-    key_param->key_len = HC_PARAM_CHAIN_LEN; /* interface regulations */
-    key_param->key_domain = HKS_ECC_CURVE_CURVE25519;
-    key_param->key_usage = HKS_KEY_USAGE_SIGN | HKS_KEY_USAGE_VERIFY;
-    key_param->key_pad = HKS_PADDING_NONE;
-    build_keyparam_ext(key_param);
+    struct HksParam params[] = {
+        {
+            .tag = HKS_TAG_PURPOSE,
+            .uint32Param = HKS_KEY_PURPOSE_SIGN | HKS_KEY_PURPOSE_VERIFY
+        }, {
+            .tag = HKS_TAG_ALGORITHM,
+            .uint32Param = HKS_ALG_ECC
+        }, {
+            .tag = HKS_TAG_PADDING, /* interface regulations */
+            .uint32Param = HKS_PADDING_NONE
+        }, {
+            .tag = HKS_TAG_KEY_SIZE,
+            .uint32Param = HC_PARAM_CHAIN_LEN
+        }
+    };
+
+    int32_t status = construct_param_set(param_set, params, array_size(params));
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("construct param set for attestation key failed");
+    }
+
+    return status;
 }
 
 int32_t get_cert_chain(const struct uint8_buff *challenge,
@@ -1605,44 +1918,43 @@ int32_t get_cert_chain(const struct uint8_buff *challenge,
     check_ptr_return_val(sk_alias, error_code);
     check_ptr_return_val(out_cert_chain, error_code);
 
-    struct hks_blob hks_key_alias = {0};
-    struct hks_key_param key_param = {0};
-    gen_key_alias_and_param(&hks_key_alias, &key_param, sk_alias);
+    struct HksBlob hks_key_alias = { sk_alias->length, sk_alias->key_alias };
+    struct HksParamSet *key_param_set = NULL;
+    int32_t hks_status = gen_get_cert_chain_param_set(&key_param_set);
+    if (hks_status != ERROR_CODE_SUCCESS) {
+        LOGE("gen get cert chain param set failed, status:%d", hks_status);
+        return ERROR_CODE_FAILED;
+    }
 
     int8_t malloc_flag = 1; /* malloc ok */
-    struct hks_blob cert[g_cert_chain_cnt];
+    struct HksBlob cert[g_cert_chain_cnt];
     (void)memset_s(cert, sizeof(cert), 0, sizeof(cert));
     const uint32_t cert_buff_size = 8192; /* each certificate buff max size */
     for (int32_t i = 0; i < g_cert_chain_cnt; ++i) {
-        struct hks_blob certBlob;
-        certBlob.data = (uint8_t *)MALLOC(cert_buff_size);
-        if (certBlob.data == NULL) {
+        cert[i].data = (uint8_t *)MALLOC(cert_buff_size);
+        if (cert[i].data == NULL) {
             malloc_flag = 0;
             break;
         }
-        (void)memset_s(certBlob.data, cert_buff_size, 0, cert_buff_size);
-        certBlob.size = cert_buff_size;
-        certBlob.type = HKS_BLOB_TYPE_RAW;
-        cert[i] = certBlob;
+        (void)memset_s(cert[i].data, cert_buff_size, 0, cert_buff_size);
+        cert[i].size = cert_buff_size;
     }
 
     if (malloc_flag == 0) {
         for (int32_t i = 0; i < g_cert_chain_cnt; ++i) {
-            if (cert[i].size != 0) {
+            if (cert[i].data != NULL) {
                 FREE(cert[i].data);
             }
         }
+        HksFreeParamSet(&key_param_set);
         return HC_MALLOC_FAILED;
     }
 
-    struct hks_cert_chain hks_cert_chains = {
-        .count = g_cert_chain_cnt,
-        .cert = cert
-    };
+    struct HksCertChain hks_cert_chains = { cert, g_cert_chain_cnt };
 
-    int32_t ret = hks_get_cert_chain(&hks_key_alias, &key_param, &hks_cert_chains);
-    if (ret != ERROR_CODE_SUCCESS) {
-        LOGE("Get cert chain failed, errCode is %d", ret);
+    hks_status = HksGetCertificateChain(&hks_key_alias, key_param_set, &hks_cert_chains);
+    if (hks_status != ERROR_CODE_SUCCESS) {
+        LOGE("Get cert chain failed, errCode is %d", hks_status);
     }
 
     out_cert_chain->length = hks_cert_chains.cert[0].size;
@@ -1656,7 +1968,76 @@ int32_t get_cert_chain(const struct uint8_buff *challenge,
         FREE(hks_cert_chains.cert[i].data);
     }
 
-    return ret;
+    HksFreeParamSet(&key_param_set);
+    return hks_status;
+}
+
+static int32_t gen_asset_unwrap_param_set(struct HksParamSet **param_set, struct HksBlob *aad)
+{
+    struct HksParam params[] = {
+        {
+            .tag = HKS_TAG_PURPOSE,
+            .uint32Param = HKS_KEY_PURPOSE_UNWRAP
+        }, {
+            .tag = HKS_TAG_ALGORITHM,
+            .uint32Param = HKS_ALG_AES
+        }, {
+            .tag = HKS_TAG_PADDING, /* interface regulations */
+            .uint32Param = HKS_PADDING_PKCS7
+        }, {
+            .tag = HKS_TAG_KEY_SIZE,
+            .uint32Param = HC_PARAM_KEY_LEN
+        }, {
+            .tag = HKS_TAG_ASSOCIATED_DATA,
+            .blob = *aad
+        }
+    };
+
+    int32_t status = construct_param_set(param_set, params, array_size(params));
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("construct param set for attestation key failed");
+    }
+
+    return status;
+}
+
+static int32_t get_asset_aad_wrap(struct uint8_buff *sec_data, struct HksBlob *aad, struct HksBlob *wrap_data)
+{
+    /* sec_data = asset_len + asset_data + wrap_data_len + wrap_data */
+    if (sec_data->length < sizeof(unsigned int)) {
+        return ERROR_CODE_FAILED;
+    }
+
+    unsigned int asset_len = *(uint32_t *)(sec_data->val);
+
+    uint32_t offset = sizeof(asset_len);
+    if (sec_data->length < (offset + asset_len)) {
+        return ERROR_CODE_FAILED;
+    }
+
+    struct uint8_buff asset_data = { sec_data->val + offset, asset_len, asset_len };
+    struct sha256_value asset_sha = sha256(&asset_data);
+    if (memcpy_s(aad->data, aad->size, asset_sha.sha256_value, asset_sha.length) != EOK) {
+        return ERROR_CODE_FAILED;
+    }
+    aad->size = asset_sha.length;
+
+    offset += asset_len;
+    if (sec_data->length < (offset + sizeof(unsigned int))) {
+        return ERROR_CODE_FAILED;
+    }
+
+    unsigned int wrap_len = *(uint32_t *)(sec_data->val + offset);
+
+    offset += sizeof(wrap_len);
+    if (sec_data->length < (offset + wrap_len)) {
+        return ERROR_CODE_FAILED;
+    }
+
+    wrap_data->size = wrap_len;
+    wrap_data->data = sec_data->val + offset;
+
+    return ERROR_CODE_SUCCESS;
 }
 
 int32_t asset_unwrap(struct uint8_buff *sec_data, struct hc_key_alias *dec_alias,
@@ -1668,59 +2049,91 @@ int32_t asset_unwrap(struct uint8_buff *sec_data, struct hc_key_alias *dec_alias
     check_ptr_return_val(dec_alias, error_code);
     check_ptr_return_val(target_alias, error_code);
 
-    struct hks_blob hks_dec_alias = {
-        .data = dec_alias->key_alias,
-        .size = dec_alias->length,
-        .type = HKS_BLOB_TYPE_ALIAS
-    };
+    struct HksBlob aad = { HC_SHA256_LEN, NULL };
+    struct HksBlob wrap_data = { 0, NULL };
 
-    struct hks_blob hks_target_alias = {
-        .data = target_alias->key_alias,
-        .size = target_alias->length,
-        .type = HKS_BLOB_TYPE_ALIAS
-    };
+    aad.data = (uint8_t *)MALLOC(HC_SHA256_LEN);
+    if (aad.data == NULL) {
+        return ERROR_CODE_FAILED;
+    }
+    (void)memset_s(aad.data, HC_SHA256_LEN, 0, HC_SHA256_LEN);
 
-    struct hks_key_param hks_param = {0};
-
-    hks_param.key_type = HKS_KEY_TYPE_AES;
-    hks_param.key_len = HC_PARAM_KEY_LEN; /* interface regulations */
-    hks_param.key_usage = HKS_KEY_USAGE_UNWRAP;
-    hks_param.key_mode = HKS_ALG_CCM;
-    hks_param.key_pad = HKS_PADDING_PKCS7;
-    build_keyparam_ext(&hks_param);
-
-    struct hks_blob hks_sec_data = {
-        .data = sec_data->val,
-        .size = sec_data->size,
-        .type = HKS_BLOB_TYPE_RAW
-    };
-
-    uint8_t result_buff[64] = {0}; /* interface regulations */
-    struct hks_blob hks_result = {
-        .data = result_buff,
-        .size = 64, /* interface regulations */
-        .type = HKS_BLOB_TYPE_WRAP_ECDH_ENC_DATA
-    };
-
-    int32_t ret = hks_unwrap(&hks_dec_alias, &hks_target_alias, &hks_param, &hks_sec_data, &hks_result);
-    if (ret != ERROR_CODE_SUCCESS) {
-        LOGE("Hks unwrap failed, errCode is %d", ret);
+    int32_t status = get_asset_aad_wrap(sec_data, &aad, &wrap_data);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("get asset aad and wrap data failed, status:%d", status);
+        safe_free(aad.data);
+        return ERROR_CODE_FAILED;
     }
 
-    return ret;
+    struct HksBlob hks_dec_alias = { dec_alias->length, dec_alias->key_alias };
+    struct HksBlob hks_target_alias = { target_alias->length, target_alias->key_alias };
+    struct HksParamSet *key_param_set = NULL;
+    status = gen_asset_unwrap_param_set(&key_param_set, &aad);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("gen asset unwrap param set failed, status:%d", status);
+        safe_free(aad.data);
+        HksFreeParamSet(&key_param_set);
+        return ERROR_CODE_FAILED;
+    }
+
+    status = HksUnwrapKey(&hks_dec_alias, &hks_target_alias, &wrap_data, key_param_set);
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("Hks unwrap failed, errCode is %d", status);
+    }
+
+    safe_free(aad.data);
+    HksFreeParamSet(&key_param_set);
+    return status;
 }
 
-static void gen_hks_param(struct hks_key_param *hks_param, struct hc_auth_id *temp_auth_id)
+static int32_t gen_derived_key_param_set(struct HksParamSet **hks_param_set,
+    struct hc_key_alias *base_alias, struct HksBlob derive_factor)
 {
-    hks_param->key_param_ext.key_auth_id = convert_to_blob_from_hc_auth_id(temp_auth_id);
-    hks_param->key_param_ext.key_auth_id.type = HKS_BLOB_TYPE_AUTH_ID;
-    hks_param->key_type = HKS_KEY_TYPE_AES;
-    hks_param->key_len = HKS_MAX_KEY_LEN_256;
-    hks_param->key_mode = HKS_ALG_CCM;
-    hks_param->key_pad = HKS_PADDING_PKCS7;
-    hks_param->key_digest = HKS_ALG_HASH_SHA_256;
-    hks_param->key_usage = HKS_KEY_USAGE_ENCRYPT | HKS_KEY_USAGE_DECRYPT | HKS_KEY_USAGE_WRAP | HKS_KEY_USAGE_UNWRAP;
-    build_keyparam_ext(hks_param);
+    struct hc_auth_id temp_auth_id = { HC_AUTH_ID_BUFF_LEN, { 0 } };
+
+    struct HksParam params[] = {
+        {
+            .tag = HKS_TAG_PURPOSE,
+            .uint32Param = HKS_KEY_PURPOSE_ENCRYPT | HKS_KEY_PURPOSE_DECRYPT
+        }, {
+            .tag = HKS_TAG_ALGORITHM,
+            .uint32Param = HKS_ALG_AES
+        }, {
+            .tag = HKS_TAG_BLOCK_MODE,
+            .uint32Param = HKS_MODE_CCM
+        }, {
+            .tag = HKS_TAG_PADDING,
+            .uint32Param = HKS_PADDING_NONE
+        }, {
+            .tag = HKS_TAG_KEY_SIZE,
+            .uint32Param = HC_PARAM_KEY_LEN
+        }, {
+            .tag = HKS_TAG_DIGEST,
+            .uint32Param = HKS_DIGEST_SHA256 
+        }, {
+            .tag = HKS_TAG_KEY_AUTH_ID,
+            .blob = { temp_auth_id.length, temp_auth_id.auth_id} 
+        }, {
+            .tag = HKS_TAG_KEY_STORAGE_FLAG,
+            .uint32Param = HKS_STORAGE_PERSISTENT
+        }, {
+            .tag = HKS_TAG_DERIVE_MAIN_KEY,
+            .blob = { base_alias->length, base_alias->key_alias }
+        }, {
+            .tag = HKS_TAG_DERIVE_FACTOR,
+            .blob = derive_factor
+        }, {
+            .tag = HKS_TAG_KEY_GENERATE_TYPE,
+            .uint32Param = HKS_KEY_GENERATE_TYPE_DERIVE
+        }
+    };
+
+    int32_t status = construct_param_set(hks_param_set, params, array_size(params));
+    if (status != ERROR_CODE_SUCCESS) {
+        LOGE("construct param set for attestation key failed");
+    }
+
+    return status;
 }
 
 int32_t gen_derived_key(struct hc_key_alias *base_alias, struct hc_key_alias *to_save_alias)
@@ -1736,45 +2149,39 @@ int32_t gen_derived_key(struct hc_key_alias *base_alias, struct hc_key_alias *to
         LOGW("Derive key exists, will be genetate again");
     }
 
-    struct hks_blob hks_base_alias = {
-        .data = base_alias->key_alias,
-        .size = base_alias->length,
-        .type = HKS_BLOB_TYPE_ALIAS
-    };
+    struct HksBlob hks_target_alias = { to_save_alias->length, to_save_alias->key_alias };
 
-    struct hks_blob hks_target_alias = {
-        .data = to_save_alias->key_alias,
-        .size = to_save_alias->length,
-        .type = HKS_BLOB_TYPE_ALIAS
-    };
+    struct HksParamSet *key_param_set = NULL;
 
-    struct hc_auth_id temp_auth_id = {
-        .length = HC_AUTH_ID_BUFF_LEN,
-        .auth_id = {0}
-    };
+    uint32_t factor_size = strlen((char *)g_factor);
+    struct HksBlob derive_factor = { factor_size, NULL };
 
-    struct hks_key_param hks_param = {0};
-    gen_hks_param(&hks_param, &temp_auth_id);
-    struct hks_derive_param hks_derive_param = {0};
-    int32_t factor_size = strlen((char *)g_factor);
-
-    hks_derive_param.derive_factor.size = factor_size;
-    hks_derive_param.derive_factor.data = (uint8_t *)MALLOC(factor_size + 1);
-    if (hks_derive_param.derive_factor.data == NULL) {
+    derive_factor.data = (uint8_t *)MALLOC(factor_size + 1);
+    if (derive_factor.data == NULL) {
         return HC_MALLOC_FAILED;
     }
-
-    (void)memcpy_s(hks_derive_param.derive_factor.data, factor_size, g_factor, factor_size);
-    hks_derive_param.derive_factor.data[factor_size] = '\0';
-    hks_derive_param.derive_factor.type = 0;
-    hks_derive_param.master_key = hks_base_alias;
-    hks_derive_param.key_gen_type = HKS_KEY_GEN_TYPE_DERIVE;
-    int32_t ret = hks_generate_symmetric_key(&hks_target_alias, &hks_param, &hks_derive_param);
-    if (ret != ERROR_CODE_SUCCESS) {
-        LOGE("Derive key failed, errCode is %d", ret);
+    if (memcpy_s(derive_factor.data, factor_size, g_factor, factor_size) != EOK) {
+        safe_free(derive_factor.data);
+        return memory_copy_error(__func__, __LINE__);
     }
-    safe_free(hks_derive_param.derive_factor.data);
-    return ret;
-}
 
+    derive_factor.data[factor_size] = '\0';
+
+    int32_t hks_status = gen_derived_key_param_set(&key_param_set, base_alias, derive_factor);
+    if (hks_status != ERROR_CODE_SUCCESS) {
+        HksFreeParamSet(&key_param_set);
+        safe_free(derive_factor.data);
+        LOGE("gen asset unwrap param set failed, status:%d", hks_status);
+        return hks_status;
+    }
+
+    hks_status = HksGenerateKey(&hks_target_alias, key_param_set, NULL);
+    if (hks_status != ERROR_CODE_SUCCESS) {
+        LOGE("generate symmetric key failed, status:%d", hks_status);
+    }
+    
+    HksFreeParamSet(&key_param_set);
+    safe_free(derive_factor.data);
+    return hks_status;
+}
 #endif
