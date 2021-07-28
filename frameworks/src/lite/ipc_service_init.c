@@ -73,6 +73,9 @@ void ServiceInit(void)
         IPROXY_END,
     };
 
+#ifdef __LINUX__
+    sleep(1); /* delay 1 second on boot */
+#endif
     if (!SAMGR_GetInstance()->RegisterService((Service *)&service)) {
         LOGE("%s, RegisterService failed", DEV_AUTH_SERVICE_NAME);
         return;
