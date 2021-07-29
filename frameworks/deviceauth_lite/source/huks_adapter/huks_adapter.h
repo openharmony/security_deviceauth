@@ -26,7 +26,7 @@
         } \
     } while (0)
 
-#define array_size(arr) ((sizeof(arr)) / (sizeof(arr)[0]))
+#define array_size(arr) ((sizeof(arr)) / (sizeof((arr)[0])))
 
 enum huks_adapter_error_code {
     ERROR_CODE_NO_PEER_PUBLIC_KEY = -10,
