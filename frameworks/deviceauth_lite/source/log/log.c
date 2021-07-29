@@ -18,7 +18,6 @@
 #include "log.h"
 #include <securec.h>
 #include "base.h"
-#include "../huks_adapter/hks_client.h"
 
 #if defined(_WINDOWS)
 #ifdef DLL_EXPORT
@@ -61,14 +60,6 @@ log_f get_loge(void)
 DLL_API_PUBLIC void registe_log(struct log_f_group *log)
 {
     check_ptr_return(log);
-    struct hks_log_f_group hks_log;
-
-    (void)memset_s(&hks_log, sizeof(hks_log), 0, sizeof(hks_log));
-    hks_log.log_debug = log->log_d;
-    hks_log.log_info = log->log_i;
-    hks_log.log_warn = log->log_w;
-    hks_log.log_error = log->log_e;
-    hks_register_log_interface(&hks_log);
 
     if (log->log_d != NULL) {
         g_log_func.log_d = log->log_d;
