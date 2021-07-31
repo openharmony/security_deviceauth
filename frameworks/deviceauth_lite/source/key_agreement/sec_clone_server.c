@@ -19,7 +19,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <securec.h>
-#include "hks_client.h"
 #include "huks_adapter.h"
 #include "log.h"
 #include "commonutil.h"
