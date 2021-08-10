@@ -648,7 +648,7 @@ void ProcCbHook(int32_t callbackId, uintptr_t cbHook,
     return;
 }
 
-static int32_t EncodeCallData(MessageParcel &dataParcel, int32_t type, const uint8_t *param, int32_t paramSz)
+static uint32_t EncodeCallData(MessageParcel &dataParcel, int32_t type, const uint8_t *param, int32_t paramSz)
 {
     const uint8_t *paramTmp = nullptr;
     int32_t zeroVal = 0;
@@ -660,15 +660,16 @@ static int32_t EncodeCallData(MessageParcel &dataParcel, int32_t type, const uin
     }
     if (dataParcel.WriteInt32(type) && dataParcel.WriteInt32(paramSz) &&
         dataParcel.WriteBuffer(reinterpret_cast<const void *>(paramTmp), static_cast<size_t>(paramSz))) {
-        return HC_SUCCESS;
+        return static_cast<uint32_t>(HC_SUCCESS);
     }
-    return HC_ERROR;
+    return static_cast<uint32_t>(HC_ERROR);
 }
 
 /* group auth callback adapter */
 static bool GaCbOnTransmitWithType(int64_t requestId, const uint8_t *data, uint32_t dataLen, int32_t type)
 {
     int32_t ret = -1;
+    uint32_t uRet;
     MessageParcel dataParcel;
     MessageParcel reply;
     IpcCallBackNode *node = nullptr;
@@ -680,10 +681,10 @@ static bool GaCbOnTransmitWithType(int64_t requestId, const uint8_t *data, uint3
         LOGE("onTransmit hook is null, request id %lld", (long long)requestId);
         return false;
     }
-    ret = EncodeCallData(dataParcel, PARAM_TYPE_REQID,
+    uRet = EncodeCallData(dataParcel, PARAM_TYPE_REQID,
         reinterpret_cast<const uint8_t *>(&requestId), sizeof(requestId));
-    ret += EncodeCallData(dataParcel, PARAM_TYPE_COMM_DATA, data, dataLen);
-    if (ret != HC_SUCCESS) {
+    uRet |= EncodeCallData(dataParcel, PARAM_TYPE_COMM_DATA, data, dataLen);
+    if (uRet != HC_SUCCESS) {
         LOGE("build trans data failed");
         return false;
     }
@@ -708,7 +709,7 @@ static bool TmpIpcGaCbOnTransmit(int64_t requestId, const uint8_t *data, uint32_
 
 static void GaCbOnSessionKeyRetWithType(int64_t requestId, const uint8_t *sessKey, uint32_t sessKeyLen, int32_t type)
 {
-    int32_t ret;
+    uint32_t ret;
     MessageParcel dataParcel;
     MessageParcel reply;
     IpcCallBackNode *node = nullptr;
@@ -722,7 +723,7 @@ static void GaCbOnSessionKeyRetWithType(int64_t requestId, const uint8_t *sessKe
     }
 
     ret = EncodeCallData(dataParcel, PARAM_TYPE_REQID, reinterpret_cast<uint8_t *>(&requestId), sizeof(requestId));
-    ret += EncodeCallData(dataParcel, PARAM_TYPE_SESS_KEY, sessKey, sessKeyLen);
+    ret |= EncodeCallData(dataParcel, PARAM_TYPE_SESS_KEY, sessKey, sessKeyLen);
     if (ret != HC_SUCCESS) {
         LOGE("build trans data failed");
         return;
@@ -747,7 +748,7 @@ static void TmpIpcGaCbOnSessionKeyReturned(int64_t requestId, const uint8_t *ses
 
 static void GaCbOnFinishWithType(int64_t requestId, int32_t operationCode, const char *returnData, int32_t type)
 {
-    int32_t ret;
+    uint32_t ret;
     MessageParcel dataParcel;
     MessageParcel reply;
     IpcCallBackNode *node = nullptr;
@@ -760,9 +761,9 @@ static void GaCbOnFinishWithType(int64_t requestId, int32_t operationCode, const
         return;
     }
     ret = EncodeCallData(dataParcel, PARAM_TYPE_REQID, reinterpret_cast<uint8_t *>(&requestId), sizeof(requestId));
-    ret += EncodeCallData(dataParcel, PARAM_TYPE_OPCODE,
+    ret |= EncodeCallData(dataParcel, PARAM_TYPE_OPCODE,
         reinterpret_cast<uint8_t *>(&operationCode), sizeof(operationCode));
-    ret += EncodeCallData(dataParcel, PARAM_TYPE_COMM_DATA,
+    ret |= EncodeCallData(dataParcel, PARAM_TYPE_COMM_DATA,
         reinterpret_cast<const uint8_t *>(returnData), strlen(returnData) + 1);
     if (ret != HC_SUCCESS) {
         LOGE("build trans data failed");
@@ -791,7 +792,7 @@ static void TmpIpcGaCbOnFinish(int64_t requestId, int32_t operationCode, const c
 static void GaCbOnErrorWithType(int64_t requestId, int32_t operationCode,
     int32_t errorCode, const char *errorReturn, int32_t type)
 {
-    int32_t ret;
+    uint32_t ret;
     MessageParcel dataParcel;
     MessageParcel reply;
     IpcCallBackNode *node = nullptr;
@@ -804,11 +805,11 @@ static void GaCbOnErrorWithType(int64_t requestId, int32_t operationCode,
         return;
     }
     ret = EncodeCallData(dataParcel, PARAM_TYPE_REQID, reinterpret_cast<uint8_t *>(&requestId), sizeof(requestId));
-    ret += EncodeCallData(dataParcel, PARAM_TYPE_OPCODE,
+    ret |= EncodeCallData(dataParcel, PARAM_TYPE_OPCODE,
         reinterpret_cast<uint8_t *>(&operationCode), sizeof(operationCode));
-    ret += EncodeCallData(dataParcel, PARAM_TYPE_ERRCODE, reinterpret_cast<uint8_t *>(&errorCode), sizeof(errorCode));
+    ret |= EncodeCallData(dataParcel, PARAM_TYPE_ERRCODE, reinterpret_cast<uint8_t *>(&errorCode), sizeof(errorCode));
     if (errorReturn != nullptr) {
-        ret += EncodeCallData(dataParcel, PARAM_TYPE_ERR_INFO,
+        ret |= EncodeCallData(dataParcel, PARAM_TYPE_ERR_INFO,
             reinterpret_cast<const uint8_t *>(errorReturn), strlen(errorReturn) + 1);
     }
     if (ret != HC_SUCCESS) {
@@ -838,6 +839,7 @@ static void TmpIpcGaCbOnError(int64_t requestId, int32_t operationCode, int32_t 
 static char *GaCbOnRequestWithType(int64_t requestId, int32_t operationCode, const char *reqParams, int32_t type)
 {
     int32_t ret = -1;
+    uint32_t uRet;
     MessageParcel dataParcel;
     MessageParcel reply;
     const char *dPtr = nullptr;
@@ -851,14 +853,14 @@ static char *GaCbOnRequestWithType(int64_t requestId, int32_t operationCode, con
         return nullptr;
     }
 
-    ret = EncodeCallData(dataParcel, PARAM_TYPE_REQID, reinterpret_cast<uint8_t *>(&requestId), sizeof(requestId));
-    ret += EncodeCallData(dataParcel, PARAM_TYPE_OPCODE,
+    uRet = EncodeCallData(dataParcel, PARAM_TYPE_REQID, reinterpret_cast<uint8_t *>(&requestId), sizeof(requestId));
+    uRet |= EncodeCallData(dataParcel, PARAM_TYPE_OPCODE,
         reinterpret_cast<uint8_t *>(&operationCode), sizeof(operationCode));
     if (reqParams != nullptr) {
-        ret += EncodeCallData(dataParcel, PARAM_TYPE_REQ_INFO,
+        uRet |= EncodeCallData(dataParcel, PARAM_TYPE_REQ_INFO,
             reinterpret_cast<const uint8_t *>(reqParams), strlen(reqParams) + 1);
     }
-    if (ret != HC_SUCCESS) {
+    if (uRet != HC_SUCCESS) {
         LOGE("build trans data failed");
         return nullptr;
     }
@@ -891,7 +893,7 @@ static char *TmpIpcGaCbOnRequest(int64_t requestId, int32_t operationCode, const
 void IpcOnGroupCreated(const char *groupInfo)
 {
     int32_t i;
-    int32_t ret;
+    uint32_t ret;
     MessageParcel dataParcel;
     MessageParcel reply;
     DataChangeListener *listener = nullptr;
@@ -931,7 +933,7 @@ void IpcOnGroupCreated(const char *groupInfo)
 void IpcOnGroupDeleted(const char *groupInfo)
 {
     int32_t i;
-    int32_t ret;
+    uint32_t ret;
     MessageParcel dataParcel;
     MessageParcel reply;
     DataChangeListener *listener = nullptr;
@@ -971,7 +973,7 @@ void IpcOnGroupDeleted(const char *groupInfo)
 void IpcOnDeviceBound(const char *peerUdid, const char *groupInfo)
 {
     int32_t i;
-    int32_t ret;
+    uint32_t ret;
     MessageParcel dataParcel;
     MessageParcel reply;
     DataChangeListener *listener = nullptr;
@@ -989,7 +991,7 @@ void IpcOnDeviceBound(const char *peerUdid, const char *groupInfo)
 
     ret = EncodeCallData(dataParcel, PARAM_TYPE_UDID,
         reinterpret_cast<const uint8_t *>(peerUdid), strlen(peerUdid) + 1);
-    ret += EncodeCallData(dataParcel, PARAM_TYPE_GROUP_INFO,
+    ret |= EncodeCallData(dataParcel, PARAM_TYPE_GROUP_INFO,
         reinterpret_cast<const uint8_t *>(groupInfo), strlen(groupInfo) + 1);
     if (ret != HC_SUCCESS) {
         LOGE("build trans data failed");
@@ -1013,7 +1015,7 @@ void IpcOnDeviceBound(const char *peerUdid, const char *groupInfo)
 void IpcOnDeviceUnBound(const char *peerUdid, const char *groupInfo)
 {
     int32_t i;
-    int32_t ret;
+    uint32_t ret;
     MessageParcel dataParcel;
     MessageParcel reply;
     DataChangeListener *listener = nullptr;
@@ -1031,7 +1033,7 @@ void IpcOnDeviceUnBound(const char *peerUdid, const char *groupInfo)
 
     ret = EncodeCallData(dataParcel, PARAM_TYPE_UDID,
         reinterpret_cast<const uint8_t *>(peerUdid), strlen(peerUdid) + 1);
-    ret += EncodeCallData(dataParcel, PARAM_TYPE_GROUP_INFO,
+    ret |= EncodeCallData(dataParcel, PARAM_TYPE_GROUP_INFO,
         reinterpret_cast<const uint8_t *>(groupInfo), strlen(groupInfo) + 1);
     if (ret != HC_SUCCESS) {
         LOGE("build trans data failed");
@@ -1055,7 +1057,7 @@ void IpcOnDeviceUnBound(const char *peerUdid, const char *groupInfo)
 void IpcOnDeviceNotTrusted(const char *peerUdid)
 {
     int32_t i;
-    int32_t ret;
+    uint32_t ret;
     MessageParcel dataParcel;
     MessageParcel reply;
     DataChangeListener *listener = nullptr;
@@ -1095,7 +1097,7 @@ void IpcOnDeviceNotTrusted(const char *peerUdid)
 void IpcOnLastGroupDeleted(const char *peerUdid, int32_t groupType)
 {
     int32_t i;
-    int32_t ret;
+    uint32_t ret;
     MessageParcel dataParcel;
     MessageParcel reply;
     DataChangeListener *listener = nullptr;
@@ -1113,7 +1115,7 @@ void IpcOnLastGroupDeleted(const char *peerUdid, int32_t groupType)
 
     ret = EncodeCallData(dataParcel, PARAM_TYPE_UDID,
         reinterpret_cast<const uint8_t *>(peerUdid), strlen(peerUdid) + 1);
-    ret += EncodeCallData(dataParcel, PARAM_TYPE_GROUP_TYPE,
+    ret |= EncodeCallData(dataParcel, PARAM_TYPE_GROUP_TYPE,
         reinterpret_cast<const uint8_t *>(&groupType), sizeof(groupType));
     if (ret != HC_SUCCESS) {
         LOGE("build trans data failed");
@@ -1137,7 +1139,7 @@ void IpcOnLastGroupDeleted(const char *peerUdid, int32_t groupType)
 void IpcOnTrustedDeviceNumChanged(int32_t curTrustedDeviceNum)
 {
     int32_t i;
-    int32_t ret;
+    uint32_t ret;
     MessageParcel dataParcel;
     MessageParcel reply;
     DataChangeListener *listener = nullptr;
