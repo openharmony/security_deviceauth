@@ -163,10 +163,16 @@ static int32_t ParseRmvInfo(PakeParams *pakeParams, StandardUnbindExchangeParams
 {
     int32_t res;
     CJson *rmvInfoJson = CreateJsonFromString((char *)exchangeParams->rmvInfo.val);
-
+    if (rmvInfoJson == NULL) {
+        LOGE("Create rmvInfoJson failed.");
+        return HC_ERR_JSON_CREATE;
+    }
     GOTO_ERR_AND_SET_RET(GetIntFromJson(rmvInfoJson, FIELD_RMV_TYPE, &(pakeParams->userTypePeer)), res);
-    GOTO_ERR_AND_SET_RET(GetByteFromJson(rmvInfoJson, FIELD_RMV_ID, pakeParams->baseParams.idPeer.val,
-        pakeParams->baseParams.idPeer.length), res);
+    res = GetIdPeerForParams(rmvInfoJson, FIELD_RMV_ID, &pakeParams->baseParams.idSelf, &pakeParams->baseParams.idPeer);
+    if (res != HC_SUCCESS) {
+        LOGE("GetIdPeerForParams failed, res: %d.", res);
+        goto err;
+    }
 err:
     FreeJson(rmvInfoJson);
     return res;
