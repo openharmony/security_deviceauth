@@ -88,9 +88,11 @@ static int IsoServerStart(SymBaseCurTask *task, IsoParams *params, const CJson *
     }
     Uint8Buff selfTokenBuf = { selfToken, ISO_TOKEN_LEN };
     if (params->opCode == OP_BIND) {
-        GOTO_ERR_AND_SET_RET(GetAuthIdPeer(in, &(params->baseParams.authIdPeer)), res);
+        GOTO_ERR_AND_SET_RET(GetAuthIdPeerFromPayload(in, &(params->baseParams.authIdSelf),
+            &(params->baseParams.authIdPeer)), res);
     } else {
-        GOTO_ERR_AND_SET_RET(GetAndCheckAuthIdPeer(in, &(params->baseParams.authIdPeer)), res);
+        GOTO_ERR_AND_SET_RET(GetAndCheckAuthIdPeer(in, &(params->baseParams.authIdSelf),
+            &(params->baseParams.authIdPeer)), res);
         GOTO_ERR_AND_SET_RET(GetAndCheckKeyLenOnServer(in, &(params->keyLen)), res);
     }
     GOTO_ERR_AND_SET_RET(GetByteFromJson(in, FIELD_ISO_SALT, params->baseParams.randPeer.val,

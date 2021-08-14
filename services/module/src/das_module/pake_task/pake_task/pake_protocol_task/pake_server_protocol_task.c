@@ -83,7 +83,7 @@ static int PakeResponse(AsyBaseCurTask *task, PakeParams *params, const CJson *i
     }
     // parse differentiated data
     if (params->opCode == AUTHENTICATE || params->opCode == OP_UNBIND) {
-        res = GetAndCheckAuthIdPeer(in, &(params->baseParams.idPeer));
+        res = GetAndCheckAuthIdPeer(in, &(params->baseParams.idSelf), &(params->baseParams.idPeer));
         if (res != HC_SUCCESS) {
             LOGE("GetAndCheckAuthIdPeer failed, res: %d.", res);
             return res;

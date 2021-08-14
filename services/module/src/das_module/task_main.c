@@ -210,7 +210,7 @@ static int NegotiateAndProcessTask(Task *task, const CJson *in, CJson *out, int 
         return HC_ERR_UNSUPPORTED_VERSION;
     }
     ProtocolType protocolType = GetPrototolType(&(task->versionInfo.curVersion), task->versionInfo.opCode);
-    LOGI("client create protocolType:%d", protocolType);
+    LOGI("Client select protocolType:%d", protocolType);
 
     SubTaskBase *subTask = NULL;
     uint32_t index = 0;
@@ -227,8 +227,8 @@ static int NegotiateAndProcessTask(Task *task, const CJson *in, CJson *out, int 
         ptr = task->vec.getp(&(task->vec), index);
     }
     if (subTask == NULL) {
-        LOGE("Not find subTask.");
-        return HC_ERROR;
+        LOGE("Can't find subTask.");
+        return HC_ERR_NOT_SUPPORT;
     }
     subTask->curVersion = task->versionInfo.curVersion;
     res = subTask->process(subTask, in, out, status);
@@ -341,7 +341,7 @@ static int CreateSingleSubTask(Task *task, const CJson *in, CJson *out)
     task->versionInfo.versionStatus = VERSION_DECIDED;
 
     ProtocolType protocolType = GetPrototolType(&(task->versionInfo.curVersion), task->versionInfo.opCode);
-    LOGI("server create protocolType:%d", protocolType);
+    LOGI("Server create protocolType:%d", protocolType);
 
     uint32_t index;
     void **ptr = NULL;
@@ -355,11 +355,12 @@ static int CreateSingleSubTask(Task *task, const CJson *in, CJson *out)
             }
             subTask->curVersion = task->versionInfo.curVersion;
             task->vec.pushBackT(&(task->vec), (void *)subTask);
-            break;
+            return HC_SUCCESS;
         }
     }
 
-    return HC_SUCCESS;
+    LOGE("Can't find protocolType.");
+    return HC_ERR_NOT_SUPPORT;
 }
 
 Task *CreateTaskT(int *taskId, const CJson *in, CJson *out)
