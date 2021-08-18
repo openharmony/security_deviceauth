@@ -13,21 +13,20 @@
  * limitations under the License.
  */
 
-#ifndef GROUP_AUTH_COMMON_DEFINES_H
-#define GROUP_AUTH_COMMON_DEFINES_H
+#ifndef TASK_MANAGER_H
+#define TASK_MANAGER_H
 
-#include <stdint.h>
-#include "device_auth.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "hc_task_thread.h"
-#include "json_utils.h"
 
-#define MAX_UDID_LEN 64
+int32_t InitTaskManager(void);
+void DestroyTaskManager(void);
+int32_t PushTask(HcTaskBase *baseTask);
 
-typedef struct {
-    HcTaskBase base;
-    int64_t authReqId;
-    CJson *authParams;
-    const DeviceAuthCallback *callback;
-} AuthDeviceTask;
-
+#ifdef __cplusplus
+}
+#endif
 #endif

@@ -20,11 +20,12 @@
 #include "common_defs.h"
 #include "json_utils.h"
 
-int32_t InitChannelManager(void (*onChannelOpened)(int64_t, int64_t, const char *, uint32_t, bool),
-                           void (*onChannelClosed)(int64_t, int64_t),
-                           void (*onMsgReceived)(int64_t, const uint8_t *, uint32_t),
-                           void (*onServiceDied)());
-void DestroyChannelManager();
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int32_t InitChannelManager(void);
+void DestroyChannelManager(void);
 
 /* Channel operation interfaces */
 ChannelType GetChannelType(const DeviceAuthCallback *callback);
@@ -34,5 +35,9 @@ void CloseChannel(ChannelType channelType, int64_t channelId);
 int32_t SendMsg(ChannelType channelType, int64_t requestId, int64_t channelId,
     const DeviceAuthCallback *callback, const char *data);
 void SetAuthResult(ChannelType channelType, int64_t channelId);
-int32_t GetLocalConnectInfo(char **returnLocalConnectInfo);
+int32_t GetLocalConnectInfo(char *jsonAddrInfo, int32_t bufLen);
+
+#ifdef __cplusplus
+}
+#endif
 #endif

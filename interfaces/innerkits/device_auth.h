@@ -136,7 +136,7 @@ typedef struct {
     int32_t (*processKeyAgreeData)(int64_t requestId, const char *appId, const uint8_t *data, uint32_t dataLen);
     int32_t (*processCredential)(int operationCode, const char *reqJsonStr, char **returnJsonStr);
     int32_t (*getRegisterInfo)(char **returnRegisterInfo);
-    int32_t (*getLocalConnectInfo)(char **returnInfo);
+    int32_t (*getLocalConnectInfo)(char *returnInfo, int32_t bufLen);
     int32_t (*addGroupManager)(const char *appId, const char *groupId, const char *managerAppId);
     int32_t (*addGroupFriend)(const char *appId, const char *groupId, const char *friendAppId);
     int32_t (*deleteGroupManager)(const char *appId, const char *groupId, const char *managerAppId);
