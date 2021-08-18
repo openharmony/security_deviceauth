@@ -14,23 +14,21 @@
  */
 
 #include "device_auth.h"
+
 #include "alg_loader.h"
 #include "callback_manager.h"
 #include "channel_manager.h"
 #include "common_util.h"
-#include "database_manager.h"
 #include "dev_auth_module_manager.h"
 #include "device_auth_defines.h"
 #include "group_auth_manager.h"
 #include "group_manager.h"
 #include "hc_init_protection.h"
 #include "hc_log.h"
-#include "hc_task_thread.h"
 #include "json_utils.h"
 #include "securec.h"
 #include "session_manager.h"
-
-#define STACK_SIZE 4096
+#include "task_manager.h"
 
 typedef struct {
     HcTaskBase base;
@@ -41,7 +39,6 @@ typedef struct {
 
 static GroupAuthManager *g_groupAuthManager =  NULL;
 static DeviceGroupManager *g_groupManagerInstance = NULL;
-static HcTaskThread *g_taskThread = NULL;
 
 static int32_t BindCallbackToTask(GroupManagerTask *task, const CJson *jsonParams)
 {
@@ -66,42 +63,6 @@ static int32_t BindCallbackToTask(GroupManagerTask *task, const CJson *jsonParam
     }
     LOGI("Bind service callback to task successfully! [AppId]: %s", appId);
     return HC_SUCCESS;
-}
-
-static char *GenerateRecvData(int64_t channelId, const uint8_t *data, uint32_t dataLen, int64_t *requestId)
-{
-    char *dataStr = (char *)HcMalloc(dataLen + 1, 0);
-    if (dataStr == NULL) {
-        LOGE("Failed to allocate dataStr memory!");
-        return NULL;
-    }
-    if (memcpy_s(dataStr, dataLen + 1, data, dataLen) != HC_SUCCESS) {
-        LOGE("Failed to copy data!");
-        HcFree(dataStr);
-        return NULL;
-    }
-    CJson *receivedData = CreateJsonFromString(dataStr);
-    HcFree(dataStr);
-    if (receivedData == NULL) {
-        LOGE("Failed to create receivedData json object from string!");
-        return NULL;
-    }
-    if (GetInt64FromJson(receivedData, FIELD_REQUEST_ID, requestId) != HC_SUCCESS) {
-        LOGE("Failed to get requestId from receivedData!");
-        return NULL;
-    }
-    if (AddByteToJson(receivedData, FIELD_CHANNEL_ID, (uint8_t *)&channelId, sizeof(int64_t)) != HC_SUCCESS) {
-        LOGE("Failed to add channelId to recvData!");
-        FreeJson(receivedData);
-        return NULL;
-    }
-    char *receivedDataStr = PackJsonToString(receivedData);
-    FreeJson(receivedData);
-    if (receivedDataStr == NULL) {
-        LOGE("Failed to convert json to string!");
-        return NULL;
-    }
-    return receivedDataStr;
 }
 
 static void DoCreateGroup(HcTaskBase *task)
@@ -193,24 +154,6 @@ static void DoConfirmRequest(HcTaskBase *task)
     GroupManagerTask *realTask = (GroupManagerTask *)task;
     LOGI("The task thread starts to execute request confirmation! [RequestId]: %" PRId64, realTask->requestId);
     OnConfirmationReceived(realTask->requestId, realTask->jsonParams);
-}
-
-static void OnChannelOpenedAction(HcTaskBase *task)
-{
-    if (task == NULL) {
-        LOGE("The input task is NULL!");
-        return;
-    }
-    GroupManagerTask *realTask = (GroupManagerTask *)task;
-    LOGI("The task thread starts to execute the task that needs to be executed"
-        "when the soft bus channel is open! [RequestId]: %" PRId64, realTask->requestId);
-    CJson *jsonParams = realTask->jsonParams;
-    int64_t channelId = DEFAULT_CHANNEL_ID;
-    if (GetByteFromJson(jsonParams, FIELD_CHANNEL_ID, (uint8_t *)&channelId, sizeof(int64_t)) != HC_SUCCESS) {
-        LOGE("Failed to get channelId from json!");
-        return;
-    }
-    OnChannelOpened(realTask->requestId, channelId);
 }
 
 static void DoProcessBindData(HcTaskBase *task)
@@ -307,14 +250,6 @@ static void InitProcessBindDataTask(GroupManagerTask *task, int64_t requestId, C
     task->jsonParams = jsonParams;
 }
 
-static void InitChannelOpenedTask(GroupManagerTask *task, int64_t requestId, CJson *jsonParams)
-{
-    task->base.doAction = OnChannelOpenedAction;
-    task->base.destroy = DestroyGroupManagerTask;
-    task->requestId = requestId;
-    task->jsonParams = jsonParams;
-}
-
 static int32_t InitCreateGroupTask(GroupManagerTask *task, int64_t requestId, CJson *jsonParams)
 {
     task->base.doAction = DoCreateGroup;
@@ -367,10 +302,6 @@ static int32_t AuthDevice(int64_t authReqId, const char *authParams, const Devic
         LOGE("The input auth params is null!");
         return HC_ERR_INVALID_PARAMS;
     }
-    if (g_taskThread == NULL) {
-        LOGE("The task thread is null!");
-        return HC_ERR_SERVICE_NEED_RESTART;
-    }
     CJson *jsonParams = CreateJsonFromString(authParams);
     if (jsonParams == NULL) {
         LOGE("Create json from params failed!");
@@ -388,7 +319,11 @@ static int32_t AuthDevice(int64_t authReqId, const char *authParams, const Devic
         HcFree(task);
         return HC_ERR_INIT_TASK_FAIL;
     }
-    g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
+    if (PushTask((HcTaskBase*)task) != HC_SUCCESS) {
+        FreeJson(jsonParams);
+        HcFree(task);
+        return HC_ERR_INIT_TASK_FAIL;
+    }
     LOGI("Push AuthDevice task successfully.");
     return HC_SUCCESS;
 }
@@ -400,10 +335,6 @@ static int32_t ProcessData(int64_t authReqId, const uint8_t *data, uint32_t data
     if ((data == NULL) || (dataLen > MAX_DATA_BUFFER_SIZE)) {
         LOGE("Invalid input for ProcessData!");
         return HC_ERR_INVALID_PARAMS;
-    }
-    if (g_taskThread == NULL) {
-        LOGE("The task thread is null!");
-        return HC_ERR_SERVICE_NEED_RESTART;
     }
     CJson *receivedData = CreateJsonFromString((const char *)data);
     if (receivedData == NULL) {
@@ -422,7 +353,11 @@ static int32_t ProcessData(int64_t authReqId, const uint8_t *data, uint32_t data
         HcFree(task);
         return HC_ERR_INIT_TASK_FAIL;
     }
-    g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
+    if (PushTask((HcTaskBase*)task) != HC_SUCCESS) {
+        FreeJson(receivedData);
+        HcFree(task);
+        return HC_ERR_INIT_TASK_FAIL;
+    }
     LOGI("Push ProcessData task successfully.");
     return HC_SUCCESS;
 }
@@ -518,16 +453,11 @@ static int32_t UnRegGroupManagerCallback(const char *appId)
 
 static int32_t RequestCreateGroup(int64_t requestId, const char *appId, const char *createParams)
 {
-    LOGI("[Start]: RequestCreateGroup! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     if ((appId == NULL) || (createParams == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
-    if (g_taskThread == NULL) {
-        LOGE("Uninitialized task thread!");
-        return HC_ERR_SERVICE_NEED_RESTART;
-    }
-
+    LOGI("[Start]: RequestCreateGroup! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     CJson *jsonCreateParams = CreateJsonFromString(createParams);
     if (jsonCreateParams == NULL) {
         LOGE("Failed to create json from string!");
@@ -550,23 +480,22 @@ static int32_t RequestCreateGroup(int64_t requestId, const char *appId, const ch
         HcFree(task);
         return HC_ERR_INIT_TASK_FAIL;
     }
-    g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
+    if (PushTask((HcTaskBase*)task) != HC_SUCCESS) {
+        FreeJson(jsonCreateParams);
+        HcFree(task);
+        return HC_ERR_INIT_TASK_FAIL;
+    }
     LOGI("[End]: Create the creating group task successfully! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     return HC_SUCCESS;
 }
 
 static int32_t RequestDeleteGroup(int64_t requestId, const char *appId, const char *disbandParams)
 {
-    LOGI("[Start]: RequestDeleteGroup! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     if ((appId == NULL) || (disbandParams == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
-    if (g_taskThread == NULL) {
-        LOGE("Uninitialized task thread!");
-        return HC_ERR_SERVICE_NEED_RESTART;
-    }
-
+    LOGI("[Start]: RequestDeleteGroup! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     CJson *jsonDisBandParams = CreateJsonFromString(disbandParams);
     if (jsonDisBandParams == NULL) {
         LOGE("Failed to create json from string!");
@@ -589,23 +518,22 @@ static int32_t RequestDeleteGroup(int64_t requestId, const char *appId, const ch
         HcFree(task);
         return HC_ERR_INIT_TASK_FAIL;
     }
-    g_taskThread->pushTask(g_taskThread, (HcTaskBase *)task);
+    if (PushTask((HcTaskBase*)task) != HC_SUCCESS) {
+        FreeJson(jsonDisBandParams);
+        HcFree(task);
+        return HC_ERR_INIT_TASK_FAIL;
+    }
     LOGI("[End]: Create the deleting group task successfully! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     return HC_SUCCESS;
 }
 
 static int32_t RequestAddMemberToGroup(int64_t requestId, const char *appId, const char *addParams)
 {
-    LOGI("[Start]: RequestAddMemberToGroup! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     if ((appId == NULL) || (addParams == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
-    if (g_taskThread == NULL) {
-        LOGE("Uninitialized task thread!");
-        return HC_ERR_SERVICE_NEED_RESTART;
-    }
-
+    LOGI("[Start]: RequestAddMemberToGroup! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     CJson *jsonAddParams = CreateJsonFromString(addParams);
     if (jsonAddParams == NULL) {
         LOGE("Failed to create json from string!");
@@ -628,23 +556,22 @@ static int32_t RequestAddMemberToGroup(int64_t requestId, const char *appId, con
         HcFree(task);
         return HC_ERR_INIT_TASK_FAIL;
     }
-    g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
+    if (PushTask((HcTaskBase*)task) != HC_SUCCESS) {
+        FreeJson(jsonAddParams);
+        HcFree(task);
+        return HC_ERR_INIT_TASK_FAIL;
+    }
     LOGI("[End]: Create the adding member task successfully! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     return HC_SUCCESS;
 }
 
 static int32_t RequestDeleteMemberFromGroup(int64_t requestId, const char *appId, const char *deleteParams)
 {
-    LOGI("[Start]: RequestDeleteMemberFromGroup! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     if ((appId == NULL) || (deleteParams == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
-    if (g_taskThread == NULL) {
-        LOGE("Uninitialized task thread!");
-        return HC_ERR_SERVICE_NEED_RESTART;
-    }
-
+    LOGI("[Start]: RequestDeleteMemberFromGroup! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     CJson *jsonDeleteParams = CreateJsonFromString(deleteParams);
     if (jsonDeleteParams == NULL) {
         LOGE("Failed to create json from string!");
@@ -667,23 +594,22 @@ static int32_t RequestDeleteMemberFromGroup(int64_t requestId, const char *appId
         HcFree(task);
         return HC_ERR_INIT_TASK_FAIL;
     }
-    g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
+    if (PushTask((HcTaskBase*)task) != HC_SUCCESS) {
+        FreeJson(jsonDeleteParams);
+        HcFree(task);
+        return HC_ERR_INIT_TASK_FAIL;
+    }
     LOGI("[End]: Create the deleting member task successfully! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     return HC_SUCCESS;
 }
 
 static int32_t RequestProcessBindData(int64_t requestId, const uint8_t *data, uint32_t dataLen)
 {
-    LOGI("[Start]: RequestProcessBindData! [RequestId]: %" PRId64, requestId);
-    if ((data == NULL) || (dataLen > MAX_DATA_BUFFER_SIZE)) {
+    if ((data == NULL) || (dataLen == 0) || (dataLen > MAX_DATA_BUFFER_SIZE)) {
         LOGE("The input data is invalid!");
         return HC_ERR_INVALID_PARAMS;
     }
-    if (g_taskThread == NULL) {
-        LOGE("The task thread is NULL!");
-        return HC_ERR_SERVICE_NEED_RESTART;
-    }
-
+    LOGI("[Start]: RequestProcessBindData! [RequestId]: %" PRId64, requestId);
     CJson *dataJson = CreateJsonFromString((const char *)data);
     if (dataJson == NULL) {
         LOGE("Failed to create json from string!");
@@ -698,6 +624,7 @@ static int32_t RequestProcessBindData(int64_t requestId, const uint8_t *data, ui
     if (tempRequestId != requestId) {
         LOGE("The requestId transferred by the service is inconsistent with that in the packet! "
             "[ServiceRequestId]: %" PRId64 ", [RequestId]: %" PRId64, requestId, tempRequestId);
+        FreeJson(dataJson);
         return HC_ERR_INVALID_PARAMS;
     }
     GroupManagerTask *task = (GroupManagerTask *)HcMalloc(sizeof(GroupManagerTask), 0);
@@ -707,23 +634,22 @@ static int32_t RequestProcessBindData(int64_t requestId, const uint8_t *data, ui
         return HC_ERR_ALLOC_MEMORY;
     }
     InitProcessBindDataTask(task, requestId, dataJson);
-    g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
+    if (PushTask((HcTaskBase*)task) != HC_SUCCESS) {
+        FreeJson(dataJson);
+        HcFree(task);
+        return HC_ERR_INIT_TASK_FAIL;
+    }
     LOGI("[End]: Create the processing data task successfully! [RequestId]: %" PRId64, requestId);
     return HC_SUCCESS;
 }
 
 static int32_t ConfirmRequest(int64_t requestId, const char *appId, const char *confirmParams)
 {
-    LOGI("[Start]: ConfirmRequest! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     if ((appId == NULL) || (confirmParams == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
-    if (g_taskThread == NULL) {
-        LOGE("Uninitialized task thread!");
-        return HC_ERR_SERVICE_NEED_RESTART;
-    }
-
+    LOGI("[Start]: ConfirmRequest! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     CJson *jsonConfirmParams = CreateJsonFromString(confirmParams);
     if (jsonConfirmParams == NULL) {
         LOGE("Failed to create json from string!");
@@ -731,6 +657,7 @@ static int32_t ConfirmRequest(int64_t requestId, const char *appId, const char *
     }
     if (AddStringToJson(jsonConfirmParams, FIELD_APP_ID, appId) != HC_SUCCESS) {
         LOGE("Failed to add appId to json!");
+        FreeJson(jsonConfirmParams);
         return HC_ERR_JSON_FAIL;
     }
 
@@ -745,78 +672,14 @@ static int32_t ConfirmRequest(int64_t requestId, const char *appId, const char *
         HcFree(task);
         return HC_ERR_INIT_TASK_FAIL;
     }
-    g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
+    if (PushTask((HcTaskBase*)task) != HC_SUCCESS) {
+        FreeJson(jsonConfirmParams);
+        HcFree(task);
+        return HC_ERR_INIT_TASK_FAIL;
+    }
     LOGI("[End]: Create the confirming request task successfully! [AppId]: %s, [RequestId]: %" PRId64,
         appId, requestId);
     return HC_SUCCESS;
-}
-
-static void OnChannelOpenedCallback(int64_t channelId, int64_t requestId, const char *deviceId,
-    uint32_t deviceIdLen, bool isServer)
-{
-    if (isServer) {
-        return;
-    }
-    if ((deviceId == NULL) || (deviceIdLen > MAX_DATA_BUFFER_SIZE)) {
-        LOGE("The input parameters is invalid!");
-        return;
-    }
-    if (g_taskThread == NULL) {
-        LOGE("Uninitialized task thread!");
-        return;
-    }
-
-    CJson *jsonParams = CreateJson();
-    if (jsonParams == NULL) {
-        LOGE("Failed to allocate jsonParams memory!");
-        return;
-    }
-    if (AddByteToJson(jsonParams, FIELD_CHANNEL_ID, (uint8_t *)&channelId, sizeof(int64_t)) != HC_SUCCESS) {
-        LOGE("Failed to add channelId to jsonParams!");
-        FreeJson(jsonParams);
-        return;
-    }
-
-    GroupManagerTask *task = (GroupManagerTask *)HcMalloc(sizeof(GroupManagerTask), 0);
-    if (task == NULL) {
-        LOGE("Failed to allocate task memory!");
-        FreeJson(jsonParams);
-        return;
-    }
-    InitChannelOpenedTask(task, requestId, jsonParams);
-    g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
-}
-
-static void OnChannelClosedCallback(int64_t channelId, int64_t requestId)
-{
-    (void)channelId;
-    (void)requestId;
-    return;
-}
-
-static void OnMsgReceivedCallback(int64_t channelId, const uint8_t *data, uint32_t dataLen)
-{
-    LOGI("Receive data from the peer end!");
-    if ((data == NULL) || (dataLen > MAX_DATA_BUFFER_SIZE)) {
-        LOGE("The input data is invalid!");
-        return;
-    }
-
-    int64_t requestId = DEFAULT_REQUEST_ID;
-    char *receivedDataStr = GenerateRecvData(channelId, data, dataLen, &requestId);
-    if (receivedDataStr == NULL) {
-        return;
-    }
-    if (RequestProcessBindData(DEFAULT_REQUEST_ID, (uint8_t *)receivedDataStr,
-        (uint32_t)(strlen(receivedDataStr) + 1)) != HC_SUCCESS) {
-        LOGE("Failed to process bind data from softBus!");
-    }
-    FreeJsonString(receivedDataStr);
-}
-
-static void OnServiceDiedCallback(void)
-{
-    return;
 }
 
 static int32_t GetModuleType(const CJson *jsonParams)
@@ -1048,16 +911,11 @@ static int32_t AddLiteDataToReceivedData(CJson *receivedData, int64_t requestId,
 
 static int32_t RequestProcessLiteData(int64_t requestId, const char *appId, const uint8_t *data, uint32_t dataLen)
 {
-    LOGI("[Start]: RequestProcessLiteData! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     if ((appId == NULL) || (data == NULL) || (dataLen > MAX_DATA_BUFFER_SIZE)) {
         LOGE("The input data is NULL or dataLen is beyond max size!");
         return HC_ERR_INVALID_PARAMS;
     }
-    if (g_taskThread == NULL) {
-        LOGE("Uninitialized task thread!");
-        return HC_ERR_SERVICE_NEED_RESTART;
-    }
-
+    LOGI("[Start]: RequestProcessLiteData! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     CJson *receivedData = CreateJsonFromString((const char *)data);
     if (receivedData == NULL) {
         LOGE("Failed to create received json object from string!");
@@ -1079,7 +937,11 @@ static int32_t RequestProcessLiteData(int64_t requestId, const char *appId, cons
         HcFree(task);
         return HC_ERR_INIT_TASK_FAIL;
     }
-    g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
+    if (PushTask((HcTaskBase*)task) != HC_SUCCESS) {
+        FreeJson(receivedData);
+        HcFree(task);
+        return HC_ERR_INIT_TASK_FAIL;
+    }
     LOGI("[End]: Create the processing lite data task successfully! [AppId]: %s, [RequestId]: %" PRId64,
         appId, requestId);
     return HC_SUCCESS;
@@ -1087,16 +949,11 @@ static int32_t RequestProcessLiteData(int64_t requestId, const char *appId, cons
 
 static int32_t RequestBindPeer(int64_t requestId, const char *appId, const char *bindParams)
 {
-    LOGI("[Start]: RequestBindPeer! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     if ((appId == NULL) || (bindParams == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
-    if (g_taskThread == NULL) {
-        LOGE("Uninitialized task thread!");
-        return HC_ERR_SERVICE_NEED_RESTART;
-    }
-
+    LOGI("[Start]: RequestBindPeer! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     CJson *jsonBindParams = CreateJsonFromString(bindParams);
     if (jsonBindParams == NULL) {
         LOGE("Failed to create json from string!");
@@ -1119,7 +976,11 @@ static int32_t RequestBindPeer(int64_t requestId, const char *appId, const char 
         HcFree(task);
         return HC_ERR_INIT_TASK_FAIL;
     }
-    g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
+    if (PushTask((HcTaskBase*)task) != HC_SUCCESS) {
+        FreeJson(jsonBindParams);
+        HcFree(task);
+        return HC_ERR_INIT_TASK_FAIL;
+    }
     LOGI("[End]: Create the binding peer device task successfully! [AppId]: %s, [RequestId]: %" PRId64,
         appId, requestId);
     return HC_SUCCESS;
@@ -1127,16 +988,11 @@ static int32_t RequestBindPeer(int64_t requestId, const char *appId, const char 
 
 static int32_t RequestUnbindPeer(int64_t requestId, const char *appId, const char *unBindParams)
 {
-    LOGI("[Start]: RequestUnbindPeer, [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     if ((appId == NULL) || (unBindParams == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
-    if (g_taskThread == NULL) {
-        LOGE("Uninitialized task thread!");
-        return HC_ERR_SERVICE_NEED_RESTART;
-    }
-
+    LOGI("[Start]: RequestUnbindPeer, [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     CJson *jsonUnbindParams = CreateJsonFromString(unBindParams);
     if (jsonUnbindParams == NULL) {
         LOGE("Failed to create json from string!");
@@ -1159,7 +1015,11 @@ static int32_t RequestUnbindPeer(int64_t requestId, const char *appId, const cha
         HcFree(task);
         return HC_ERR_INIT_TASK_FAIL;
     }
-    g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
+    if (PushTask((HcTaskBase*)task) != HC_SUCCESS) {
+        FreeJson(jsonUnbindParams);
+        HcFree(task);
+        return HC_ERR_INIT_TASK_FAIL;
+    }
     LOGI("[End]: Create the unbinding peer device task successfully! [AppId]: %s, [RequestId]: %" PRId64,
         appId, requestId);
     return HC_SUCCESS;
@@ -1167,16 +1027,11 @@ static int32_t RequestUnbindPeer(int64_t requestId, const char *appId, const cha
 
 static int32_t RequestAuthKeyAgree(int64_t requestId, const char *appId, const char *agreeParams)
 {
-    LOGI("[Start]: RequestAuthKeyAgree! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     if ((appId == NULL) || (agreeParams == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
-    if (g_taskThread == NULL) {
-        LOGE("Uninitialized task thread!");
-        return HC_ERR_SERVICE_NEED_RESTART;
-    }
-
+    LOGI("[Start]: RequestAuthKeyAgree! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     CJson *jsonAgreeParams = CreateJsonFromString(agreeParams);
     if (jsonAgreeParams == NULL) {
         LOGE("Failed to create json from string!");
@@ -1199,23 +1054,22 @@ static int32_t RequestAuthKeyAgree(int64_t requestId, const char *appId, const c
         HcFree(task);
         return HC_ERR_INIT_TASK_FAIL;
     }
-    g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
+    if (PushTask((HcTaskBase*)task) != HC_SUCCESS) {
+        FreeJson(jsonAgreeParams);
+        HcFree(task);
+        return HC_ERR_INIT_TASK_FAIL;
+    }
     LOGI("[End]: Create the key agreement task successfully! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     return HC_SUCCESS;
 }
 
 static int32_t RequestProcessKeyAgreeData(int64_t requestId, const char *appId, const uint8_t *data, uint32_t dataLen)
 {
-    LOGI("[Start]: RequestProcessKeyAgreeData! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     if ((appId == NULL) || (data == NULL) || (dataLen > MAX_DATA_BUFFER_SIZE)) {
         LOGE("The input data is NULL or dataLen is beyond max size!");
         return HC_ERR_INVALID_PARAMS;
     }
-    if (g_taskThread == NULL) {
-        LOGE("Uninitialized task thread!");
-        return HC_ERR_SERVICE_NEED_RESTART;
-    }
-
+    LOGI("[Start]: RequestProcessKeyAgreeData! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
     CJson *receivedData = CreateJsonFromString((const char *)data);
     if (receivedData == NULL) {
         LOGE("Failed to create received json object from string!");
@@ -1237,7 +1091,11 @@ static int32_t RequestProcessKeyAgreeData(int64_t requestId, const char *appId, 
         HcFree(task);
         return HC_ERR_INIT_TASK_FAIL;
     }
-    g_taskThread->pushTask(g_taskThread, (HcTaskBase*)task);
+    if (PushTask((HcTaskBase*)task) != HC_SUCCESS) {
+        FreeJson(receivedData);
+        HcFree(task);
+        return HC_ERR_INIT_TASK_FAIL;
+    }
     LOGI("[End]: Create the processing key agreement data task successfully! [AppId]: %s, [RequestId]: %" PRId64, appId,
         requestId);
     return HC_SUCCESS;
@@ -1605,33 +1463,6 @@ static int32_t InitAlgorithm()
     return res;
 }
 
-static int InitAndStartThread()
-{
-    if (g_taskThread != NULL) {
-        LOGD("Task thread is not null");
-    }
-    g_taskThread = HcMalloc(sizeof(HcTaskThread), 0);
-    if (g_taskThread == NULL) {
-        return HC_ERR_ALLOC_MEMORY;
-    }
-    int32_t res = InitHcTaskThread(g_taskThread, STACK_SIZE, "HichainThread");
-    if (res != HC_SUCCESS) {
-        LOGE("Init task thread failed, res:%d", res);
-        HcFree(g_taskThread);
-        g_taskThread = NULL;
-        return HC_ERROR;
-    }
-    res = g_taskThread->startThread(g_taskThread);
-    if (res != HC_SUCCESS) {
-        DestroyHcTaskThread(g_taskThread);
-        HcFree(g_taskThread);
-        g_taskThread = NULL;
-        LOGE("Start thread failed, res:%d", res);
-        return HC_ERROR;
-    }
-    return res;
-}
-
 static void DestroyGmAndGa()
 {
     if (g_groupAuthManager != NULL) {
@@ -1644,21 +1475,11 @@ static void DestroyGmAndGa()
     }
 }
 
-static void StopAndDestroyThread()
-{
-    if (g_taskThread != NULL) {
-        g_taskThread->stopAndClear(g_taskThread);
-        DestroyHcTaskThread(g_taskThread);
-        HcFree(g_taskThread);
-        g_taskThread = NULL;
-    }
-}
-
 DEVICE_AUTH_API_PUBLIC int InitDeviceAuthService()
 {
     LOGI("[Service]: Start to init device auth service!");
     if (CheckInit() == FINISH_INIT) {
-        LOGI("[End]: [Service]: Init device auth service successfully!");
+        LOGI("[End]: [Service]: Device auth service is running!");
         return HC_SUCCESS;
     }
     int32_t res = InitAlgorithm();
@@ -1680,14 +1501,13 @@ DEVICE_AUTH_API_PUBLIC int InitDeviceAuthService()
     if (res != HC_SUCCESS) {
         goto free_module;
     }
-    res = InitChannelManager(OnChannelOpenedCallback,
-        OnChannelClosedCallback, OnMsgReceivedCallback, OnServiceDiedCallback);
+    res = InitChannelManager();
     if (res != HC_SUCCESS) {
         LOGE("[End]: [Service]: Failed to init channel manage module!");
         goto free_group_manager;
     }
     InitSessionManager();
-    res = InitAndStartThread();
+    res = InitTaskManager();
     if (res != HC_SUCCESS) {
         LOGE("[End]: [Service]: Failed to init worker thread!");
         goto free_all;
@@ -1716,12 +1536,12 @@ DEVICE_AUTH_API_PUBLIC void DestroyDeviceAuthService()
         LOGI("[End]: [Service]: The service has not been initialized, so it does not need to be destroyed!");
         return;
     }
+    DestroyTaskManager();
     DestroyChannelManager();
     DestroySessionManager();
     DestroyGroupManager();
     DestroyModules();
     DestroyGmAndGa();
-    StopAndDestroyThread();
     SetDeInitStatus();
     LOGI("[End]: [Service]: Destroy device auth service successfully!");
 }
