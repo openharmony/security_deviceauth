@@ -380,7 +380,7 @@ static CJson *GenerateGroupErrorMsg(int32_t errorCode, int64_t requestId)
 static void InformPeerProcessError(int64_t requestId, const CJson *jsonParams, const DeviceAuthCallback *callback,
     int32_t errorCode)
 {
-    ChannelType channelType = GetChannelType(callback);
+    ChannelType channelType = GetChannelType(callback, jsonParams);
     int64_t channelId = DEFAULT_CHANNEL_ID;
     if ((channelType == NO_CHANNEL) ||
         ((channelType == SOFT_BUS) &&
@@ -535,8 +535,8 @@ static int32_t AddMemberToGroup(int64_t requestId, CJson *jsonParams, const Devi
         if (result != HC_SUCCESS) {
             break;
         }
-        ChannelType channelType = GetChannelType(callback);
-        if ((channelType == NO_CHANNEL) || (!CanFindValidChannel(channelType, jsonParams, callback))) {
+        ChannelType channelType = GetChannelType(callback, jsonParams);
+        if (channelType == NO_CHANNEL) {
             LOGE("No available channels found!");
             result = HC_ERR_CHANNEL_NOT_EXIST;
             break;
@@ -579,8 +579,8 @@ static int32_t DeleteMemberFromGroupInner(int64_t requestId, CJson *jsonParams, 
         LOGI("The service requires that the device be forcibly unbound locally instead of being unbound online!");
         return HandleLocalUnbind(requestId, jsonParams, callback);
     }
-    ChannelType channelType = GetChannelType(callback);
-    if ((channelType == NO_CHANNEL) || (!CanFindValidChannel(channelType, jsonParams, callback))) {
+    ChannelType channelType = GetChannelType(callback, jsonParams);
+    if (channelType == NO_CHANNEL) {
         LOGI("No available channels found!");
         if (isForceDelete) {
             LOGI("The peer device is forcibly unbound because no available channel is found!");

@@ -22,6 +22,7 @@ inc_path = [
   "${services_path}/common/inc/channel_manager",
   "${services_path}/common/inc/channel_manager/soft_bus_channel",
   "${services_path}/common/inc/data_base",
+  "${services_path}/common/inc/task_manager",
   "${services_path}/group_auth/inc",
   "${services_path}/group_auth/inc/account_unrelated_group_auth",
   "${services_path}/group_auth/inc/account_related_group_auth",
@@ -56,8 +57,9 @@ deviceauth_files = [
   "${services_path}/common/src/broadcast_manager/broadcast_manager.c",
   "${services_path}/common/src/callback_manager/callback_manager.c",
   "${services_path}/common/src/channel_manager/channel_manager.c",
-  "${services_path}/common/src/channel_manager/soft_bus_channel_mock/soft_bus_channel_mock.c",
+  "${services_path}/common/src/channel_manager/soft_bus_channel/soft_bus_channel.c",
   "${services_path}/common/src/data_base/database_manager.c",
+  "${services_path}/common/src/task_manager/task_manager.c",
 
   "${services_path}/group_auth/src/group_auth_manager/group_auth_manager.c",
   "${services_path}/group_auth/src/group_auth_manager/account_unrelated_group_auth/account_unrelated_group_auth.c",
