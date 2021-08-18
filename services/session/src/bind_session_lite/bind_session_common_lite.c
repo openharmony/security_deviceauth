@@ -342,7 +342,7 @@ void InitLiteBindSession(int bindType, int operationCode, int64_t requestId, Lit
     session->base.type = bindType;
     session->operationCode = operationCode;
     session->requestId = requestId;
-    session->channelType = GetChannelType(callback);
+    session->channelType = NO_CHANNEL;
     session->channelId = DEFAULT_CHANNEL_ID;
     session->isWaiting = false;
     session->params = NULL;

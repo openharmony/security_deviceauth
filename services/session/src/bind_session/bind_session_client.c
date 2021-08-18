@@ -143,9 +143,9 @@ static int32_t PrepareClient(const CJson *jsonParams, BindSession *session)
     return OpenChannel(session->channelType, jsonParams, session->requestId, &session->channelId);
 }
 
-static void InitClientChannel(const DeviceAuthCallback *callback, BindSession *session)
+static void InitClientChannel(const DeviceAuthCallback *callback, const CJson *jsonParams, BindSession *session)
 {
-    session->channelType = GetChannelType(callback);
+    session->channelType = GetChannelType(callback, jsonParams);
 }
 
 Session *CreateClientBindSession(CJson *jsonParams, const DeviceAuthCallback *callback)
@@ -185,7 +185,7 @@ Session *CreateClientBindSession(CJson *jsonParams, const DeviceAuthCallback *ca
         return NULL;
     }
     InitBindSession(TYPE_CLIENT_BIND_SESSION, operationCode, requestId, callback, session);
-    InitClientChannel(callback, session);
+    InitClientChannel(callback, jsonParams, session);
     /* The client bind session needs to receive a message indicating that the channel is open. */
     session->onChannelOpened = OnBindChannelOpened;
 

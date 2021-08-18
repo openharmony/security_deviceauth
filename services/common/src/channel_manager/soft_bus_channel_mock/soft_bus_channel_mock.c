@@ -14,28 +14,25 @@
  */
 
 #include "soft_bus_channel.h"
-#include "device_auth_defines.h"
-#include "hc_types.h"
 
-int32_t InitSoftBusChannelModule(void (*onChannelOpened)(int64_t, int64_t, const char *, uint32_t, bool),
-                                 void (*onChannelClosed)(int64_t, int64_t),
-                                 void (*onMsgReceived)(int64_t, const uint8_t *, uint32_t),
-                                 void (*onServiceDied)())
+#include "device_auth_defines.h"
+
+int32_t InitSoftBusChannelModule(void)
 {
     return HC_SUCCESS;
 }
 
-void DestroySoftBusChannelModule()
+void DestroySoftBusChannelModule(void)
 {
     return;
 }
 
-SoftBus *GetSoftBusInstance()
+SoftBus *GetSoftBusInstance(void)
 {
     return NULL;
 }
 
-bool IsSoftBusChannelSupported()
+bool IsSoftBusChannelSupported(void)
 {
     return false;
 }
