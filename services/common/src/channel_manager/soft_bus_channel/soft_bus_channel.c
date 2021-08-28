@@ -20,6 +20,7 @@
 #include "device_auth_defines.h"
 #include "group_manager.h"
 #include "hc_log.h"
+#include "inner_session.h"
 #include "session.h"
 #include "session_manager.h"
 #include "task_manager.h"
@@ -61,7 +62,6 @@ static int32_t GetReqIdByChannelId(int64_t channelId, int64_t *returnReqId)
         }
     }
     g_channelMutex->unlock(g_channelMutex);
-    LOGE("Failed to find request by channelId!");
     return HC_ERR_REQUEST_NOT_FOUND;
 }
 
@@ -186,6 +186,12 @@ static int OnChannelOpenedCb(int sessionId, int result)
     return HC_SUCCESS;
 }
 
+static void OnChannelClosedCb(int sessionId)
+{
+    LOGI("[SoftBus][Out]: OnChannelClosed! sessionId: %d", sessionId);
+    return;
+}
+
 static void OnBytesReceivedCb(int sessionId, const void *data, unsigned int dataLen)
 {
     if ((data == NULL) || (dataLen == 0) || (dataLen > MAX_DATA_BUFFER_SIZE)) {
@@ -202,102 +208,21 @@ static void OnBytesReceivedCb(int sessionId, const void *data, unsigned int data
     FreeJsonString(recvDataStr);
 }
 
-static bool IsEthChannel(const CJson *json)
-{
-    const char *ethIp = GetStringFromJson(json, ETH_IP);
-    return (ethIp != NULL) ? true : false;
-}
-
-static bool IsWlanChannel(const CJson *json)
-{
-    const char *wlanIp = GetStringFromJson(json, WLAN_IP);
-    return (wlanIp != NULL) ? true : false;
-}
-
-static bool IsBrChannel(const CJson *json)
-{
-    const char *brMac = GetStringFromJson(json, BR_MAC);
-    return (brMac != NULL) ? true : false;
-}
-
-static bool IsBleChannel(const CJson *json)
-{
-    const char *bleMac = GetStringFromJson(json, BLE_MAC);
-    return (bleMac != NULL) ? true : false;
-}
-
-static int32_t ConvertJsonToAddr(const CJson *json, ConnectionAddr *addr)
-{
-    if (IsEthChannel(json)) {
-        int ethPort = 0;
-        if (GetIntFromJson(json, ETH_PORT, &ethPort) != HC_SUCCESS) {
-            return HC_ERR_INVALID_PARAMS;
-        }
-        const char *ethIp = GetStringFromJson(json, ETH_IP);
-        if (memcpy_s(addr->info.ip.ip, IP_STR_MAX_LEN, ethIp, HcStrlen(ethIp) + 1) != EOK) {
-            return HC_ERR_MEMORY_COPY;
-        }
-        addr->info.ip.port = (uint16_t)ethPort;
-        addr->type = CONNECTION_ADDR_ETH;
-        return HC_SUCCESS;
-    } else if (IsWlanChannel(json)) {
-        int wlanPort = 0;
-        if (GetIntFromJson(json, WLAN_PORT, &wlanPort) != HC_SUCCESS) {
-            return HC_ERR_INVALID_PARAMS;
-        }
-        const char *wlanIp = GetStringFromJson(json, WLAN_IP);
-        if (memcpy_s(addr->info.ip.ip, IP_STR_MAX_LEN, wlanIp, HcStrlen(wlanIp) + 1) != EOK) {
-            return HC_ERR_MEMORY_COPY;
-        }
-        addr->info.ip.port = (uint16_t)wlanPort;
-        addr->type = CONNECTION_ADDR_WLAN;
-        return HC_SUCCESS;
-    } else if(IsBrChannel(json)) {
-        const char *brMac = GetStringFromJson(json, BR_MAC);
-        if (memcpy_s(addr->info.br.brMac, BT_MAC_LEN, brMac, HcStrlen(brMac) + 1) != EOK) {
-            return HC_ERR_MEMORY_COPY;
-        }
-        addr->type = CONNECTION_ADDR_BR;
-        return HC_SUCCESS;
-    } else if(IsBleChannel(json)) {
-        const char *bleMac = GetStringFromJson(json, BLE_MAC);
-        if (memcpy_s(addr->info.ble.bleMac, BT_MAC_LEN, bleMac, HcStrlen(bleMac) + 1) != EOK) {
-            return HC_ERR_MEMORY_COPY;
-        }
-        addr->type = CONNECTION_ADDR_BLE;
-        return HC_SUCCESS;
-    } else {
-        LOGE("The connectParams is invalid!");
-        return HC_ERR_INVALID_PARAMS;
-    }
-}
-
 static int32_t OpenSoftBusChannel(const char *connectParams, int64_t requestId, int64_t *returnChannelId)
 {
     if ((connectParams == NULL) || (returnChannelId == NULL)) {
         LOGE("The input connectParams or returnChannelId is NULL!");
         return HC_ERR_NULL_PTR;
     }
-    ConnectionAddr addr;
-    CJson *json = CreateJsonFromString(connectParams);
-    if (json == NULL) {
-        LOGE("Failed to create json from string!");
-        return HC_ERR_JSON_CREATE;
-    }
-    int32_t res = ConvertJsonToAddr(json, &addr);
-    FreeJson(json);
-    if (res != HC_SUCCESS) {
-        return res;
-    }
     LOGD("[SoftBus][In]: OpenChannel!");
-    int64_t channelId = (int64_t)OpenAuthSession(GROUP_MANAGER_PACKAGE_NAME, &addr);
+    int64_t channelId = (int64_t)OpenAuthSession(GROUP_MANAGER_PACKAGE_NAME, NULL, 0, connectParams);
     LOGD("[SoftBus][Out]: OpenChannel! [channelId]: %lld", channelId);
     /* If the value of channelId is less than 0, the soft bus fails to open the channel */
     if (channelId < 0) {
         LOGE("Failed to open soft bus channel!");
         return HC_ERR_SOFT_BUS;
     }
-    res = AddChannelEntry(requestId, channelId);
+    int32_t res = AddChannelEntry(requestId, channelId);
     if (res != HC_SUCCESS) {
         return res;
     }
@@ -328,7 +253,7 @@ static int32_t SendSoftBusMsg(int64_t channelId, const uint8_t *data, uint32_t d
 static void NotifySoftBusBindResult(int64_t channelId)
 {
     LOGD("[SoftBus][In]: NotifyAuthSuccess!");
-    // NotifyAuthSuccess(channelId);
+    NotifyAuthSuccess(channelId);
     LOGD("[SoftBus][Out]: NotifyAuthSuccess!");
 }
 
@@ -336,7 +261,7 @@ SoftBus g_softBus = {
     .openChannel = OpenSoftBusChannel,
     .closeChannel = CloseSoftBusChannel,
     .sendMsg = SendSoftBusMsg,
-    .notifyResult = NotifySoftBusBindResult,
+    .notifyResult = NotifySoftBusBindResult
 };
 
 int32_t InitSoftBusChannelModule(void)
@@ -357,7 +282,7 @@ int32_t InitSoftBusChannelModule(void)
     g_channelVec = CREATE_HC_VECTOR(ChannelEntryVec)
     ISessionListener softBusListener = {
         .OnSessionOpened = OnChannelOpenedCb,
-        .OnSessionClosed = NULL,
+        .OnSessionClosed = OnChannelClosedCb,
         .OnBytesReceived = OnBytesReceivedCb,
         .OnMessageReceived = NULL
     };

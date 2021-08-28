@@ -415,11 +415,11 @@ static int32_t AddServerParamsToJson(bool isClient, int64_t requestId, const cha
 
 static int32_t RegGroupManagerCallback(const char *appId, const DeviceAuthCallback *callback)
 {
-    LOGI("[Start]: Service register GM callback! [AppId]: %s", appId);
     if ((appId == NULL) || (callback == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
+    LOGI("[Start]: Service register GM callback! [AppId]: %s", appId);
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return HC_ERR_NOT_SUPPORT;
@@ -434,11 +434,11 @@ static int32_t RegGroupManagerCallback(const char *appId, const DeviceAuthCallba
 
 static int32_t UnRegGroupManagerCallback(const char *appId)
 {
-    LOGI("[Start]: Service deregister GM callback! [AppId]: %s", appId);
     if (appId == NULL) {
         LOGE("The input appId is NULL!");
         return HC_ERR_INVALID_PARAMS;
     }
+    LOGI("[Start]: Service deregister GM callback! [AppId]: %s", appId);
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return HC_ERR_NOT_SUPPORT;
@@ -1116,11 +1116,11 @@ static int32_t GetRegisterInfo(char **returnRegisterInfo)
 
 static int32_t AddGroupManagerIfAccessible(const char *appId, const char *groupId, const char *managerAppId)
 {
-    LOGI("[Start]: AddGroupManager! [AppId]: %s, [ManagerAppId]: %s", appId, managerAppId);
     if ((appId == NULL) || (groupId == NULL) || (managerAppId == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
+    LOGI("[Start]: AddGroupManager! [AppId]: %s, [ManagerAppId]: %s", appId, managerAppId);
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return HC_ERR_NOT_SUPPORT;
@@ -1135,11 +1135,11 @@ static int32_t AddGroupManagerIfAccessible(const char *appId, const char *groupI
 
 static int32_t AddGroupFriendIfAccessible(const char *appId, const char *groupId, const char *friendAppId)
 {
-    LOGI("[Start]: AddGroupFriend! [AppId]: %s, [FriendAppId]: %s", appId, friendAppId);
     if ((appId == NULL) || (groupId == NULL) || (friendAppId == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
+    LOGI("[Start]: AddGroupFriend! [AppId]: %s, [FriendAppId]: %s", appId, friendAppId);
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return HC_ERR_NOT_SUPPORT;
@@ -1154,11 +1154,11 @@ static int32_t AddGroupFriendIfAccessible(const char *appId, const char *groupId
 
 static int32_t DeleteGroupManagerIfAccessible(const char *appId, const char *groupId, const char *managerAppId)
 {
-    LOGI("[Start]: DeleteGroupManager! [AppId]: %s, [ManagerAppId]: %s", appId, managerAppId);
     if ((appId == NULL) || (groupId == NULL) || (managerAppId == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
+    LOGI("[Start]: DeleteGroupManager! [AppId]: %s, [ManagerAppId]: %s", appId, managerAppId);
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return HC_ERR_NOT_SUPPORT;
@@ -1173,11 +1173,11 @@ static int32_t DeleteGroupManagerIfAccessible(const char *appId, const char *gro
 
 static int32_t DeleteGroupFriendIfAccessible(const char *appId, const char *groupId, const char *friendAppId)
 {
-    LOGI("[Start]: DeleteGroupFriend! [AppId]: %s, [FriendAppId]: %s", appId, friendAppId);
     if ((appId == NULL) || (groupId == NULL) || (friendAppId == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
+    LOGI("[Start]: DeleteGroupFriend! [AppId]: %s, [FriendAppId]: %s", appId, friendAppId);
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return HC_ERR_NOT_SUPPORT;
@@ -1193,11 +1193,11 @@ static int32_t DeleteGroupFriendIfAccessible(const char *appId, const char *grou
 static int32_t GetGroupManagersIfAccessible(const char *appId, const char *groupId, char **returnManagers,
     uint32_t *returnSize)
 {
-    LOGI("[Start]: GetGroupManagers! [AppId]: %s", appId);
     if ((appId == NULL) || (groupId == NULL) || (returnManagers == NULL) || (returnSize == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
+    LOGI("[Start]: GetGroupManagers! [AppId]: %s", appId);
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return HC_ERR_NOT_SUPPORT;
@@ -1213,11 +1213,11 @@ static int32_t GetGroupManagersIfAccessible(const char *appId, const char *group
 static int32_t GetGroupFriendsIfAccessible(const char *appId, const char *groupId, char **returnFriends,
     uint32_t *returnSize)
 {
-    LOGI("[Start]: GetGroupFriends! [AppId]: %s", appId);
     if ((appId == NULL) || (groupId == NULL) || (returnFriends == NULL) || (returnSize == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
+    LOGI("[Start]: GetGroupFriends! [AppId]: %s", appId);
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return HC_ERR_NOT_SUPPORT;
@@ -1232,11 +1232,11 @@ static int32_t GetGroupFriendsIfAccessible(const char *appId, const char *groupI
 
 static int32_t RegListener(const char *appId, const DataChangeListener *listener)
 {
-    LOGI("[Start]: Service register listener! [AppId]: %s", appId);
     if ((appId == NULL) || (listener == NULL)) {
         LOGE("The input parameter contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
+    LOGI("[Start]: Service register listener! [AppId]: %s", appId);
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return HC_ERR_NOT_SUPPORT;
@@ -1251,11 +1251,11 @@ static int32_t RegListener(const char *appId, const DataChangeListener *listener
 
 static int32_t UnRegListener(const char *appId)
 {
-    LOGI("[Start]: Service deregister listener! [AppId]: %s", appId);
     if (appId == NULL) {
         LOGE("The input appId is NULL!");
         return HC_ERR_INVALID_PARAMS;
     }
+    LOGI("[Start]: Service deregister listener! [AppId]: %s", appId);
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return HC_ERR_NOT_SUPPORT;
@@ -1270,11 +1270,11 @@ static int32_t UnRegListener(const char *appId)
 
 static int32_t GetAccessibleGroupInfoById(const char *appId, const char *groupId, char **returnGroupInfo)
 {
-    LOGI("[Start]: GetAccessibleGroupInfoById! [AppId]: %s, [GroupId]: %s", appId, groupId);
     if ((appId == NULL) || (groupId == NULL) || (returnGroupInfo == NULL)) {
         LOGE("The input parameter contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
+    LOGI("[Start]: GetAccessibleGroupInfoById! [AppId]: %s, [GroupId]: %s", appId, groupId);
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return HC_ERR_NOT_SUPPORT;
@@ -1290,11 +1290,11 @@ static int32_t GetAccessibleGroupInfoById(const char *appId, const char *groupId
 static int32_t GetAccessibleGroupInfo(const char *appId, const char *queryParams, char **returnGroupVec,
     uint32_t *groupNum)
 {
-    LOGI("[Start]: GetAccessibleGroupInfo! [AppId]: %s, [QueryParams]: %s", appId, queryParams);
     if ((appId == NULL) || (queryParams == NULL) || (returnGroupVec == NULL) || (groupNum == NULL)) {
         LOGE("The input parameter contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
+    LOGI("[Start]: GetAccessibleGroupInfo! [AppId]: %s, [QueryParams]: %s", appId, queryParams);
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return HC_ERR_NOT_SUPPORT;
@@ -1309,11 +1309,11 @@ static int32_t GetAccessibleGroupInfo(const char *appId, const char *queryParams
 
 static int32_t GetAccessibleJoinedGroups(const char *appId, int groupType, char **returnGroupVec, uint32_t *groupNum)
 {
-    LOGI("[Start]: GetAccessibleJoinedGroups! [AppId]: %s, [GroupType]: %d", appId, groupType);
     if ((appId == NULL) || (returnGroupVec == NULL) || (groupNum == NULL)) {
         LOGE("The input parameter contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
+    LOGI("[Start]: GetAccessibleJoinedGroups! [AppId]: %s, [GroupType]: %d", appId, groupType);
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return HC_ERR_NOT_SUPPORT;
@@ -1329,11 +1329,11 @@ static int32_t GetAccessibleJoinedGroups(const char *appId, int groupType, char 
 static int32_t GetAccessibleRelatedGroups(const char *appId, const char *peerDeviceId, char **returnGroupVec,
     uint32_t *groupNum)
 {
-    LOGI("[Start]: GetAccessibleRelatedGroups! [AppId]: %s", appId);
     if ((appId == NULL) || (peerDeviceId == NULL) || (returnGroupVec == NULL) || (groupNum == NULL)) {
         LOGE("The input parameter contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
+    LOGI("[Start]: GetAccessibleRelatedGroups! [AppId]: %s", appId);
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return HC_ERR_NOT_SUPPORT;
@@ -1349,11 +1349,11 @@ static int32_t GetAccessibleRelatedGroups(const char *appId, const char *peerDev
 static int32_t GetAccessibleDeviceInfoById(const char *appId, const char *deviceId, const char *groupId,
     char **returnDeviceInfo)
 {
-    LOGI("[Start]: GetAccessibleDeviceInfoById! [AppId]: %s, [GroupId]: %s", appId, groupId);
     if ((appId == NULL) || (deviceId == NULL) || (groupId == NULL) || (returnDeviceInfo == NULL)) {
         LOGE("The input parameter contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
+    LOGI("[Start]: GetAccessibleDeviceInfoById! [AppId]: %s, [GroupId]: %s", appId, groupId);
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return HC_ERR_NOT_SUPPORT;
@@ -1369,11 +1369,11 @@ static int32_t GetAccessibleDeviceInfoById(const char *appId, const char *device
 static int32_t GetAccessibleTrustedDevices(const char *appId, const char *groupId, char **returnDevInfoVec,
     uint32_t *deviceNum)
 {
-    LOGI("[Start]: GetAccessibleTrustedDevices! [AppId]: %s, [GroupId]: %s", appId, groupId);
     if ((appId == NULL) || (groupId == NULL) || (returnDevInfoVec == NULL) || (deviceNum == NULL)) {
         LOGE("The input parameter contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
+    LOGI("[Start]: GetAccessibleTrustedDevices! [AppId]: %s, [GroupId]: %s", appId, groupId);
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return HC_ERR_NOT_SUPPORT;
@@ -1388,11 +1388,11 @@ static int32_t GetAccessibleTrustedDevices(const char *appId, const char *groupI
 
 static bool IsDeviceInAccessibleGroup(const char *appId, const char *groupId, const char *deviceId)
 {
-    LOGI("[Start]: IsDeviceInAccessibleGroup! [AppId]: %s, [GroupId]: %s", appId, groupId);
     if ((appId == NULL) || (groupId == NULL) || (deviceId == NULL)) {
         LOGE("The input parameter contains NULL value!");
         return false;
     }
+    LOGI("[Start]: IsDeviceInAccessibleGroup! [AppId]: %s, [GroupId]: %s", appId, groupId);
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return false;
@@ -1407,11 +1407,11 @@ static bool IsDeviceInAccessibleGroup(const char *appId, const char *groupId, co
 
 static void DestroyInfo(char **returnInfo)
 {
-    LOGI("[Start]: DestroyInfo!");
     if (returnInfo == NULL) {
         LOGI("The input returnInfo is NULL!");
         return;
     }
+    LOGI("[Start]: DestroyInfo!");
     if (!IsGroupManagerSupported()) {
         LOGE("Group manager is not supported!");
         return;
@@ -1498,11 +1498,6 @@ DEVICE_AUTH_API_PUBLIC int InitDeviceAuthService()
     if (res != HC_SUCCESS) {
         goto free_module;
     }
-    res = InitChannelManager();
-    if (res != HC_SUCCESS) {
-        LOGE("[End]: [Service]: Failed to init channel manage module!");
-        goto free_group_manager;
-    }
     InitSessionManager();
     res = InitTaskManager();
     if (res != HC_SUCCESS) {
@@ -1513,9 +1508,7 @@ DEVICE_AUTH_API_PUBLIC int InitDeviceAuthService()
     LOGI("[End]: [Service]: Init device auth service successfully!");
     return res;
 free_all:
-    DestroyChannelManager();
     DestroySessionManager();
-free_group_manager:
     DestroyGroupManager();
 free_module:
     DestroyModules();

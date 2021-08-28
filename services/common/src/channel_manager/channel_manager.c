@@ -21,15 +21,25 @@
 #include "hc_types.h"
 #include "soft_bus_channel.h"
 
+static bool g_initialized = false;
+
 int32_t InitChannelManager(void)
 {
-    return IsSoftBusChannelSupported() ? InitSoftBusChannelModule() : HC_SUCCESS;
+    if (g_initialized || !IsSoftBusChannelSupported()) {
+        return HC_SUCCESS;
+    }
+    int32_t res = InitSoftBusChannelModule();
+    if (res == HC_SUCCESS) {
+        g_initialized = true;
+    }
+    return res;
 }
 
 void DestroyChannelManager(void)
 {
-    if (IsSoftBusChannelSupported()) {
+    if (g_initialized && IsSoftBusChannelSupported()) {
         DestroySoftBusChannelModule();
+        g_initialized = false;
     }
 }
 

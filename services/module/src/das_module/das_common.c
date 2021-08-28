@@ -383,7 +383,7 @@ int32_t GetAndCheckAuthIdPeer(const CJson *in, const Uint8Buff *authIdSelf, cons
         LOGE("Malloc for authIdPeerTmp failed.");
         return HC_ERR_ALLOC_MEMORY;
     }
-    if (HexStringToByte(authIdStr, authIdPeerTmp, authIdPeerLen) != HAL_SUCCESS) {
+    if (HexStringToByte(authIdStr, authIdPeerTmp, authIdPeerLen) != HC_SUCCESS) {
         LOGE("Convert peer authId from hex string to byte failed, res: %d.", HC_ERR_CONVERT_FAILED);
         HcFree(authIdPeerTmp);
         return HC_ERR_CONVERT_FAILED;
