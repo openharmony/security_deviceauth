@@ -17,6 +17,7 @@
 #include "account_related_group_manager.h"
 #include "account_unrelated_group_manager.h"
 #include "broadcast_manager.h"
+#include "channel_manager.h"
 #include "database_manager.h"
 #include "hc_log.h"
 
@@ -374,6 +375,11 @@ static int32_t RegGroupManagerCallback(const char *appId, const DeviceAuthCallba
     if ((appId == NULL) || (callback == NULL)) {
         LOGE("The input appId or callback is NULL!");
         return HC_ERR_INVALID_PARAMS;
+    }
+    int32_t res = InitChannelManager();
+    if (res != HC_SUCCESS) {
+        LOGE("[End]: [Service]: Failed to init channel manage module!");
+        return res;
     }
     if (UpdateCallbackIfExist(appId, callback) == HC_SUCCESS) {
         LOGI("[End]: The callback associated with the appId already exists, so we update the callback!");
