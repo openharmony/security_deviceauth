@@ -88,7 +88,7 @@ void CloseChannel(ChannelType channelType, int64_t channelId)
     }
 }
 
-int32_t SendMsg(ChannelType channelType, int64_t requestId, int64_t channelId,
+int32_t HcSendMsg(ChannelType channelType, int64_t requestId, int64_t channelId,
     const DeviceAuthCallback *callback, const char *data)
 {
     if (channelType == SERVICE_CHANNEL) {
