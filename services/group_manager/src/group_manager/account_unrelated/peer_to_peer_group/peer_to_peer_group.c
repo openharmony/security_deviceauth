@@ -398,7 +398,7 @@ static void InformPeerProcessError(int64_t requestId, const CJson *jsonParams, c
         LOGE("An error occurred when converting json to string!");
         return;
     }
-    (void)SendMsg(channelType, requestId, channelId, callback, errorDataStr);
+    (void)HcSendMsg(channelType, requestId, channelId, callback, errorDataStr);
     FreeJsonString(errorDataStr);
 }
 

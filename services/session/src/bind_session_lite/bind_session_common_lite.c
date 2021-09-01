@@ -29,7 +29,7 @@ static int32_t SendLiteBindSessionData(const LiteBindSession *session, const CJs
         LOGE("An error occurred when converting json to string!");
         return HC_ERR_JSON_FAIL;
     }
-    int32_t result = SendMsg(session->channelType, session->requestId,
+    int32_t result = HcSendMsg(session->channelType, session->requestId,
         session->channelId, session->base.callback, sendDataStr);
     FreeJsonString(sendDataStr);
     return result;
