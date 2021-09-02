@@ -184,7 +184,6 @@ int GenEncResult(const IsoParams *params, int message, CJson *out, const char *a
     GOTO_ERR_AND_SET_RET(AddIntToJson(sendToSelf, FIELD_OPERATION_CODE, params->opCode), res);
     GOTO_ERR_AND_SET_RET(AddObjToJson(out, FIELD_SEND_TO_PEER, sendToPeer), res);
     GOTO_ERR_AND_SET_RET(AddObjToJson(out, FIELD_SEND_TO_SELF, sendToSelf), res);
-    GOTO_ERR_AND_SET_RET(AddIntToJson(out, FIELD_CREDENTIAL_TYPE, SYMMETRIC), res);
 err:
     FreeJson(sendToPeer);
     FreeJson(sendToSelf);

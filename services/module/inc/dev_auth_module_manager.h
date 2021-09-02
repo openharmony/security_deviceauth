@@ -29,9 +29,9 @@ void DestroyModules();
 int32_t CreateTask(int *taskId, const CJson *in, CJson *out, int moduleType);
 int32_t ProcessTask(int taskId, const CJson *in, CJson *out, int *status, int moduleType);
 void DestroyTask(int taskId, int moduleType);
+int32_t CheckMsgRepeatability(const CJson *in, int moduleType);
 
 // for DAS
-int32_t CheckMsgRepeatability(const CJson *in, int moduleType);
 int32_t RegisterLocalIdentity(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType,
     int moduleType);
 int32_t UnregisterLocalIdentity(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType,

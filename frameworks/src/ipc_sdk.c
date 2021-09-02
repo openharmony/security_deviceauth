@@ -823,10 +823,10 @@ static int32_t IpcGmGetRegisterInfo(char **registerInfo)
     return (*registerInfo != NULL) ? HC_SUCCESS : HC_ERR_NULL_PTR;
 }
 
-static int32_t IpcGmGetLocalConnectInfo(char **outLocalConnInfo)
+static int32_t IpcGmGetLocalConnectInfo(char *returnInfo, int32_t bufLen)
 {
     LOGI("starting ...");
-    if (outLocalConnInfo == NULL) {
+    if (returnInfo == NULL) {
         return HC_ERR_INVALID_PARAMS;
     }
 

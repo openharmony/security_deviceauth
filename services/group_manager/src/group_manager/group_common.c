@@ -96,7 +96,7 @@ int32_t GetHashResult(const uint8_t *info, uint32_t infoLen, char *hash, uint32_
     if (result == HC_SUCCESS) {
         if (ByteToHexString(infoHash.val, infoHash.length, hash, hashLen) != HC_SUCCESS) {
             LOGE("Failed to convert bytes to string!");
-            result = HC_HEX_CONVERT_FAILED;
+            result = HC_ERR_CONVERT_FAILED;
         }
     }
     HcFree(infoHash.val);
