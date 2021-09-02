@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "cJSON.h"
+#include "hc_error.h"
 
 typedef cJSON CJson;
 

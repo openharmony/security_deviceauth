@@ -137,9 +137,9 @@ err:
 static int ParseServerStartMessage(IsoParams *params, const CJson *in, uint8_t *peerToken)
 {
     if (params->opCode == OP_BIND) {
-        RETURN_IF_ERR(GetAuthIdPeer(in, &(params->baseParams.authIdPeer)));
+        RETURN_IF_ERR(GetAuthIdPeerFromPayload(in, &(params->baseParams.authIdSelf), &(params->baseParams.authIdPeer)));
     } else {
-        RETURN_IF_ERR(GetAndCheckAuthIdPeer(in, &(params->baseParams.authIdPeer)));
+        RETURN_IF_ERR(GetAndCheckAuthIdPeer(in, &(params->baseParams.authIdSelf), &(params->baseParams.authIdPeer)));
     }
     RETURN_IF_ERR(GetByteFromJson(in, FIELD_ISO_SALT, params->baseParams.randPeer.val,
         params->baseParams.randPeer.length));
