@@ -346,8 +346,11 @@ static int CreateSingleSubTask(Task *task, const CJson *in, CJson *out)
     uint32_t index;
     void **ptr = NULL;
     FOR_EACH_HC_VECTOR(g_protocolTypeVec, index, ptr) {
+        if ((ptr == NULL) || ((*ptr) == NULL)) {
+            continue;
+        }
         DasProtocolType *temp = (DasProtocolType *)(*ptr);
-        if ((ptr != NULL) && ((*ptr) != NULL) && (temp->type == protocolType)) {
+        if (temp->type == protocolType) {
             SubTaskBase *subTask = temp->createSubTask(in, out);
             if (subTask == NULL) {
                 LOGE("Create subTask failed");
