@@ -45,8 +45,7 @@ void DestroyChannelManager(void)
 
 ChannelType GetChannelType(const DeviceAuthCallback *callback, const CJson *jsonParams)
 {
-    if (IsSoftBusChannelSupported())
-    {
+    if (IsSoftBusChannelSupported()) {
         const char *connectParams = GetStringFromJson(jsonParams, FIELD_CONNECT_PARAMS);
         if (connectParams != NULL) {
             return SOFT_BUS;

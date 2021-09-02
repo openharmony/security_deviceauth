@@ -16,11 +16,11 @@
 #ifndef TASK_MANAGER_H
 #define TASK_MANAGER_H
 
+#include "hc_task_thread.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "hc_task_thread.h"
 
 int32_t InitTaskManager(void);
 void DestroyTaskManager(void);
