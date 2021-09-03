@@ -1573,6 +1573,7 @@ DEVICE_AUTH_API_PUBLIC const DeviceGroupManager *GetGmInstance()
     g_groupManagerInstance->getRelatedGroups = GetAccessibleRelatedGroups;
     g_groupManagerInstance->getDeviceInfoById = GetAccessibleDeviceInfoById;
     g_groupManagerInstance->getTrustedDevices = GetAccessibleTrustedDevices;
+    g_groupManagerInstance->checkAccessToGroup = NULL;
     g_groupManagerInstance->isDeviceInGroup = IsDeviceInAccessibleGroup;
     g_groupManagerInstance->destroyInfo = DestroyInfo;
     return g_groupManagerInstance;
