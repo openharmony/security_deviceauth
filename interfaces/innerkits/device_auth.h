@@ -149,6 +149,7 @@ typedef struct {
     int32_t (*getRelatedGroups)(const char *appId, const char *peerDeviceId, char **returnGroupVec, uint32_t *groupNum);
     int32_t (*getDeviceInfoById)(const char *appId, const char *deviceId, const char *groupId, char **returnDeviceInfo);
     int32_t (*getTrustedDevices)(const char *appId, const char *groupId, char **returnDevInfoVec, uint32_t *deviceNum);
+    int32_t (*checkAccessToGroup)(const char *appId, const char *groupId);
     bool (*isDeviceInGroup)(const char *appId, const char *groupId, const char *deviceId);
     void (*destroyInfo)(char **returnInfo);
 } DeviceGroupManager;
