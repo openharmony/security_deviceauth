@@ -29,10 +29,10 @@ typedef struct {
     void (*postOnTrustedDeviceNumChanged)(int curTrustedDeviceNum);
 } Broadcaster;
 
-bool IsBroadcastSupported();
-int32_t InitBroadcastManager();
-void DestroyBroadcastManager();
-Broadcaster *GetBroadcaster();
+bool IsBroadcastSupported(void);
+int32_t InitBroadcastManager(void);
+void DestroyBroadcastManager(void);
+Broadcaster *GetBroadcaster(void);
 int32_t AddListener(const char *appId, const DataChangeListener *listener);
 int32_t RemoveListener(const char *appId);
 

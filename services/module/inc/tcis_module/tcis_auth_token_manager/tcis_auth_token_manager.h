@@ -71,20 +71,20 @@ typedef struct {
 
 typedef struct {
     int (*setToken)(CJson *in, CJson *out);
-    uint64_t (*getUserId)();
+    uint64_t (*getUserId)(void);
     int (*getDeviceId)(Uint8Buff *deviceId);
     int (*getToken)(TcisToken *token);
     int (*getServerPublicKey)(Uint8Buff *publicKey);
-    int (*deleteToken)();
+    int (*deleteToken)(void);
 #ifdef ASY
     int (*setRegisterProof)(CJson *in);
     int (*getRegisterProof)(CJson *out);
 #endif
 } TcisAuthTokenManager;
 
-TcisAuthTokenManager *GetTcisAuthTokenManager();
+TcisAuthTokenManager *GetTcisAuthTokenManager(void);
 
-void InitTcisTokenManagerAlg();
+void InitTcisTokenManagerAlg(void);
 
 #endif
 #endif

@@ -16,9 +16,12 @@
 #ifndef HC_FILE_H
 #define HC_FILE_H
 
-typedef union {
-    void* pfd;
-    int fd;
+typedef struct {
+    union {
+        void *pfd;
+        int fd;
+    } fileHandle;
+    const char *filePath;
 } FileHandle;
 
 typedef enum FileIdEnumT {
@@ -30,10 +33,10 @@ typedef enum FileIdEnumT {
 #define MODE_FILE_WRITE 1
 
 /* 0 indicates success, -1 indicates fail */
-int HcFileOpen(int fileId, int mode, FileHandle* file);
+int HcFileOpen(int fileId, int mode, FileHandle *file);
 int HcFileSize(FileHandle file);
-int HcFileRead(FileHandle file, void* dst, int dstSize);
-int HcFileWrite(FileHandle file, const void* src, int srcSize);
+int HcFileRead(FileHandle file, void *dst, int dstSize);
+int HcFileWrite(FileHandle file, const void *src, int srcSize);
 void HcFileClose(FileHandle file);
 void HcFileRemove(int fileId);
 void SetFilePath(FileIdEnum fileId, const char *path);

@@ -28,9 +28,9 @@ typedef cJSON CJson;
 /* Need to call FreeJson to free the returned pointer when it's no longer in use. */
 CJson *CreateJsonFromString(const char *jsonStr);
 /* Need to call FreeJson to free the returned pointer when it's no longer in use. */
-CJson *CreateJson();
+CJson *CreateJson(void);
 /* Need to call FreeJson to free the returned pointer when it's no longer in use. */
-CJson *CreateJsonArray();
+CJson *CreateJsonArray(void);
 /* Need to call FreeJson to free the returned pointer when it's no longer in use. */
 CJson *DuplicateJson(const CJson *jsonObj);
 void FreeJson(CJson *jsonObj);

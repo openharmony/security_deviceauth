@@ -57,9 +57,9 @@ typedef struct {
     void (*destroyInfo)(char **returnInfo);
 } GroupManager;
 
-int32_t InitGroupManager();
-void DestroyGroupManager();
-GroupManager *GetGroupManagerInstance();
-bool IsGroupManagerSupported();
+int32_t InitGroupManager(void);
+void DestroyGroupManager(void);
+GroupManager *GetGroupManagerInstance(void);
+bool IsGroupManagerSupported(void);
 
 #endif
