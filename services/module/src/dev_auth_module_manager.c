@@ -246,7 +246,7 @@ int32_t ProcessTask(int taskId, const CJson *in, CJson *out, int *status, int mo
     if (res != HC_SUCCESS) {
         LOGE("AddSingleVersionToJson failed, res:%d", res);
     } else {
-        LOGI("Create task success.");
+        LOGI("Process task success.");
     }
     return res;
 }

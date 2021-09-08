@@ -27,7 +27,10 @@ if (defined(ohos_lite)) {
       "//third_party/cJSON",
       "//utils/native/lite/include",
       "//base/hiviewdfx/hilog_lite/interfaces/native/innerkits/hilog",
-      "//third_party/bounds_checking_function/include"
+      "//third_party/bounds_checking_function/include",
+      "//foundation/communication/dsoftbus/interfaces/kits/common",
+      "//foundation/communication/dsoftbus/interfaces/kits/transport",
+      "//foundation/communication/dsoftbus/interfaces/inner_kits/transport",
     ]
     sources = deviceauth_files
 
@@ -39,6 +42,7 @@ if (defined(ohos_lite)) {
       "//build/lite/config/component/cJSON:cjson_shared",
       "//utils/native/lite:utils",
       "//base/hiviewdfx/hilog_lite/frameworks/featured:hilog_shared",
+      "//foundation/communication/dsoftbus/sdk:softbus_client",
       "//third_party/bounds_checking_function:libsec_shared",
     ]
   }
@@ -116,30 +120,36 @@ if (defined(ohos_lite)) {
   ohos_static_library("deviceauth") {
     subsystem_name = "security"
     part_name = "deviceauth_standard"
-  
+
     include_dirs = inc_path
     include_dirs += hals_inc_path
     include_dirs += [
       "//third_party/cJSON",
       "//utils/native/base/include",
-      "${frameworks_path}/inc/standard"
+      "${frameworks_path}/inc/standard",
+      "//foundation/communication/dsoftbus/interfaces/kits/common",
+      "//foundation/communication/dsoftbus/interfaces/kits/transport",
+      "//foundation/communication/dsoftbus/interfaces/inner_kits/transport",
     ]
 
     sources = deviceauth_files
-  
+
     cflags = [ "-DHILOG_ENABLE" ]
     cflags += build_flags
     if (target_cpu == "arm") {
       cflags += [ "-DBINDER_IPC_32BIT" ]
     }
-  
+
     deps = [
       "${hals_path}:${hal_module_name}",
       "//third_party/cJSON:cjson_static",
       "//utils/native/base:utils",
     ]
 
-    external_deps = [ "hiviewdfx_hilog_native:libhilog" ]
+    external_deps = [
+      "hiviewdfx_hilog_native:libhilog",
+      "dsoftbus_standard:softbus_client",
+    ]
   }
 
   ohos_prebuilt_etc("auth_service.rc") {

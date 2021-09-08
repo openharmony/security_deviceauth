@@ -129,6 +129,7 @@ int IsoClientCheckAndGenToken(const IsoBaseParams *params, const Uint8Buff *peer
         return res;
     }
     if (memcmp(peerToken->val, outHmac.val, outHmac.length) != 0) {
+        LOGE("Compare hmac token failed.");
         return HC_ERR_PROOF_NOT_MATCH;
     }
     return IsoCalPeerToken(params, selfToken);
@@ -149,6 +150,7 @@ int IsoClientGenSessionKey(IsoBaseParams *params, int returnResult, const uint8_
         return res;
     }
     if (memcmp(outHmacBuf.val, hmac, hmacLen) != 0) {
+        LOGE("Compare hmac result failed.");
         return HC_ERR_PROOF_NOT_MATCH;
     }
 
@@ -178,6 +180,7 @@ int IsoClientGenSessionKey(IsoBaseParams *params, int returnResult, const uint8_
     res = params->loader->computeHkdf(&pskBuf, &hkdfSaltBuf, &keyInfoBuf, &params->sessionKey, false);
     if (res != 0) {
         LOGE("compute hkdf failed, res:%d", res);
+        FreeAndCleanKey(&params->sessionKey);
     }
     HcFree(hkdfSalt);
     return res;
@@ -201,6 +204,7 @@ int IsoServerGenSessionKeyAndCalToken(IsoBaseParams *params, const Uint8Buff *to
         return res;
     }
     if (memcmp(tokenFromPeer->val, outHmac.val, outHmac.length) != 0) {
+        LOGE("Compare hmac token failed.");
         return HC_ERR_PROOF_NOT_MATCH;
     }
 
@@ -231,8 +235,7 @@ int IsoServerGenSessionKeyAndCalToken(IsoBaseParams *params, const Uint8Buff *to
     res = params->loader->computeHkdf(&pskBuf, &hkdfSaltBuf, &keyInfoBuf, &(params->sessionKey), false);
     HcFree(hkdfSalt);
     if (res != 0) {
-        HcFree(params->sessionKey.val);
-        params->sessionKey.val = NULL;
+        FreeAndCleanKey(&params->sessionKey);
         return res;
     }
 
@@ -240,8 +243,7 @@ int IsoServerGenSessionKeyAndCalToken(IsoBaseParams *params, const Uint8Buff *to
     Uint8Buff messageBuf = { (uint8_t *)&returnCode, sizeof(int) };
     res = params->loader->computeHmac(&pskBuf, &messageBuf, tokenToPeer, false);
     if (res != 0) {
-        HcFree(params->sessionKey.val);
-        params->sessionKey.val = NULL;
+        FreeAndCleanKey(&params->sessionKey);
     }
     return res;
 }
