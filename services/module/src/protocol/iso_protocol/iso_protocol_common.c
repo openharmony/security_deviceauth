@@ -16,6 +16,7 @@
 #include "iso_protocol_common.h"
 #include "hc_log.h"
 #include "hc_types.h"
+#include "protocol_common.h"
 #include "securec.h"
 
 static int IsoCalSelfToken(const IsoBaseParams *params, Uint8Buff *outHmac)

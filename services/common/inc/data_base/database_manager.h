@@ -37,10 +37,10 @@ typedef struct {
 extern "C" {
 #endif
 
-int32_t InitDatabase();
-void DestroyDatabase();
+int32_t InitDatabase(void);
+void DestroyDatabase(void);
 
-Int64Vector CreateInt64Vector();
+Int64Vector CreateInt64Vector(void);
 void DestroyInt64Vector(Int64Vector *obj);
 
 int32_t AddGroup(const GroupInfo *addParams);
@@ -56,11 +56,11 @@ int32_t GetLocalDevUdid(char **udid);
 void DestroyUdid(char **udid);
 
 void RegisterBroadcaster(const Broadcaster *broadcaster);
-void DeregisterBroadcaster();
+void DeregisterBroadcaster(void);
 void RegGenerateGroupIdFunc(int32_t (*generateGroupId)(int64_t userId, int64_t sharedUserId, char **returnGroupId));
-void DeregGenerateGroupIdFunc();
+void DeregGenerateGroupIdFunc(void);
 
-int32_t GetTrustedDevNumber();
+int32_t GetTrustedDevNumber(void);
 int32_t GetGroupEntryByGroupId(const char *groupId, GroupInfo *returnGroupInfo);
 int32_t GetGroupEntry(const char *groupId, const char *udid, GroupInfo *returnGroupInfo);
 int32_t GetDeviceInfoForDevAuth(const char *udid, const char *groupId, DeviceInfo *deviceInfo);
@@ -73,8 +73,8 @@ bool IsGroupOwner(const char *groupId, const char *appId);
 bool IsGroupAccessible(const char *groupId, const char *appId);
 bool IsGroupEditAllowed(const char *groupId, const char *appId);
 bool IsGroupExist(const char *ownerName, const char *groupName);
-bool IsIdenticalGroupExist();
-bool IsAcrossAccountGroupExist();
+bool IsIdenticalGroupExist(void);
+bool IsAcrossAccountGroupExist(void);
 bool IsGroupExistByGroupId(const char *groupId);
 bool IsTrustedDeviceExist(const char *udid);
 bool IsTrustedDeviceInGroup(const char *groupId, const char *udid);
@@ -92,8 +92,8 @@ int32_t AddGroupFriend(const char *groupId, const char *friendAppId);
 int32_t RemoveGroupFriend(const char *groupId, const char *friendAppId);
 int32_t GetGroupFriends(const char *groupId, CJson *returnFriends);
 
-GroupInfo *CreateGroupInfoStruct();
-DeviceInfo *CreateDeviceInfoStruct();
+GroupInfo *CreateGroupInfoStruct(void);
+DeviceInfo *CreateDeviceInfoStruct(void);
 void DestroyGroupInfoStruct(GroupInfo *groupInfo);
 void DestroyDeviceInfoStruct(DeviceInfo *deviceInfo);
 void CreateGroupInfoVecStruct(GroupInfoVec *vec);

@@ -602,7 +602,7 @@ int GenerateSeed(IsoParams *params)
         HcFree(random);
         return res;
     }
-    clock_t times = clock();
+    clock_t times = 0;
     uint8_t *input = (uint8_t *)HcMalloc(SEED_LEN + sizeof(clock_t), 0);
     if (input == NULL) {
         LOGE("malloc failed");

@@ -22,6 +22,6 @@ typedef struct {
     AsyBaseCurTask taskBase;
 } NewPakeProtocolClientTask;
 
-AsyBaseCurTask *CreateNewPakeProtocolClientTask();
+AsyBaseCurTask *CreateNewPakeProtocolClientTask(void);
 
 #endif

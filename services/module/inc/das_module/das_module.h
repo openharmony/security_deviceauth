@@ -19,7 +19,7 @@
 #include "common_defs.h"
 #include "common_util.h"
 
-bool IsDasSupported();
+bool IsDasSupported(void);
 
 typedef struct DasAuthModuleT {
     AuthModuleBase moduleBase;
@@ -28,6 +28,6 @@ typedef struct DasAuthModuleT {
     int (*deletePeerAuthInfo)(const char *, const char *, Uint8Buff *, int);
 } DasAuthModule;
 
-AuthModuleBase *CreateDasModule();
+AuthModuleBase *CreateDasModule(void);
 
 #endif

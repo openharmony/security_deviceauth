@@ -14,33 +14,29 @@
 if (defined(ohos_lite)) {
   import("//build/lite/config/component/lite_component.gni")
   lite_component("deviceauth_lite") {
-    features = [
-      "services:deviceauth",
-      "services:deviceauth_service",
-      "services:deviceauth_sdk",
-    ]
+    features = [ "services:deviceauth" ]
+    if (ohos_kernel_type == "linux" || ohos_kernel_type == "liteos_a") {
+      features += [
+        "services:deviceauth_service",
+        "services:deviceauth_sdk",
+      ]
+    }
   }
 } else {
   import("//build/ohos.gni")
   import("deviceauth_env.gni")
   group("deviceauth_build") {
-    deps = [
-      "services:deviceauth",
-    ]
+    deps = [ "services:deviceauth" ]
   }
 
   group("deviceauth_service_build") {
-    deps = [
-      "services:deviceauth_service",
-    ]
+    deps = [ "services:deviceauth_service" ]
   }
 
   group("deviceauth_sdk_build") {
-    deps = [
-      "services:deviceauth_sdk",
-    ]
+    deps = [ "services:deviceauth_sdk" ]
   }
-  
+
   group("deviceauth_test_build") {
     testonly = true
     deps = [ "test/unittest/deviceauth:deviceauth_llt" ]

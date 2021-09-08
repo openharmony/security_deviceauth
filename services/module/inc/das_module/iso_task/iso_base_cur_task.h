@@ -53,7 +53,7 @@ typedef struct IsoParamsT {
 } IsoParams;
 
 typedef struct SymBaseCurTaskT {
-    CurTaskType (*getCurTaskType)();
+    CurTaskType (*getCurTaskType)(void);
     void (*destroyTask)(struct SymBaseCurTaskT *);
     int(*process)(struct SymBaseCurTaskT *, IsoParams *params, const CJson *in, CJson *out, int *status);
     int taskStatus;
