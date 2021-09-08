@@ -129,6 +129,7 @@
 #define DEFAULT_RETURN_KEY_LENGTH 32
 #define ERR_AUTH_FORM 0
 #define MAX_BUFFER_LEN 1024
+#define MAX_DATA_BUFFER_SIZE 4096
 #define MAX_AUTH_ID_LEN 256
 
 typedef enum {

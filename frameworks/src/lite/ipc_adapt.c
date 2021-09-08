@@ -659,7 +659,7 @@ void ProcCbHook(int32_t callbackId, uintptr_t cbHook,
     return;
 }
 
-static int32_t EncodeCallData(IpcIo *dataParcel, int32_t type, const uint8_t *param, int32_t paramSz)
+static uint32_t EncodeCallData(IpcIo *dataParcel, int32_t type, const uint8_t *param, int32_t paramSz)
 {
     const uint8_t *paramTmp = NULL;
     int32_t zeroVal = 0;
@@ -672,15 +672,15 @@ static int32_t EncodeCallData(IpcIo *dataParcel, int32_t type, const uint8_t *pa
     IpcIoPushInt32(dataParcel, type);
     IpcIoPushFlatObj(dataParcel, (const void *)(paramTmp), (uint32_t)paramSz);
     if (!IpcIoAvailable(dataParcel)) {
-        return HC_ERROR;
+        return (uint32_t)(HC_ERROR);
     }
-    return HC_SUCCESS;
+    return (uint32_t)(HC_SUCCESS);
 }
 
 /* group auth callback adapter */
 static bool GaCbOnTransmitWithType(int64_t requestId, const uint8_t *data, uint32_t dataLen, int32_t type)
 {
-    int32_t ret;
+    uint32_t ret;
     IpcIo *dataParcel = NULL;
     IpcIo reply;
     uint8_t dataBuf[IPC_STACK_BUFF_SZ] = {0};
@@ -730,7 +730,7 @@ static bool TmpIpcGaCbOnTransmit(int64_t requestId, const uint8_t *data, uint32_
 
 static void GaCbOnSessionKeyRetWithType(int64_t requestId, const uint8_t *sessKey, uint32_t sessKeyLen, int32_t type)
 {
-    int32_t ret;
+    uint32_t ret;
     IpcIo *dataParcel = NULL;
     IpcCallBackNode *node = NULL;
 
@@ -777,7 +777,7 @@ static void TmpIpcGaCbOnSessionKeyReturned(int64_t requestId, const uint8_t *ses
 
 static void GaCbOnFinishWithType(int64_t requestId, int32_t operationCode, const char *returnData, int32_t type)
 {
-    int32_t ret;
+    uint32_t ret;
     IpcIo *dataParcel = NULL;
     IpcCallBackNode *node = NULL;
 
@@ -827,7 +827,7 @@ static void TmpIpcGaCbOnFinish(int64_t requestId, int32_t operationCode, const c
 static void GaCbOnErrorWithType(int64_t requestId, int32_t operationCode,
     int32_t errorCode, const char *errorReturn, int32_t type)
 {
-    int32_t ret;
+    uint32_t ret;
     IpcIo *dataParcel = NULL;
     IpcCallBackNode *node = NULL;
 
@@ -880,6 +880,7 @@ static void TmpIpcGaCbOnError(int64_t requestId, int32_t operationCode, int32_t 
 static char *GaCbOnRequestWithType(int64_t requestId, int32_t operationCode, const char *reqParams, int32_t type)
 {
     int32_t ret;
+    uint32_t uRet;
     IpcIo *dataParcel = NULL;
     IpcIo reply;
     uint8_t dataBuf[IPC_STACK_BUFF_SZ] = {0};
@@ -900,12 +901,12 @@ static char *GaCbOnRequestWithType(int64_t requestId, int32_t operationCode, con
         UnLockCallbackList();
         return NULL;
     }
-    ret = EncodeCallData(dataParcel, PARAM_TYPE_REQID, (uint8_t *)(&requestId), sizeof(requestId));
-    ret |= EncodeCallData(dataParcel, PARAM_TYPE_OPCODE, (uint8_t *)(&operationCode), sizeof(operationCode));
+    uRet = EncodeCallData(dataParcel, PARAM_TYPE_REQID, (uint8_t *)(&requestId), sizeof(requestId));
+    uRet |= EncodeCallData(dataParcel, PARAM_TYPE_OPCODE, (uint8_t *)(&operationCode), sizeof(operationCode));
     if (reqParams != NULL) {
-        ret |= EncodeCallData(dataParcel, PARAM_TYPE_REQ_INFO, (const uint8_t *)(reqParams), strlen(reqParams) + 1);
+        uRet |= EncodeCallData(dataParcel, PARAM_TYPE_REQ_INFO, (const uint8_t *)(reqParams), strlen(reqParams) + 1);
     }
-    if (ret != HC_SUCCESS) {
+    if (uRet != HC_SUCCESS) {
         UnLockCallbackList();
         HcFree((void *)dataParcel);
         LOGE("build trans data failed");
@@ -938,7 +939,7 @@ static char *TmpIpcGaCbOnRequest(int64_t requestId, int32_t operationCode, const
 void IpcOnGroupCreated(const char *groupInfo)
 {
     int32_t i;
-    int32_t ret;
+    uint32_t ret;
     IpcIo *dataParcel = NULL;
     DataChangeListener *listener = NULL;
 
@@ -986,7 +987,7 @@ void IpcOnGroupCreated(const char *groupInfo)
 void IpcOnGroupDeleted(const char *groupInfo)
 {
     int32_t i;
-    int32_t ret;
+    uint32_t ret;
     IpcIo *dataParcel = NULL;
     DataChangeListener *listener = NULL;
 
@@ -1034,7 +1035,7 @@ void IpcOnGroupDeleted(const char *groupInfo)
 void IpcOnDeviceBound(const char *peerUdid, const char *groupInfo)
 {
     int32_t i;
-    int32_t ret;
+    uint32_t ret;
     IpcIo *dataParcel = NULL;
     DataChangeListener *listener = NULL;
 
@@ -1083,7 +1084,7 @@ void IpcOnDeviceBound(const char *peerUdid, const char *groupInfo)
 void IpcOnDeviceUnBound(const char *peerUdid, const char *groupInfo)
 {
     int32_t i;
-    int32_t ret;
+    uint32_t ret;
     IpcIo *dataParcel = NULL;
     DataChangeListener *listener = NULL;
 
@@ -1132,7 +1133,7 @@ void IpcOnDeviceUnBound(const char *peerUdid, const char *groupInfo)
 void IpcOnDeviceNotTrusted(const char *peerUdid)
 {
     int32_t i;
-    int32_t ret;
+    uint32_t ret;
     IpcIo *dataParcel = NULL;
     DataChangeListener *listener = NULL;
 
@@ -1180,7 +1181,7 @@ void IpcOnDeviceNotTrusted(const char *peerUdid)
 void IpcOnLastGroupDeleted(const char *peerUdid, int32_t groupType)
 {
     int32_t i;
-    int32_t ret;
+    uint32_t ret;
     IpcIo *dataParcel = NULL;
     DataChangeListener *listener = NULL;
 
@@ -1229,7 +1230,7 @@ void IpcOnLastGroupDeleted(const char *peerUdid, int32_t groupType)
 void IpcOnTrustedDeviceNumChanged(int32_t curTrustedDeviceNum)
 {
     int32_t i;
-    int32_t ret;
+    uint32_t ret;
     IpcIo *dataParcel = NULL;
     DataChangeListener *listener = NULL;
 

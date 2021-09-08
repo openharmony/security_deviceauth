@@ -65,9 +65,9 @@ static int32_t LitePrepareClient(const CJson *jsonParams, LiteBindSession *sessi
     return OpenChannel(session->channelType, jsonParams, session->requestId, &session->channelId);
 }
 
-static void InitClientChannel(const DeviceAuthCallback *callback, LiteBindSession *session)
+static void InitClientChannel(const DeviceAuthCallback *callback, const CJson *jsonParams, LiteBindSession *session)
 {
-    session->channelType = GetChannelType(callback);
+    session->channelType = GetChannelType(callback, jsonParams);
 }
 
 Session *CreateLiteClientBindSession(CJson *jsonParams, const DeviceAuthCallback *callback)
@@ -91,7 +91,7 @@ Session *CreateLiteClientBindSession(CJson *jsonParams, const DeviceAuthCallback
         return NULL;
     }
     InitLiteBindSession(TYPE_CLIENT_BIND_SESSION_LITE, operationCode, requestId, session, callback);
-    InitClientChannel(callback, session);
+    InitClientChannel(callback, jsonParams, session);
     /* The client bind session needs to receive a message indicating that the channel is open. */
     session->onChannelOpened = OnLiteBindChannelOpened;
 

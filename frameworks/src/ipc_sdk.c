@@ -823,10 +823,20 @@ static int32_t IpcGmGetRegisterInfo(char **registerInfo)
     return (*registerInfo != NULL) ? HC_SUCCESS : HC_ERR_NULL_PTR;
 }
 
-static int32_t IpcGmGetLocalConnectInfo(char **outLocalConnInfo)
+static int32_t IpcGmGetLocalConnectInfo(char *returnInfo, int32_t bufLen)
 {
     LOGI("starting ...");
-    if (outLocalConnInfo == NULL) {
+    if (returnInfo == NULL) {
+        return HC_ERR_INVALID_PARAMS;
+    }
+
+    return HC_ERR_NOT_SUPPORT;
+}
+
+static int32_t IpcGmCheckAccessToGroup(const char *appId, const char *groupId)
+{
+    LOGI("starting ...");
+    if ((appId == NULL) || (groupId == NULL)) {
         return HC_ERR_INVALID_PARAMS;
     }
 
@@ -1792,6 +1802,7 @@ static void InitIpcGmMethods(DeviceGroupManager *gmMethodObj)
     gmMethodObj->getRelatedGroups = IpcGmGetRelatedGroups;
     gmMethodObj->getDeviceInfoById = IpcGmGetDeviceInfoById;
     gmMethodObj->getTrustedDevices = IpcGmGetTrustedDevices;
+    gmMethodObj->checkAccessToGroup = IpcGmCheckAccessToGroup;
     gmMethodObj->isDeviceInGroup = IpcGmIsDeviceInGroup;
     gmMethodObj->destroyInfo = IpcGmDestroyInfo;
     gmMethodObj->authKeyAgree = IpcGmAuthKeyAgree;

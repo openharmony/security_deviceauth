@@ -38,9 +38,7 @@ PriorityMap g_bindPriorityList[BIND_PRIORITY_LEN] = {
 };
 PriorityMap g_authPriorityList[AUTH_PRIORITY_LEN] = {
     { PSK_SPEKE | NEW_EC_SPEKE, NEW_PAKE },
-    { PSK_SPEKE | NEW_DL_SPEKE, NEW_PAKE },
     { PSK_SPEKE | EC_SPEKE, PAKE },
-    { PSK_SPEKE | DL_SPEKE, PAKE },
     { ISO_ALG, ISO }
 };
 
@@ -143,7 +141,8 @@ static ProtocolType GetBindPrototolType(VersionStruct *curVersion)
 static ProtocolType GetAuthPrototolType(VersionStruct *curVersion)
 {
     if (IsVersionEqual(curVersion, &g_defaultVersion)) {
-        return STS;
+        LOGE("Not support STS.");
+        return UNSUPPORTED;
     } else {
         for (int i = 0; i < AUTH_PRIORITY_LEN; i++) {
             if ((curVersion->third & g_authPriorityList[i].alg) == g_authPriorityList[i].alg) {
