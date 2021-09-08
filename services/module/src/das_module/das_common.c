@@ -332,7 +332,36 @@ err:
     return res;
 }
 
-int32_t GetAndCheckAuthIdPeer(const CJson *in, const Uint8Buff *authIdPeer)
+int32_t GetIdPeerForParams(const CJson *in, const char *peerIdKey, const Uint8Buff *authIdSelf, Uint8Buff *authIdPeer)
+{
+    const char *authIdStr = GetStringFromJson(in, peerIdKey);
+    if (authIdStr == NULL) {
+        LOGE("Get peer id from json failed.");
+        return HC_ERR_JSON_GET;
+    }
+    uint32_t authIdLen = HcStrlen(authIdStr) / BYTE_TO_HEX_OPER_LENGTH;
+    if (authIdLen == 0 || authIdLen > MAX_AUTH_ID_LEN) {
+        LOGE("Invalid authIdPeerLen.");
+        return HC_ERR_INVALID_LEN;
+    }
+    int32_t res = InitSingleParam(authIdPeer, authIdLen);
+    if (res != HC_SUCCESS) {
+        LOGE("InitSingleParam for peer authId failed, res: %d.", res);
+        return res;
+    }
+    if (HexStringToByte(authIdStr, authIdPeer->val, authIdPeer->length) != HC_SUCCESS) {
+        LOGE("HexStringToByte for authIdPeer failed.");
+        return HC_ERR_CONVERT_FAILED;
+    }
+    if ((authIdSelf->length == authIdPeer->length) &&
+        memcmp(authIdSelf->val, authIdPeer->val, authIdSelf->length) == 0) {
+        LOGE("Peer id can not be equal to self id.");
+        return HC_ERR_INVALID_PARAMS;
+    }
+    return HC_SUCCESS;
+}
+
+int32_t GetAndCheckAuthIdPeer(const CJson *in, const Uint8Buff *authIdSelf, const Uint8Buff *authIdPeer)
 {
     const CJson *payload = GetObjFromJson(in, FIELD_PAYLOAD);
     if (payload == NULL) {
@@ -354,48 +383,37 @@ int32_t GetAndCheckAuthIdPeer(const CJson *in, const Uint8Buff *authIdPeer)
         LOGE("Malloc for authIdPeerTmp failed.");
         return HC_ERR_ALLOC_MEMORY;
     }
-    int32_t res = HexStringToByte(authIdStr, authIdPeerTmp, authIdPeerLen);
-    if (res != HC_SUCCESS) {
-        LOGE("Convert peer authId from hex string to byte failed, res: %d.", res);
-        goto err;
+    if (HexStringToByte(authIdStr, authIdPeerTmp, authIdPeerLen) != HC_SUCCESS) {
+        LOGE("Convert peer authId from hex string to byte failed, res: %d.", HC_ERR_CONVERT_FAILED);
+        HcFree(authIdPeerTmp);
+        return HC_ERR_CONVERT_FAILED;
+    }
+    if ((authIdSelf->length == authIdPeer->length) &&
+        memcmp(authIdSelf->val, authIdPeer->val, authIdSelf->length) == 0) {
+        LOGE("Peer id can not be equal to self id.");
+        HcFree(authIdPeerTmp);
+        return HC_ERR_INVALID_PARAMS;
     }
     if (memcmp(authIdPeer->val, authIdPeerTmp, authIdPeer->length) != 0) {
         LOGE("Peer authId does not match.");
-        res = HC_ERR_INVALID_PARAMS;
-        goto err;
+        HcFree(authIdPeerTmp);
+        return HC_ERR_INVALID_PARAMS;
     }
-err:
     HcFree(authIdPeerTmp);
-    return res;
+    return HC_SUCCESS;
 }
 
-int32_t GetAuthIdPeer(const CJson *in, Uint8Buff *authIdPeer)
+int32_t GetAuthIdPeerFromPayload(const CJson *in, const Uint8Buff *authIdSelf, Uint8Buff *authIdPeer)
 {
     const CJson *payload = GetObjFromJson(in, FIELD_PAYLOAD);
     if (payload == NULL) {
         LOGE("Not have payload.");
         return HC_ERR_INVALID_PARAMS;
     }
-    const char *authIdStr = GetStringFromJson(payload, FIELD_PEER_AUTH_ID);
-    if (authIdStr == NULL) {
-        LOGE("AuthIdPeer in payload is null.");
-        return HC_ERR_INVALID_PARAMS;
-    }
-    uint32_t authIdLen = HcStrlen(authIdStr) / BYTE_TO_HEX_OPER_LENGTH;
-    if (authIdLen == 0 || authIdLen > MAX_AUTH_ID_LEN) {
-        LOGE("Invalid authIdPeerLen");
-        return HC_ERR_INVALID_PARAMS;
-    }
-    int32_t res = InitSingleParam(authIdPeer, authIdLen);
+    int res = GetIdPeerForParams(payload, FIELD_PEER_AUTH_ID, authIdSelf, authIdPeer);
     if (res != HC_SUCCESS) {
-        LOGE("InitSingleParam for peer authId failed, res: %d.", res);
-        return res;
+        LOGE("GetIdPeerForParams failed, res: %d.", res);
     }
-    res = HexStringToByte(authIdStr, authIdPeer->val, authIdPeer->length);
-    if (res != HC_SUCCESS) {
-        LOGE("HexStringToByte for authIdPeer failed.");
-    }
-
     return res;
 }
 

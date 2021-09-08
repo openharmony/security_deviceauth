@@ -304,20 +304,10 @@ static int32_t ParseAuthInfo(PakeParams *pakeParams, const StandardBindExchangeP
 
     GOTO_ERR_AND_SET_RET(GetByteFromJson(authInfoJson, FIELD_AUTH_PK, exchangeParams->pubKeyPeer.val,
         exchangeParams->pubKeyPeer.length), res);
-    const char *authId = GetStringFromJson(authInfoJson, FIELD_AUTH_ID);
-    if (authId == NULL) {
-        LOGE("get authId failed");
-        res = HC_ERROR;
-        goto err;
-    }
-    res = InitSingleParam(&pakeParams->baseParams.idPeer, strlen(authId) / BYTE_TO_HEX_OPER_LENGTH);
+    res = GetIdPeerForParams(authInfoJson, FIELD_AUTH_ID,
+        &pakeParams->baseParams.idSelf, &pakeParams->baseParams.idPeer);
     if (res != HC_SUCCESS) {
-        LOGE("InitSingleParam for idPeer failed.");
-        goto err;
-    }
-    res = HexStringToByte(authId, pakeParams->baseParams.idPeer.val, pakeParams->baseParams.idPeer.length);
-    if (res != HC_SUCCESS) {
-        LOGE("Convert idPeer from hex string to byte failed.");
+        LOGE("GetIdPeerForParams failed, res: %d.", res);
         goto err;
     }
 err:

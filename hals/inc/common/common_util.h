@@ -17,6 +17,7 @@
 #define COMMON_UTIL_H
 
 #include <stdint.h>
+#include "hc_error.h"
 
 #define BYTE_TO_HEX_OPER_LENGTH 2
 #define DEC 10

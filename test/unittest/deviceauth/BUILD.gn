@@ -23,6 +23,9 @@ ohos_unittest("deviceauth_llt") {
     "./include",
     "//third_party/json/include",
     "//utils/native/base/include",
+    "//foundation/communication/dsoftbus/interfaces/kits/common",
+    "//foundation/communication/dsoftbus/interfaces/kits/transport",
+    "//foundation/communication/dsoftbus/interfaces/inner_kits/transport",
   ]
   include_dirs += inc_path
   include_dirs += hals_inc_path
@@ -60,5 +63,8 @@ ohos_unittest("deviceauth_llt") {
     "//utils/native/base:utils",
   ]
 
-  external_deps = [ "hiviewdfx_hilog_native:libhilog" ]
+  external_deps = [
+    "hiviewdfx_hilog_native:libhilog",
+    "dsoftbus_standard:softbus_client",
+  ]
 }

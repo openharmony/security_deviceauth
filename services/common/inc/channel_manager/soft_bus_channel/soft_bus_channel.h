@@ -19,20 +19,23 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
     int32_t (*openChannel)(const char *connectParams, int64_t requestId, int64_t *returnChannelId);
     void (*closeChannel)(int64_t channelId);
     int32_t (*sendMsg)(int64_t channelId, const uint8_t *data, uint32_t dataLen);
-    void (*setAuthResult)(int64_t channelId);
-    char *(*getLocalAuthInfo)();
+    void (*notifyResult)(int64_t channelId);
 } SoftBus;
 
-int32_t InitSoftBusChannelModule(void (*onChannelOpened)(int64_t, int64_t, const char *, uint32_t, bool),
-                                 void (*onChannelClosed)(int64_t, int64_t),
-                                 void (*onMsgReceived)(int64_t, const uint8_t *, uint32_t),
-                                 void (*onServiceDied)());
-void DestroySoftBusChannelModule();
-SoftBus *GetSoftBusInstance();
-bool IsSoftBusChannelSupported();
+int32_t InitSoftBusChannelModule(void);
+void DestroySoftBusChannelModule(void);
+SoftBus *GetSoftBusInstance(void);
+bool IsSoftBusChannelSupported(void);
 
+#ifdef __cplusplus
+}
+#endif
 #endif
