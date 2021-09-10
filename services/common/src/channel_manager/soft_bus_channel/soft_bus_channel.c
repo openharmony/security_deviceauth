@@ -25,13 +25,6 @@
 #include "session_manager.h"
 #include "task_manager.h"
 
-#define ETH_IP "ethIp"
-#define ETH_PORT "ethPort"
-#define WLAN_IP "wifiIp"
-#define WLAN_PORT "wifiPort"
-#define BR_MAC "brMac"
-#define BLE_MAC "bleMac"
-
 typedef struct {
     HcTaskBase base;
     int64_t requestId;
@@ -153,9 +146,14 @@ static char *GenRecvData(int64_t channelId, const void *data, uint32_t dataLen, 
     return recvDataStr;
 }
 
+static bool IsServer(int sessionId)
+{
+    return (GetSessionSide(sessionId) == 0) ? true : false;
+}
+
 static int OnChannelOpenedCb(int sessionId, int result)
 {
-    if (GetSessionSide(sessionId) == 0) {
+    if (IsServer(sessionId)) {
         LOGD("Peer device open channel!");
         return HC_SUCCESS;
     }
@@ -189,7 +187,10 @@ static int OnChannelOpenedCb(int sessionId, int result)
 static void OnChannelClosedCb(int sessionId)
 {
     LOGI("[SoftBus][Out]: OnChannelClosed! sessionId: %d", sessionId);
-    return;
+    if (IsServer(sessionId)) {
+        return;
+    }
+    RemoveChannelEntry(sessionId);
 }
 
 static void OnBytesReceivedCb(int sessionId, const void *data, unsigned int dataLen)
@@ -232,6 +233,9 @@ static int32_t OpenSoftBusChannel(const char *connectParams, int64_t requestId, 
 
 static void CloseSoftBusChannel(int64_t channelId)
 {
+    if (IsServer(channelId)) {
+        return;
+    }
     RemoveChannelEntry(channelId);
     LOGD("[SoftBus][In]: CloseSession!");
     CloseSession(channelId);
