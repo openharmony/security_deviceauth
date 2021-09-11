@@ -153,6 +153,11 @@ static int32_t GenerateRequestParams(const CJson *jsonParams, CJson *requestPara
         LOGE("Failed to get peerAuthId from jsonParams!");
         return HC_ERR_JSON_GET;
     }
+    const char *appId = GetStringFromJson(jsonParams, FIELD_APP_ID);
+    if (appId == NULL) {
+        LOGE("Failed to get appId from jsonParams!");
+        return HC_ERR_JSON_GET;
+    }
     int32_t groupType = PEER_TO_PEER_GROUP;
     if (GetIntFromJson(jsonParams, FIELD_GROUP_TYPE, &groupType) != HC_SUCCESS) {
         LOGE("Failed to get groupType from jsonParams!");
@@ -168,6 +173,10 @@ static int32_t GenerateRequestParams(const CJson *jsonParams, CJson *requestPara
     }
     if (AddStringToJson(requestParams, FIELD_PEER_DEVICE_ID, peerAuthId) != HC_SUCCESS) {
         LOGE("Failed to add peerDeviceId to requestParams!");
+        return HC_ERR_JSON_FAIL;
+    }
+    if (AddStringToJson(requestParams, FIELD_APP_ID, appId) != HC_SUCCESS) {
+        LOGE("Failed to add appId to requestParams!");
         return HC_ERR_JSON_FAIL;
     }
     return HC_SUCCESS;
