@@ -23,14 +23,18 @@
 #include "cJSON.h"
 #include "hc_error.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef cJSON CJson;
 
 /* Need to call FreeJson to free the returned pointer when it's no longer in use. */
 CJson *CreateJsonFromString(const char *jsonStr);
 /* Need to call FreeJson to free the returned pointer when it's no longer in use. */
-CJson *CreateJson();
+CJson *CreateJson(void);
 /* Need to call FreeJson to free the returned pointer when it's no longer in use. */
-CJson *CreateJsonArray();
+CJson *CreateJsonArray(void);
 /* Need to call FreeJson to free the returned pointer when it's no longer in use. */
 CJson *DuplicateJson(const CJson *jsonObj);
 void FreeJson(CJson *jsonObj);
@@ -97,4 +101,7 @@ void ClearSensitiveStringInJson(CJson *jsonObj, const char *key);
 void ClearAndFreeJsonString(char *jsonStr);
 int32_t GetUnsignedIntFromJson(const CJson *jsonObj, const char *key, uint32_t *value);
 
+#ifdef __cplusplus
+}
+#endif
 #endif
