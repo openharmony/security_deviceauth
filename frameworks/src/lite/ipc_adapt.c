@@ -926,8 +926,34 @@ static char *GaCbOnRequestWithType(int64_t requestId, int32_t operationCode, con
     return (dPtr != NULL) ? strdup(dPtr) : NULL;
 }
 
+static bool CanFindCbByReqId(int64_t requestId)
+{
+    LockCallbackList();
+    IpcCallBackNode *node = GetIpcCallBackByReqId(requestId, CB_TYPE_DEV_AUTH);
+    UnLockCallbackList();
+    return (node != NULL) ? true : false;
+}
+
 static char *IpcGaCbOnRequest(int64_t requestId, int32_t operationCode, const char *reqParams)
 {
+    if (!CanFindCbByReqId(requestId)) {
+        CJson *reqParamsJson = CreateJsonFromString(reqParams);
+        if (reqParamsJson == NULL) {
+            LOGE("failed to create json from string!");
+            return NULL;
+        }
+        const char *callerAppId = GetStringFromJson(reqParamsJson, FIELD_APP_ID);
+        if (callerAppId == NULL) {
+            LOGE("failed to get appId from json object!");
+            FreeJson(reqParamsJson);
+            return NULL;
+        }
+        int32_t ret = AddReqIdByAppId(callerAppId, requestId);
+        FreeJson(reqParamsJson);
+        if (ret != HC_SUCCESS) {
+            return NULL;
+        }
+    }
     return GaCbOnRequestWithType(requestId, operationCode, reqParams, CB_TYPE_DEV_AUTH);
 }
 

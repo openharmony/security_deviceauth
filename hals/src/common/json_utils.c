@@ -31,12 +31,12 @@ CJson *CreateJsonFromString(const char *jsonStr)
     return cJSON_Parse(jsonStr);
 }
 
-CJson *CreateJson()
+CJson *CreateJson(void)
 {
     return cJSON_CreateObject();
 }
 
-CJson *CreateJsonArray()
+CJson *CreateJsonArray(void)
 {
     return cJSON_CreateArray();
 }
