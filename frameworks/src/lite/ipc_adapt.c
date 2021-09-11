@@ -931,7 +931,7 @@ static bool CanFindCbByReqId(int64_t requestId)
     LockCallbackList();
     IpcCallBackNode *node = GetIpcCallBackByReqId(requestId, CB_TYPE_DEV_AUTH);
     UnLockCallbackList();
-    return (node != NULL) ? true :false;
+    return (node != NULL) ? true : false;
 }
 
 static char *IpcGaCbOnRequest(int64_t requestId, int32_t operationCode, const char *reqParams)
@@ -942,13 +942,13 @@ static char *IpcGaCbOnRequest(int64_t requestId, int32_t operationCode, const ch
             LOGE("failed to create json from string!");
             return NULL;
         }
-        const char *appId = GetStringFromJson(reqParamsJson, FIELD_APP_ID);
-        if (appId == NULL) {
+        const char *callerAppId = GetStringFromJson(reqParamsJson, FIELD_APP_ID);
+        if (callerAppId == NULL) {
             LOGE("failed to get appId from json object!");
             FreeJson(reqParamsJson);
             return NULL;
         }
-        int32_t ret = AddReqIdByAppId(appId, requestId);
+        int32_t ret = AddReqIdByAppId(callerAppId, requestId);
         FreeJson(reqParamsJson);
         if (ret != HC_SUCCESS) {
             return NULL;
