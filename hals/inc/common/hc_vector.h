@@ -134,7 +134,7 @@ void VClear##ClassName(ClassName* obj) \
         ClearParcel(&obj->parcel); \
     } \
 } \
-ClassName Create##ClassName() \
+ClassName Create##ClassName(void) \
 { \
     ClassName obj; \
     obj.pushBack = VPushBack##ClassName; \

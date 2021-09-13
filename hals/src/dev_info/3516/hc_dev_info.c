@@ -37,7 +37,7 @@ int32_t HcGetUdid(uint8_t *udid, int32_t udidLen)
         return HAL_SUCCESS;
     }
 #endif
-    LOGW("using fake udid");
+    LOGD("using fake udid");
     const char *udidTemp = "ABCDEF00ABCDEF00ABCDEF00ABCDEF00ABCDEF00ABCDEF00ABCDEF00ABCDEF00";
     (void)memset_s(udid, udidLen, 0, udidLen);
     if (memcpy_s(udid, udidLen, udidTemp, strlen(udidTemp)) != EOK) {

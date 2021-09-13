@@ -36,7 +36,7 @@ typedef uint32_t HcBool;
 
 void* HcMalloc(uint32_t size, char val);
 void HcFree(void* addr);
-void ReportMalloc();
+void ReportMalloc(void);
 uint32_t HcStrlen(const char *str);
 
 #ifdef __cplusplus

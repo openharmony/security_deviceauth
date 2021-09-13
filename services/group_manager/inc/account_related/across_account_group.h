@@ -24,7 +24,7 @@ typedef struct {
     int32_t (*generateGroupId)(int64_t userId, int64_t sharedUserId, char **returnGroupId);
 } AcrossAccountGroup;
 
-bool IsAcrossAccountGroupSupported();
-BaseGroup *GetAcrossAccountGroupInstance();
+bool IsAcrossAccountGroupSupported(void);
+BaseGroup *GetAcrossAccountGroupInstance(void);
 
 #endif

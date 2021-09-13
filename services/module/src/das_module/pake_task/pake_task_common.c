@@ -323,6 +323,7 @@ static int32_t FillPkgNameAndServiceType(PakeParams *params, const CJson *in)
 
 static int32_t FillNonce(PakeParams *params, const CJson *in)
 {
+    (void)in;
     if (params->opCode == AUTHENTICATE || params->opCode == OP_UNBIND) {
         params->nonce.length = PAKE_NONCE_LEN;
         params->nonce.val = (uint8_t *)HcMalloc(params->nonce.length, 0);

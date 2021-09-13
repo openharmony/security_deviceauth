@@ -31,6 +31,6 @@
  */
 int32_t HcGetUdid(uint8_t *udid, int32_t udidLen);
 
-const char *GetStoragePath();
+const char *GetStoragePath(void);
 
 #endif

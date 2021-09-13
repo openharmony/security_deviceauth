@@ -15,7 +15,7 @@
 
 #include "hc_mutex.h"
 
-int MutexLock(HcMutex* mutex)
+static int HcMutexLock(HcMutex *mutex)
 {
     if (mutex == NULL) {
         return -1;
@@ -23,7 +23,7 @@ int MutexLock(HcMutex* mutex)
     return -pthread_mutex_lock(&mutex->mutex);
 }
 
-void MutexUnlock(HcMutex* mutex)
+static void HcMutexUnlock(HcMutex *mutex)
 {
     if (mutex == NULL) {
         return;
@@ -31,7 +31,7 @@ void MutexUnlock(HcMutex* mutex)
     pthread_mutex_unlock(&mutex->mutex);
 }
 
-int32_t InitHcMutex(struct HcMutexT* mutex)
+int32_t InitHcMutex(struct HcMutexT *mutex)
 {
     if (mutex == NULL) {
         return -1;
@@ -40,12 +40,12 @@ int32_t InitHcMutex(struct HcMutexT* mutex)
     if (res != 0) {
         return res;
     }
-    mutex->lock = MutexLock;
-    mutex->unlock = MutexUnlock;
+    mutex->lock = HcMutexLock;
+    mutex->unlock = HcMutexUnlock;
     return 0;
 }
 
-void DestroyHcMutex(struct HcMutexT* mutex)
+void DestroyHcMutex(struct HcMutexT *mutex)
 {
     if (mutex == NULL) {
         return;

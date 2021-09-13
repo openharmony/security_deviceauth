@@ -28,7 +28,7 @@ enum {
     TASK_STATUS_FINAL,
 };
 
-static CurTaskType GetTaskType()
+static CurTaskType GetTaskType(void)
 {
     return TASK_TYPE_ISO_PROTOCOL;
 }
@@ -81,6 +81,7 @@ err:
 
 static int IsoClientStart(SymBaseCurTask *task, IsoParams *params, const CJson *in, CJson *out, int *status)
 {
+    (void)in;
     if (task->taskStatus != TASK_STATUS_BEGIN) {
         LOGI("The message is repeated, ignore it, status :%d", task->taskStatus);
         *status = IGNORE_MSG;
@@ -285,7 +286,7 @@ out_func:
     return res;
 }
 
-SymBaseCurTask *CreateProtocolClientTask()
+SymBaseCurTask *CreateProtocolClientTask(void)
 {
     IsoProtocolClientTask *task = (IsoProtocolClientTask *)HcMalloc(sizeof(IsoProtocolClientTask), 0);
     if (task == NULL) {

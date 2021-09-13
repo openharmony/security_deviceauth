@@ -31,8 +31,8 @@ typedef struct {
         uint32_t *returnSize);
 } AccountUnrelatedGroupManager;
 
-AccountUnrelatedGroupManager *GetAccountUnrelatedGroupManager();
-bool IsAccountUnrelatedGroupManagerSupported();
+AccountUnrelatedGroupManager *GetAccountUnrelatedGroupManager(void);
+bool IsAccountUnrelatedGroupManagerSupported(void);
 bool IsAccountUnrelatedGroupTypeSupported(int32_t groupType);
 
 #endif
