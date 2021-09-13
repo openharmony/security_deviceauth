@@ -16,7 +16,7 @@
 #include "iso_task_main.h"
 #include "das_asy_token_manager.h"
 
-bool IsIsoSupported()
+bool IsIsoSupported(void)
 {
     return false;
 }
@@ -28,7 +28,7 @@ SubTaskBase *CreateIsoSubTask(const CJson *in, CJson *out)
     return NULL;
 }
 
-const TokenManager *GetSymTokenManagerInstance()
+const TokenManager *GetSymTokenManagerInstance(void)
 {
     return NULL;
 }

@@ -26,6 +26,6 @@ typedef struct {
     OnDasErrorFunc onDasError;
 } NonAccountGroupAuth;
 
-BaseGroupAuth *GetNonAccountGroupAuth();
+BaseGroupAuth *GetNonAccountGroupAuth(void);
 
 #endif

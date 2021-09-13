@@ -61,7 +61,7 @@ void Init##TlvS(TlvS *tlv, unsigned short checkTag) \
     Init##TlvMember(&tlv->TlvMemberName, CheckTag); \
     tlv->offset[index++] = offsetof(TlvStructType, TlvMemberName);
 
-#define END_TLV_STRUCT_DEFINE() \
+#define END_TLV_STRUCT_DEFINE(void) \
     tlv->offsetCount = index; \
     tlv->base.parse = ParseTlvStruct; \
     tlv->base.getlen = GetLenTlvStruct; \

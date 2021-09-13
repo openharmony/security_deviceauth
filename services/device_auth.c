@@ -1424,7 +1424,7 @@ static void DestroyInfo(char **returnInfo)
     instance->destroyInfo(returnInfo);
 }
 
-static int32_t AllocGmAndGa()
+static int32_t AllocGmAndGa(void)
 {
     if (g_groupManagerInstance == NULL) {
         g_groupManagerInstance = (DeviceGroupManager *)HcMalloc(sizeof(DeviceGroupManager), 0);
@@ -1445,7 +1445,7 @@ static int32_t AllocGmAndGa()
     return HC_SUCCESS;
 }
 
-static int32_t InitAlgorithm()
+static int32_t InitAlgorithm(void)
 {
     const AlgLoader *loader = GetLoaderInstance();
     if (loader == NULL) {
@@ -1460,7 +1460,7 @@ static int32_t InitAlgorithm()
     return res;
 }
 
-static void DestroyGmAndGa()
+static void DestroyGmAndGa(void)
 {
     if (g_groupAuthManager != NULL) {
         HcFree(g_groupAuthManager);
@@ -1472,7 +1472,7 @@ static void DestroyGmAndGa()
     }
 }
 
-DEVICE_AUTH_API_PUBLIC int InitDeviceAuthService()
+DEVICE_AUTH_API_PUBLIC int InitDeviceAuthService(void)
 {
     LOGI("[Service]: Start to init device auth service!");
     if (CheckInit() == FINISH_INIT) {
@@ -1519,7 +1519,7 @@ err:
     return res;
 }
 
-DEVICE_AUTH_API_PUBLIC void DestroyDeviceAuthService()
+DEVICE_AUTH_API_PUBLIC void DestroyDeviceAuthService(void)
 {
     LOGI("[Service]: Start to destroy device auth service!");
     if (CheckDestroy() == FINISH_DESTROY) {

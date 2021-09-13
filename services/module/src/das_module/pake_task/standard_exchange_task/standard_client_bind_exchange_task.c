@@ -26,7 +26,7 @@ enum {
     TASK_STATUS_CLIENT_BIND_EXCHANGE_CONFIRM,
 };
 
-static CurTaskType GetTaskType()
+static CurTaskType GetTaskType(void)
 {
     return TASK_TYPE_BIND_STANDARD_EXCHANGE;
 }

@@ -53,7 +53,7 @@ void SetFilePath(FileIdEnum fileId, const char *path)
     }
 }
 
-int GetNextFolder(const char* filePath, int* beginPos, char* dst, int size)
+int GetNextFolder(const char *filePath, int *beginPos, char *dst, int size)
 {
     int pos = (*beginPos);
     while (1) {
@@ -81,7 +81,7 @@ int GetNextFolder(const char* filePath, int* beginPos, char* dst, int size)
     }
 }
 
-int HcFileOpenRead(const char* path)
+int HcFileOpenRead(const char *path)
 {
     return open(path, O_RDONLY);
 }
@@ -102,7 +102,7 @@ static int IsFileValid(const char *path)
     return 0;
 }
 
-int HcFileOpenWrite(const char* path)
+int HcFileOpenWrite(const char *path)
 {
     char filePath[MAX_FOLDER_NAME_SIZE + 1];
     int beginPos = 0;
@@ -127,17 +127,17 @@ int HcFileOpenWrite(const char* path)
     }
 }
 
-int HcFileOpen(int fileId, int mode, FileHandle* file)
+int HcFileOpen(int fileId, int mode, FileHandle *file)
 {
     if (fileId < 0 || fileId >= FILE_ID_LAST || file == NULL) {
         return -1;
     }
     if (mode == MODE_FILE_READ) {
-        file->fd = HcFileOpenRead(g_fileDefInfo[fileId].filePath);
+        file->fileHandle.fd = HcFileOpenRead(g_fileDefInfo[fileId].filePath);
     } else {
-        file->fd = HcFileOpenWrite(g_fileDefInfo[fileId].filePath);
+        file->fileHandle.fd = HcFileOpenWrite(g_fileDefInfo[fileId].filePath);
     }
-    if (file->fd == -1) {
+    if (file->fileHandle.fd == -1) {
         return -1;
     }
     return 0;
@@ -145,15 +145,15 @@ int HcFileOpen(int fileId, int mode, FileHandle* file)
 
 int HcFileSize(FileHandle file)
 {
-    int fp = file.fd;
+    int fp = file.fileHandle.fd;
     int size = lseek(fp, 0, SEEK_END);
     (void)lseek(fp, 0, SEEK_SET);
     return size;
 }
 
-int HcFileRead(FileHandle file, void* dst, int dstSize)
+int HcFileRead(FileHandle file, void *dst, int dstSize)
 {
-    int fp = file.fd;
+    int fp = file.fileHandle.fd;
     if (fp  == -1 || dstSize < 0 || dst == NULL) {
         return -1;
     }
@@ -178,12 +178,12 @@ int HcFileRead(FileHandle file, void* dst, int dstSize)
 
 int HcFileWrite(FileHandle file, const void *src, int srcSize)
 {
-    int fp = file.fd;
+    int fp = file.fileHandle.fd;
     if (fp == -1 || srcSize < 0 || src == NULL) {
         return -1;
     }
 
-    const char* srcBuffer = (const char*)src;
+    const char *srcBuffer = (const char *)src;
     int total = 0;
     while (total < srcSize) {
         int writeCount = write(fp, srcBuffer + total, srcSize - total);
@@ -197,7 +197,7 @@ int HcFileWrite(FileHandle file, const void *src, int srcSize)
 
 void HcFileClose(FileHandle file)
 {
-    int fp = file.fd;
+    int fp = file.fileHandle.fd;
     if (fp == 0) {
         return;
     }

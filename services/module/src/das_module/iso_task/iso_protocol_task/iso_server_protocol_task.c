@@ -29,7 +29,7 @@ enum {
     TASK_STATUS_FINAL,
 };
 
-static CurTaskType GetTaskType()
+static CurTaskType GetTaskType(void)
 {
     return TASK_TYPE_ISO_PROTOCOL;
 }

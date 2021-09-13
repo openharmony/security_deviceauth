@@ -76,6 +76,6 @@ union KeyRoleInfoUnion {
     uint32_t roleInfo;
 };
 
-const AlgLoader *GetRealLoaderInstance();
+const AlgLoader *GetRealLoaderInstance(void);
 
 #endif
