@@ -54,4 +54,11 @@ int32_t ByteToHexString(const uint8_t *byte, uint32_t byteLen, char *hexStr, uin
  */
 int64_t StringToInt64(const char *cp);
 
+/*
+ * Convert string to anonymous string.
+ * @param originalStr: string to be converted
+ * @param anonymousStr: the converted result
+ */
+void ConvertToAnnoymousStr(const char *originalStr, char **anonymousStr);
+
 #endif

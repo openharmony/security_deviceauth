@@ -18,6 +18,7 @@
 #include <string.h>
 #include "hc_error.h"
 #include "hc_log.h"
+#include "hc_types.h"
 
 #define OUT_OF_HEX 16
 #define NUMBER_9_IN_DECIMAL 9
@@ -91,4 +92,34 @@ int64_t StringToInt64(const char *cp)
         return 0;
     }
     return strtoll(cp, NULL, DEC);
+}
+
+void ConvertToAnnoymousStr(const char *originalStr, char **anonymousStr)
+{
+    if ((originalStr == NULL) || (anonymousStr == NULL)) {
+        return;
+    }
+    int desensitizationLen = 4;
+    uint32_t len = HcStrlen(originalStr);
+    if (len <= desensitizationLen) {
+        LOGD("The input string length is too short!");
+        return;
+    }
+    *anonymousStr = (char *)HcMalloc(len + 1, 0);
+    if ((*anonymousStr) == NULL) {
+        LOGD("Failed to allocate anonymousStr memory!");
+        return;
+    }
+    if (memset_s(*anonymousStr, len + 1, '*', len) != EOK) {
+        LOGD("Failed to memset string!");
+        HcFree(*anonymousStr);
+        *anonymousStr = NULL;
+        return;
+    }
+    if (memcpy_s(*anonymousStr, len + 1, originalStr, len - desensitizationLen) != EOK) {
+        LOGD("Failed to copy string!");
+        HcFree(*anonymousStr);
+        *anonymousStr = NULL;
+        return;
+    }
 }
