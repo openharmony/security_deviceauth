@@ -29,15 +29,15 @@ if (defined(ohos_lite)) {
         "//utils/native/lite/include",
         "//base/hiviewdfx/hilog_lite/interfaces/native/kits/hilog_lite",
         "//utils/native/lite/memory/include",
-        "//base/startup/syspara_lite/interfaces/kits/"
+        "//base/startup/syspara_lite/interfaces/kits/",
       ]
 
       sources = hal_common_files
       sources += [
         "src/dev_info/3516/hc_dev_info.c",
+        "src/liteos/L0/hc_file.c",
         "src/liteos/L0/hc_init_protection.c",
         "src/liteos/L0/huks_adapter.c",
-        "src/liteos/L0/hc_file.c",
         "src/liteos/hc_condition.c",
         "src/liteos/hc_mutex.c",
         "src/liteos/hc_thread.c",
@@ -47,11 +47,11 @@ if (defined(ohos_lite)) {
 
       cflags = [ "-DHILOG_ENABLE" ]
       deps = [
-        "//base/security/huks/interfaces/innerkits/huks_lite:huks_3.0_sdk",
-        "//utils/native/lite:utils",
         "//base/hiviewdfx/hilog_lite/frameworks/mini:hilog_lite",
+        "//base/security/huks/interfaces/innerkits/huks_lite:huks_3.0_sdk",
+        "//base/startup/syspara_lite/frameworks/parameter/src:sysparam",
         "//build/lite/config/component/cJSON:cjson_shared",
-        "//base/startup/syspara_lite/frameworks/parameter/src:sysparam"
+        "//utils/native/lite:utils",
       ]
     }
   } else {
@@ -64,14 +64,12 @@ if (defined(ohos_lite)) {
         "//utils/native/lite/include",
         "//base/security/huks/interfaces/innerkits/huks_standard/main/include",
         "//base/hiviewdfx/hilog_lite/interfaces/native/innerkits/hilog",
-        "//third_party/bounds_checking_function/include"
+        "//third_party/bounds_checking_function/include",
       ]
 
       sources = hal_common_files
       sources += [
         "src/dev_info/3516/hc_dev_info.c",
-        "src/linux/lite/mbedtls_hash_to_point.c",
-        "src/linux/lite/huks_adapter.c",
         "src/linux/hc_condition.c",
         "src/linux/hc_file.c",
         "src/linux/hc_init_protection.c",
@@ -79,19 +77,21 @@ if (defined(ohos_lite)) {
         "src/linux/hc_thread.c",
         "src/linux/hc_time.c",
         "src/linux/hc_types.c",
+        "src/linux/lite/huks_adapter.c",
+        "src/linux/lite/mbedtls_hash_to_point.c",
       ]
 
       cflags = [ "-DHILOG_ENABLE" ]
       defines = [ "LITE_DEVICE" ]
 
       deps = [
+        "//base/hiviewdfx/hilog_lite/frameworks/featured:hilog_shared",
         "//base/security/huks/interfaces/innerkits/huks_lite:huks_3.0_sdk",
+        "//build/lite/config/component/cJSON:cjson_shared",
         "//build/lite/config/component/openssl:openssl_shared",
         "//third_party/bounds_checking_function:libsec_shared",
         "//third_party/mbedtls:mbedtls_shared",
         "//utils/native/lite:utils",
-        "//base/hiviewdfx/hilog_lite/frameworks/featured:hilog_shared",
-        "//build/lite/config/component/cJSON:cjson_shared"
       ]
     }
   }
@@ -105,14 +105,12 @@ if (defined(ohos_lite)) {
       "//utils/native/base/include",
       "//third_party/openssl/include/",
       "//base/security/huks/interfaces/innerkits/huks_standard/main/include",
-      "//base/startup/syspara_lite/interfaces/innerkits/native/syspara/include"
+      "//base/startup/syspara_lite/interfaces/innerkits/native/syspara/include",
     ]
 
     sources = hal_common_files
     sources += [
       "src/dev_info/3516/hc_dev_info.c",
-      "src/linux/standard/crypto_hash_to_point.c",
-      "src/linux/standard/huks_adapter.c",
       "src/linux/hc_condition.c",
       "src/linux/hc_file.c",
       "src/linux/hc_init_protection.c",
@@ -120,14 +118,16 @@ if (defined(ohos_lite)) {
       "src/linux/hc_thread.c",
       "src/linux/hc_time.c",
       "src/linux/hc_types.c",
+      "src/linux/standard/crypto_hash_to_point.c",
+      "src/linux/standard/huks_adapter.c",
     ]
     cflags = [ "-DHILOG_ENABLE" ]
     deps = [
       "//base/security/huks/interfaces/innerkits/huks_standard/main:libhukssdk",
+      "//base/startup/syspara_lite/interfaces/innerkits/native/syspara:syspara",
       "//third_party/cJSON:cjson_static",
       "//third_party/openssl:libcrypto_static",
       "//utils/native/base:utils",
-      "//base/startup/syspara_lite/interfaces/innerkits/native/syspara:syspara"
     ]
     external_deps = [ "hiviewdfx_hilog_native:libhilog" ]
   }

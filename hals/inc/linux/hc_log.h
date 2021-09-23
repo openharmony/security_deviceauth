@@ -18,10 +18,18 @@
 
 #include <inttypes.h>
 
+typedef enum {
+    DEV_AUTH_LOG_LEVEL_DEBUG = 0,
+    DEV_AUTH_LOG_LEVEL_INFO,
+    DEV_AUTH_LOG_LEVEL_WARN,
+    DEV_AUTH_LOG_LEVEL_ERROR
+} DevAuthLogLevel;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-const char *HcFmtLogData(const char *funName, char *out, int32_t outSz, const char *fmtStr, ...);
+
+void DevAuthLogPrint(DevAuthLogLevel level, const char *funName, const char *fmt, ...);
 
 #ifdef __cplusplus
 }
@@ -31,14 +39,15 @@ const char *HcFmtLogData(const char *funName, char *out, int32_t outSz, const ch
 
 #include "hilog/log.h"
 
-#define LOGD(fmt, ...) ((void)HiLogPrint(LOG_CORE, LOG_DEBUG, LOG_DOMAIN, \
-    "[DEVAUTH]", "%{public}s: " fmt, __FUNCTION__, ##__VA_ARGS__))
-#define LOGE(fmt, ...) ((void)HiLogPrint(LOG_CORE, LOG_ERROR, LOG_DOMAIN, \
-    "[DEVAUTH]", "%{public}s: " fmt, __FUNCTION__, ##__VA_ARGS__))
-#define LOGI(fmt, ...) ((void)HiLogPrint(LOG_CORE, LOG_INFO, LOG_DOMAIN, \
-    "[DEVAUTH]", "%{public}s: " fmt, __FUNCTION__, ##__VA_ARGS__))
-#define LOGW(fmt, ...) ((void)HiLogPrint(LOG_CORE, LOG_WARN, LOG_DOMAIN, \
-    "[DEVAUTH]", "%{public}s: " fmt, __FUNCTION__, ##__VA_ARGS__))
+#define LOGD(fmt, ...) (DevAuthLogPrint(DEV_AUTH_LOG_LEVEL_DEBUG, __FUNCTION__, fmt, ##__VA_ARGS__))
+#define LOGI(fmt, ...) (DevAuthLogPrint(DEV_AUTH_LOG_LEVEL_INFO, __FUNCTION__, fmt, ##__VA_ARGS__))
+#define LOGW(fmt, ...) (DevAuthLogPrint(DEV_AUTH_LOG_LEVEL_WARN, __FUNCTION__, fmt, ##__VA_ARGS__))
+#define LOGE(fmt, ...) (DevAuthLogPrint(DEV_AUTH_LOG_LEVEL_ERROR, __FUNCTION__, fmt, ##__VA_ARGS__))
+
+#define DEV_AUTH_LOG_DEBUG(buf) HiLogPrint(LOG_CORE, LOG_DEBUG, LOG_DOMAIN, "[DEVAUTH]", "%{public}s", buf)
+#define DEV_AUTH_LOG_INFO(buf) HiLogPrint(LOG_CORE, LOG_INFO, LOG_DOMAIN, "[DEVAUTH]", "%{public}s", buf)
+#define DEV_AUTH_LOG_WARN(buf) HiLogPrint(LOG_CORE, LOG_WARN, LOG_DOMAIN, "[DEVAUTH]", "%{public}s", buf)
+#define DEV_AUTH_LOG_ERROR(buf) HiLogPrint(LOG_CORE, LOG_ERROR, LOG_DOMAIN, "[DEVAUTH]", "%{public}s", buf)
 
 #else
 
@@ -46,9 +55,8 @@ const char *HcFmtLogData(const char *funName, char *out, int32_t outSz, const ch
 #include <stdlib.h>
 
 #define LOGD(fmt, ...) printf("[D][DEVAUTH]%s: " fmt "\n", __FUNCTION__, ##__VA_ARGS__)
-#define LOGE(fmt, ...) printf("[E][DEVAUTH]%s: " fmt "\n", __FUNCTION__, ##__VA_ARGS__)
 #define LOGI(fmt, ...) printf("[I][DEVAUTH]%s: " fmt "\n", __FUNCTION__, ##__VA_ARGS__)
 #define LOGW(fmt, ...) printf("[W][DEVAUTH]%s: " fmt "\n", __FUNCTION__, ##__VA_ARGS__)
+#define LOGE(fmt, ...) printf("[E][DEVAUTH]%s: " fmt "\n", __FUNCTION__, ##__VA_ARGS__)
 #endif
-
 #endif
