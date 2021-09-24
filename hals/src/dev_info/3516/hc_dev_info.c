@@ -53,7 +53,6 @@ const char *GetStoragePath()
 #else
     const char *storageFile = "/storage/deviceauth/hcgroup.dat";
 #endif
-    LOGI("%s", storageFile);
     return storageFile;
 }
 

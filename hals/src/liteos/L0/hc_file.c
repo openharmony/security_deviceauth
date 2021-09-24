@@ -59,7 +59,7 @@ int HcFileOpenRead(const char *path)
 
 int HcFileOpenWrite(const char *path)
 {
-    int ret = UtilsFileOpen(path, 02 | 0100, 0);
+    int ret = UtilsFileOpen(path, O_RDWR_FS | O_CREAT_FS | O_TRUNC_FS, 0);
     LOGI("ret = %d", ret);
     return ret;
 }
