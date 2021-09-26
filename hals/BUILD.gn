@@ -34,7 +34,7 @@ if (defined(ohos_lite)) {
 
       sources = hal_common_files
       sources += [
-        "src/dev_info/3516/hc_dev_info.c",
+        "src/dev_info/3861/hc_dev_info.c",
         "src/liteos/L0/hc_file.c",
         "src/liteos/L0/hc_init_protection.c",
         "src/liteos/L0/huks_adapter.c",
