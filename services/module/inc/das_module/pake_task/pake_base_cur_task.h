@@ -37,7 +37,7 @@ typedef struct PakeParamsT {
 } PakeParams;
 
 typedef struct AsyBaseCurTaskT {
-    CurTaskType (*getCurTaskType)();
+    CurTaskType (*getCurTaskType)(void);
     void (*destroyTask)(struct AsyBaseCurTaskT *);
     int(*process)(struct AsyBaseCurTaskT *, PakeParams *params, const CJson *in, CJson *out, int *status);
     int taskStatus;

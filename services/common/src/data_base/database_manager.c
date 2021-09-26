@@ -84,7 +84,7 @@ static void DestroyStrVector(StringVector *vec)
     DESTROY_HC_VECTOR(StringVector, vec)
 }
 
-static TrustedGroupEntry *CreateGroupEntryStruct()
+static TrustedGroupEntry *CreateGroupEntryStruct(void)
 {
     TrustedGroupEntry *ptr = (TrustedGroupEntry *)HcMalloc(sizeof(TrustedGroupEntry), 0);
     if (ptr == NULL) {
@@ -107,7 +107,7 @@ static void DestroyGroupEntryStruct(TrustedGroupEntry *groupEntry)
     DESTROY_HC_VECTOR(Int64Vector, &groupEntry->sharedUserIdVec)
 }
 
-static void DestroyGroupTable()
+static void DestroyGroupTable(void)
 {
     uint32_t groupIndex;
     TrustedGroupEntry **entry = NULL;
@@ -126,7 +126,7 @@ static void DestroyDeviceEntryStruct(TrustedDeviceEntry *deviceEntry)
     DeleteParcel(&deviceEntry->ext);
 }
 
-static void DestroyTrustDevTable()
+static void DestroyTrustDevTable(void)
 {
     uint32_t devIndex;
     TrustedDeviceEntry *deviceEntry = NULL;
@@ -247,7 +247,7 @@ static TrustedDeviceEntry *GetTrustedDeviceEntryByAuthId(const char *authId, con
  * Currently, this interface does not return the actual number of trusted devices.
  * If at least one trusted device exists, return 1. Otherwise, return 0.
  */
-static int GetTrustedDeviceNum()
+static int GetTrustedDeviceNum(void)
 {
     return (g_trustedDeviceTable.size(&g_trustedDeviceTable) > 0) ? 1 : 0;
 }
@@ -440,7 +440,7 @@ static void NotifyLastGroupDeleted(const char *peerUdid, int groupType)
     }
 }
 
-static void NotifyTrustedDeviceNumChanged()
+static void NotifyTrustedDeviceNumChanged(void)
 {
     int trustedDeviceNum = GetTrustedDeviceNum();
     if (g_broadcaster != NULL && g_broadcaster->postOnTrustedDeviceNumChanged != NULL) {
@@ -982,7 +982,7 @@ static bool LoadDBFromParcel(HcParcel *parcelIn)
     return ret;
 }
 
-static bool LoadDB()
+static bool LoadDB(void)
 {
     FileHandle file;
     int ret = HcFileOpen(FILE_ID_GROUP, MODE_FILE_READ, &file);
@@ -1113,7 +1113,7 @@ static bool SaveDBToParcel(HcParcel *parcelOut)
     return ret;
 }
 
-static bool SaveDB()
+static bool SaveDB(void)
 {
     HcParcel parcel = CreateParcel(0, 0);
     if (!SaveDBToParcel(&parcel)) {
@@ -1436,7 +1436,7 @@ bool IsTrustedDeviceExist(const char *udid)
     }
 }
 
-int32_t GetTrustedDevNumber()
+int32_t GetTrustedDevNumber(void)
 {
     g_databaseMutex->lock(g_databaseMutex);
     int num = GetTrustedDeviceNum();
@@ -1611,7 +1611,7 @@ static void DeleteUserIdExpiredGroupEntry(int64_t curUserId)
     }
 }
 
-static void DeleteAccountDeviceEntry()
+static void DeleteAccountDeviceEntry(void)
 {
     uint32_t devIndex = 0;
     TrustedDeviceEntry *deviceEntry = NULL;
@@ -1633,7 +1633,7 @@ static void DeleteAccountDeviceEntry()
     }
 }
 
-static void DeleteAccountGroupEntry()
+static void DeleteAccountGroupEntry(void)
 {
     TrustedGroupEntry **groupEntry = NULL;
     uint32_t groupIndex = 0;
@@ -1848,7 +1848,7 @@ bool IsGroupExist(const char *ownerName, const char *groupName)
     return false;
 }
 
-bool IsIdenticalGroupExist()
+bool IsIdenticalGroupExist(void)
 {
     uint32_t index;
     TrustedGroupEntry **entry = NULL;
@@ -1863,7 +1863,7 @@ bool IsIdenticalGroupExist()
     return false;
 }
 
-bool IsAcrossAccountGroupExist()
+bool IsAcrossAccountGroupExist(void)
 {
     uint32_t index;
     TrustedGroupEntry **entry = NULL;
@@ -2042,7 +2042,7 @@ int32_t GetGroupEntryByGroupId(const char *groupId, GroupInfo *returnGroupInfo)
     return res;
 }
 
-GroupInfo *CreateGroupInfoStruct()
+GroupInfo *CreateGroupInfoStruct(void)
 {
     GroupInfo *ptr = (GroupInfo *)HcMalloc(sizeof(GroupInfo), 0);
     if (ptr == NULL) {
@@ -2067,7 +2067,7 @@ void DestroyGroupInfoStruct(GroupInfo *groupInfo)
     groupInfo = NULL;
 }
 
-DeviceInfo *CreateDeviceInfoStruct()
+DeviceInfo *CreateDeviceInfoStruct(void)
 {
     DeviceInfo *deviceInfo = (DeviceInfo *)HcMalloc(sizeof(DeviceInfo), 0);
     if (deviceInfo == NULL) {
@@ -2406,7 +2406,7 @@ int32_t GetTrustedDevices(const char *groupId, DeviceInfoVec *deviceInfoVec)
     return HC_SUCCESS;
 }
 
-int32_t InitDatabase()
+int32_t InitDatabase(void)
 {
     g_trustedGroupTable = CREATE_HC_VECTOR(TrustedGroupTable)
     g_trustedDeviceTable = CREATE_HC_VECTOR(TrustedDeviceTable)
@@ -2436,7 +2436,7 @@ int32_t InitDatabase()
     return HC_SUCCESS;
 }
 
-void DestroyDatabase()
+void DestroyDatabase(void)
 {
     DestroyTrustDevTable();
     DestroyGroupTable();
@@ -2456,7 +2456,7 @@ void RegGenerateGroupIdFunc(int32_t (*generateGroupId)(int64_t userId, int64_t s
     g_generateIdFunc = generateGroupId;
 }
 
-void DeregGenerateGroupIdFunc()
+void DeregGenerateGroupIdFunc(void)
 {
     g_generateIdFunc = NULL;
 }
@@ -2470,7 +2470,7 @@ void RegisterBroadcaster(const Broadcaster *broadcaster)
     g_broadcaster = broadcaster;
 }
 
-void DeregisterBroadcaster()
+void DeregisterBroadcaster(void)
 {
     g_broadcaster = NULL;
 }

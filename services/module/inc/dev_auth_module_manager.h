@@ -23,8 +23,8 @@
 extern "C" {
 #endif
 
-int32_t InitModules();
-void DestroyModules();
+int32_t InitModules(void);
+void DestroyModules(void);
 
 int32_t CreateTask(int *taskId, const CJson *in, CJson *out, int moduleType);
 int32_t ProcessTask(int taskId, const CJson *in, CJson *out, int *status, int moduleType);

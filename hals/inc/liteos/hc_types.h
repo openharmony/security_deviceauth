@@ -31,7 +31,7 @@ typedef uint32_t HcBool;
 #endif
 
 void *HcMalloc(uint32_t size, char val);
-void HcFree(void* addr);
+void HcFree(void *addr);
 uint32_t HcStrlen(const char *str);
 
 #endif

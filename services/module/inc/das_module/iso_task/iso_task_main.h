@@ -20,8 +20,8 @@
 #include "json_utils.h"
 #include "das_asy_token_manager.h"
 
-bool IsIsoSupported();
-const TokenManager *GetSymTokenManagerInstance();
+bool IsIsoSupported(void);
+const TokenManager *GetSymTokenManagerInstance(void);
 SubTaskBase *CreateIsoSubTask(const CJson *in, CJson *out);
 
 #endif

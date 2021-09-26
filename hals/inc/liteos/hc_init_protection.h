@@ -25,9 +25,9 @@ typedef enum InitStatusEnum {
     FINISH_DESTROY,
 } InitStatus;
 
-int CheckInit();
-int CheckDestroy();
-void SetInitStatus();
-void SetDeInitStatus();
+int CheckInit(void);
+int CheckDestroy(void);
+void SetInitStatus(void);
+void SetDeInitStatus(void);
 
 #endif 

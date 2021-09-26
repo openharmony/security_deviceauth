@@ -26,8 +26,8 @@ typedef struct {
     int32_t (*processCredential)(int operationCode, const char *reqJsonStr, char **returnJsonStr);
 } AccountRelatedGroupManager;
 
-AccountRelatedGroupManager *GetAccountRelatedGroupManager();
-bool IsAccountRelatedGroupManagerSupported();
+AccountRelatedGroupManager *GetAccountRelatedGroupManager(void);
+bool IsAccountRelatedGroupManagerSupported(void);
 bool IsAccountRelatedGroupTypeSupported(int32_t groupType);
 
 #endif
