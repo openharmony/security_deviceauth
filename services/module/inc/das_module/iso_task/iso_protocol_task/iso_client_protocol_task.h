@@ -22,6 +22,6 @@ typedef struct {
     SymBaseCurTask taskBase;
 } IsoProtocolClientTask;
 
-SymBaseCurTask *CreateProtocolClientTask();
+SymBaseCurTask *CreateProtocolClientTask(void);
 
 #endif

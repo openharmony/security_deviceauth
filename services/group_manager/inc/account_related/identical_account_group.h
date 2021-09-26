@@ -24,7 +24,7 @@ typedef struct {
     int32_t (*syncDeleteGroup)(const CJson *jsonParams);
 } IdenticalAccountGroup;
 
-bool IsIdenticalAccountGroupSupported();
-BaseGroup *GetIdenticalAccountGroupInstance();
+bool IsIdenticalAccountGroupSupported(void);
+BaseGroup *GetIdenticalAccountGroupInstance(void);
 
 #endif

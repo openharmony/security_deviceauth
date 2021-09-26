@@ -25,7 +25,7 @@ enum {
     TASK_TYPE_FINAL,
 };
 
-static CurTaskType GetTaskType()
+static CurTaskType GetTaskType(void)
 {
     return TASK_TYPE_UNBIND_LITE_EXCHANGE;
 }

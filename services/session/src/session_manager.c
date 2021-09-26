@@ -152,7 +152,7 @@ static void InformTimeOutAndDestroyRequest(const DeviceAuthCallback *callback, i
     callback->onError(requestId, AUTH_FORM_INVALID_TYPE, HC_ERR_TIME_OUT, NULL);
 }
 
-static void RemoveOverTimeSession()
+static void RemoveOverTimeSession(void)
 {
     uint32_t index = 0;
     void **session = NULL;

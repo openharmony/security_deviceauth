@@ -24,6 +24,6 @@ typedef struct {
     StandardBindExchangeParams params;
 } StandardBindExchangeClientTask;
 
-AsyBaseCurTask *CreateStandardBindExchangeClientTask();
+AsyBaseCurTask *CreateStandardBindExchangeClientTask(void);
 
 #endif
