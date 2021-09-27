@@ -20,7 +20,7 @@
 
 #define INPUT_UDID_LEN 65
 #define MAX_INPUT_UDID_LEN 200
-#define MAX_SESSION_COUNT 20
+#define MAX_SESSION_COUNT 10
 
 /*
  * Get the unique device ID of the device(UDID).
