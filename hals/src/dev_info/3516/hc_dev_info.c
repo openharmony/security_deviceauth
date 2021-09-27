@@ -16,11 +16,8 @@
 #include "hc_dev_info.h"
 #include "hc_error.h"
 #include "hc_log.h"
-#include "securec.h"
-
-#ifndef LITE_DEVICE
 #include "parameter.h"
-#endif
+#include "securec.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,16 +28,9 @@ int32_t HcGetUdid(uint8_t *udid, int32_t udidLen)
     if (udid == NULL || udidLen < INPUT_UDID_LEN || udidLen > MAX_INPUT_UDID_LEN) {
         return HAL_ERR_INVALID_PARAM;
     }
-#ifndef LITE_DEVICE
-    int32_t ret = GetDevUdid((char *)udid, udidLen);
-    if (ret == 0) {
-        return HAL_SUCCESS;
-    }
-#endif
-    LOGD("using fake udid");
-    const char *udidTemp = "ABCDEF00ABCDEF00ABCDEF00ABCDEF00ABCDEF00ABCDEF00ABCDEF00ABCDEF00";
-    (void)memset_s(udid, udidLen, 0, udidLen);
-    if (memcpy_s(udid, udidLen, udidTemp, strlen(udidTemp)) != EOK) {
+    int32_t res = GetDevUdid((char *)udid, udidLen);
+    if (res != 0) {
+        LOGE("[OS]: GetDevUdid fail! res: %d", res);
         return HAL_FAILED;
     }
     return HAL_SUCCESS;
@@ -53,6 +43,7 @@ const char *GetStoragePath()
 #else
     const char *storageFile = "/storage/deviceauth/hcgroup.dat";
 #endif
+    LOGI("[OS]: storageFile: %s", storageFile);
     return storageFile;
 }
 
