@@ -26,6 +26,6 @@ typedef struct TokenManagerT {
     int (*computeAndSavePsk)(const PakeParams *params);
 } TokenManager;
 
-const TokenManager *GetAsyTokenManagerInstance();
+const TokenManager *GetAsyTokenManagerInstance(void);
 
 #endif

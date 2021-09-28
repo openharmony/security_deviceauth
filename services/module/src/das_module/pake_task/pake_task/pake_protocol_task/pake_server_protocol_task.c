@@ -27,7 +27,7 @@ enum {
     TASK_STATUS_SERVER_PAKE_CONFIRM
 };
 
-static CurTaskType GetTaskType()
+static CurTaskType GetTaskType(void)
 {
     return TASK_TYPE_PAKE_PROTOCOL;
 }

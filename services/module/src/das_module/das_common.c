@@ -75,6 +75,7 @@ err:
 
 void SendErrMsgToSelf(const CJson *in, CJson *out, int errCode)
 {
+    (void)in;
     CJson *sendToSelf = CreateJson();
     if (sendToSelf == NULL) {
         return;

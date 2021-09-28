@@ -479,7 +479,7 @@ int32_t DeletePeerAuthInfoInTask(const char *pkgName, const char *serviceType, U
     return res;
 }
 
-int32_t InitDasProtocolType()
+int32_t InitDasProtocolType(void)
 {
     g_protocolTypeVec = CREATE_HC_VECTOR(DasProtocolTypeVec)
     DasProtocolType *protocol = NULL;
@@ -522,7 +522,7 @@ int32_t InitDasProtocolType()
     return HC_SUCCESS;
 }
 
-void DestroyDasProtocolType()
+void DestroyDasProtocolType(void)
 {
     uint32_t index;
     void **ptr = NULL;

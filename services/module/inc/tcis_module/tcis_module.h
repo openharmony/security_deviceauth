@@ -50,8 +50,8 @@ typedef struct {
     AlgLoader *algLoader;
 } TcisAuthModule;
 
-AuthModuleBase *CreateTcisModule();
+AuthModuleBase *CreateTcisModule(void);
 
-bool IsTcisSupported();
+bool IsTcisSupported(void);
 
 #endif

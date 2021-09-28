@@ -157,10 +157,10 @@ typedef struct {
 #ifdef __cplusplus
 extern "C" {
 #endif
-DEVICE_AUTH_API_PUBLIC int InitDeviceAuthService();
-DEVICE_AUTH_API_PUBLIC void DestroyDeviceAuthService();
-DEVICE_AUTH_API_PUBLIC const GroupAuthManager *GetGaInstance();
-DEVICE_AUTH_API_PUBLIC const DeviceGroupManager *GetGmInstance();
+DEVICE_AUTH_API_PUBLIC int InitDeviceAuthService(void);
+DEVICE_AUTH_API_PUBLIC void DestroyDeviceAuthService(void);
+DEVICE_AUTH_API_PUBLIC const GroupAuthManager *GetGaInstance(void);
+DEVICE_AUTH_API_PUBLIC const DeviceGroupManager *GetGmInstance(void);
 #ifdef __cplusplus
 }
 #endif
