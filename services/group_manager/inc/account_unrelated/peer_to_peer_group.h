@@ -31,7 +31,7 @@ typedef struct {
         uint32_t *returnSize);
 } PeerToPeerGroup;
 
-BaseGroup *GetPeerToPeerGroupInstance();
-bool IsPeerToPeerGroupSupported();
+BaseGroup *GetPeerToPeerGroupInstance(void);
+bool IsPeerToPeerGroupSupported(void);
 
 #endif

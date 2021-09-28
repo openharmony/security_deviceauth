@@ -20,7 +20,7 @@
 #include "hc_types.h"
 #include "pake_defs.h"
 
-uint32_t GetPakeEcAlg();
+uint32_t GetPakeEcAlg(void);
 int32_t GenerateEcPakeParams(PakeBaseParams *params, Uint8Buff *secret);
 int32_t GenerateEcSharedSecret(PakeBaseParams *params, Uint8Buff *sharedSecret);
 

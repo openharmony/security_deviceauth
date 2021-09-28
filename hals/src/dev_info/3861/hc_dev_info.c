@@ -13,15 +13,34 @@
  * limitations under the License.
  */
 
-#ifndef NEW_PAKE_CLIENT_PROTOCOL_TASK_H
-#define NEW_PAKE_CLIENT_PROTOCOL_TASK_H
+#include "hc_dev_info.h"
+#include "securec.h"
+#include "parameter.h"
+#include "hc_error.h"
+#include "hc_log.h"
 
-#include "pake_base_cur_task.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-typedef struct {
-    AsyBaseCurTask taskBase;
-} NewPakeProtocolClientTask;
+int32_t HcGetUdid(uint8_t *udid, int32_t udidLen)
+{
+    if (udid == NULL || udidLen < INPUT_UDID_LEN || udidLen > MAX_INPUT_UDID_LEN) {
+        return HAL_ERR_INVALID_PARAM;
+    }
+    int32_t ret = GetDevUdid((char *)udid, udidLen);
+    if (ret != 0) {
+        LOGE("Failed to get dev udid, ret = %d", ret);
+        return HAL_FAILED;
+    }
+    return HAL_SUCCESS;
+}
 
-AsyBaseCurTask *CreateNewPakeProtocolClientTask(void);
+const char *GetStoragePath()
+{
+    return "hcgroup.dat";
+}
 
+#ifdef __cplusplus
+}
 #endif

@@ -152,7 +152,7 @@ static void InformTimeOutAndDestroyRequest(const DeviceAuthCallback *callback, i
     callback->onError(requestId, AUTH_FORM_INVALID_TYPE, HC_ERR_TIME_OUT, NULL);
 }
 
-static void RemoveOverTimeSession()
+static void RemoveOverTimeSession(void)
 {
     uint32_t index = 0;
     void **session = NULL;
@@ -176,8 +176,8 @@ static void RemoveOverTimeSession()
 
 int32_t ProcessSession(int64_t requestId, int32_t type, CJson *in)
 {
-    int64_t sessionId = 0;
     RemoveOverTimeSession();
+    int64_t sessionId = 0;
     int32_t result = GetSessionIdByType(requestId, type, &sessionId);
     if (result != HC_SUCCESS) {
         LOGE("The corresponding session is not found!");
@@ -212,11 +212,13 @@ static int32_t CheckForCreateSession(int64_t requestId, CJson *params, const Dev
 int32_t CreateSession(int64_t requestId, SessionTypeValue sessionType, CJson *params,
     const DeviceAuthCallback *callback)
 {
+    RemoveOverTimeSession();
     int32_t res = CheckForCreateSession(requestId, params, callback);
     if (res != HC_SUCCESS) {
         return res;
     }
     uint32_t vecSize = g_sessionManagerVec.size(&g_sessionManagerVec);
+    LOGI("Current session num: %d", vecSize);
     if (vecSize >= MAX_SESSION_COUNT) {
         LOGE("Session vector is full.");
         return HC_ERR_SESSION_IS_FULL;

@@ -18,6 +18,6 @@
 
 #include "alg_defs.h"
 
-const AlgLoader *GetLoaderInstance();
+const AlgLoader *GetLoaderInstance(void);
 
 #endif

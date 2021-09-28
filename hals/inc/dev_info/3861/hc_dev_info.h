@@ -18,9 +18,13 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define INPUT_UDID_LEN 65
 #define MAX_INPUT_UDID_LEN 200
-#define MAX_SESSION_COUNT 10
+#define MAX_SESSION_COUNT 20
 
 /*
  * Get the unique device ID of the device(UDID).
@@ -33,4 +37,7 @@ int32_t HcGetUdid(uint8_t *udid, int32_t udidLen);
 
 const char *GetStoragePath(void);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

@@ -33,8 +33,8 @@ typedef struct TaskT {
 
 Task *CreateTaskT(int *taskId, const CJson *in, CJson *out);
 
-int32_t InitDasProtocolType();
-void DestroyDasProtocolType();
+int32_t InitDasProtocolType(void);
+void DestroyDasProtocolType(void);
 
 int32_t RegisterLocalIdentityInTask(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType);
 int32_t UnregisterLocalIdentityInTask(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType);
