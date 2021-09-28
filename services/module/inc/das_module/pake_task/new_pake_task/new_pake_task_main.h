@@ -20,7 +20,7 @@
 #include "json_utils.h"
 #include "das_module_defines.h"
 
-bool IsSupportNewPake();
+bool IsSupportNewPake(void);
 SubTaskBase *CreateNewPakeSubTask(const CJson *in, CJson *out);
 
 #endif

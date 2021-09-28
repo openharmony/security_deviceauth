@@ -63,7 +63,7 @@ typedef struct {
     bool isAlias;
 } KeyBuff;
 
-typedef int32_t (*InitAlgFunc)();
+typedef int32_t (*InitAlgFunc)(void);
 
 typedef int32_t (*Sha256Func)(const Uint8Buff *message, Uint8Buff *hash);
 

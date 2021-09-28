@@ -284,12 +284,12 @@ void DestroyTask(int taskId, int moduleType)
     module->destroyTask(taskId);
 }
 
-static AuthModuleBase *CreateDasModuleStatic()
+static AuthModuleBase *CreateDasModuleStatic(void)
 {
     return CreateDasModule();
 }
 
-static uint32_t InitDasModule()
+static uint32_t InitDasModule(void)
 {
     AuthModuleBase *das = CreateDasModuleStatic();
     if (das == NULL) {
@@ -300,7 +300,7 @@ static uint32_t InitDasModule()
     return HC_SUCCESS;
 }
 
-static uint32_t InitTcisModule()
+static uint32_t InitTcisModule(void)
 {
     AuthModuleBase *tcis = CreateTcisModule();
     if (tcis == NULL) {
@@ -311,7 +311,7 @@ static uint32_t InitTcisModule()
     return HC_SUCCESS;
 }
 
-int32_t InitModules()
+int32_t InitModules(void)
 {
     g_authModuleVec = CREATE_HC_VECTOR(AuthModuleVec)
     InitGroupAndModuleVersion(&g_version);
@@ -335,7 +335,7 @@ int32_t InitModules()
     return res;
 }
 
-void DestroyModules()
+void DestroyModules(void)
 {
     uint32_t index;
     void **module = NULL;

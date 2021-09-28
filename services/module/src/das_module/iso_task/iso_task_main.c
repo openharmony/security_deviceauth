@@ -24,6 +24,7 @@
 
 static int32_t UnregisterLocalIdentity(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType)
 {
+    (void)userType;
     const AlgLoader *loader = GetLoaderInstance();
     Uint8Buff pkgNameBuff = { (uint8_t *)pkgName, HcStrlen(pkgName) };
     Uint8Buff serviceTypeBuff = { (uint8_t *)serviceType, HcStrlen(serviceType) };
@@ -47,6 +48,7 @@ static int32_t UnregisterLocalIdentity(const char *pkgName, const char *serviceT
 
 static int32_t DeletePeerAuthInfo(const char *pkgName, const char *serviceType, Uint8Buff *authIdPeer, int userTypePeer)
 {
+    (void)userTypePeer;
     const AlgLoader *loader = GetLoaderInstance();
     Uint8Buff pkgNameBuff = { (uint8_t *)pkgName, HcStrlen(pkgName)};
     Uint8Buff serviceTypeBuff = { (uint8_t *)serviceType, HcStrlen(serviceType) };
@@ -75,7 +77,7 @@ TokenManager g_symTokenManagerInstance = {
     NULL
 };
 
-bool IsIsoSupported()
+bool IsIsoSupported(void)
 {
     return true;
 }
@@ -97,7 +99,7 @@ SubTaskBase *CreateIsoSubTask(const CJson *in, CJson *out)
     }
 }
 
-const TokenManager *GetSymTokenManagerInstance()
+const TokenManager *GetSymTokenManagerInstance(void)
 {
     return &g_symTokenManagerInstance;
 }

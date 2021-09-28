@@ -24,6 +24,6 @@ typedef struct {
     StandardUnbindExchangeParams params;
 } StandardUnbindExchangeClientTask;
 
-AsyBaseCurTask *CreateStandardUnbindExchangeClientTask();
+AsyBaseCurTask *CreateStandardUnbindExchangeClientTask(void);
 
 #endif

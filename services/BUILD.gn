@@ -26,95 +26,111 @@ if (defined(ohos_lite)) {
     include_dirs += [
       "//third_party/cJSON",
       "//utils/native/lite/include",
-      "//base/hiviewdfx/hilog_lite/interfaces/native/innerkits/hilog",
       "//third_party/bounds_checking_function/include",
-      "//foundation/communication/dsoftbus/interfaces/kits/common",
-      "//foundation/communication/dsoftbus/interfaces/kits/transport",
-      "//foundation/communication/dsoftbus/interfaces/inner_kits/transport",
     ]
-    sources = deviceauth_files
 
     defines = [ "HILOG_ENABLE" ]
     cflags = build_flags
+
+    if (ohos_kernel_type == "linux" || ohos_kernel_type == "liteos_a") {
+      include_dirs += [
+        "//base/hiviewdfx/hilog_lite/interfaces/native/innerkits/hilog",
+        "//foundation/communication/dsoftbus/interfaces/kits/common",
+        "//foundation/communication/dsoftbus/interfaces/kits/transport",
+        "//foundation/communication/dsoftbus/interfaces/inner_kits/transport",
+      ]
+      sources = deviceauth_files
+    } else {
+      include_dirs += [ "//base/hiviewdfx/hilog_lite/interfaces/native/kits/hilog_lite" ]
+      sources = deviceauth_lite0_files
+    }
 
     deps = [
       "${hals_path}:${hal_module_name}",
       "//build/lite/config/component/cJSON:cjson_shared",
       "//utils/native/lite:utils",
-      "//base/hiviewdfx/hilog_lite/frameworks/featured:hilog_shared",
-      "//foundation/communication/dsoftbus/sdk:softbus_client",
-      "//third_party/bounds_checking_function:libsec_shared",
     ]
+    if (ohos_kernel_type == "linux" || ohos_kernel_type == "liteos_a") {
+      deps += [
+        "//base/hiviewdfx/hilog_lite/frameworks/featured:hilog_shared",
+        "//foundation/communication/dsoftbus/sdk:softbus_client",
+        "//third_party/bounds_checking_function:libsec_shared",
+      ]
+    } else {
+      deps += [ "//base/hiviewdfx/hilog_lite/frameworks/mini:hilog_lite" ]
+    }
   }
 
-  executable("deviceauth_service") {
-    include_dirs = inc_path
-    include_dirs += hals_inc_path
-    include_dirs += [
-      "//third_party/cJSON",
-      "//utils/native/lite/include",
-      "//base/hiviewdfx/hilog_lite/interfaces/native/innerkits/hilog",
-      "//third_party/bounds_checking_function/include",
-      "${frameworks_path}/inc/lite",
-      "//foundation/communication/ipc_lite/interfaces/kits",
-      "//foundation/distributedschedule/samgr_lite/interfaces/kits/samgr"
-    ]
+  if (ohos_kernel_type == "linux" || ohos_kernel_type == "liteos_a") {
+    executable("deviceauth_service") {
+      include_dirs = inc_path
+      include_dirs += hals_inc_path
+      include_dirs += [
+        "//third_party/cJSON",
+        "//utils/native/lite/include",
+        "//base/hiviewdfx/hilog_lite/interfaces/native/innerkits/hilog",
+        "//third_party/bounds_checking_function/include",
+        "${frameworks_path}/inc/lite",
+        "//foundation/communication/ipc_lite/interfaces/kits",
+        "//foundation/distributedschedule/samgr_lite/interfaces/kits/samgr"
+      ]
 
-    sources = deviceauth_ipc_files
-    sources += [
-      "${frameworks_path}/src/lite/ipc_service_init.c",
-      "${frameworks_path}/src/ipc_service.c"
-    ]
+      sources = deviceauth_ipc_files
+      sources += [
+        "${frameworks_path}/src/lite/ipc_service_init.c",
+        "${frameworks_path}/src/ipc_service.c"
+      ]
 
-    defines = [ "HILOG_ENABLE" ]
-    if (ohos_kernel_type == "linux") {
-      defines += [ "__LINUX__" ]
+      defines = [ "HILOG_ENABLE" ]
+      if (ohos_kernel_type == "linux") {
+        defines += [ "__LINUX__" ]
+      }
+      ldflags = [ "-pthread" ]
+
+      deps = [
+        ":deviceauth",
+        "${hals_path}:${hal_module_name}",
+        "//utils/native/lite:utils",
+        "//base/hiviewdfx/hilog_lite/frameworks/featured:hilog_shared",
+        "//foundation/communication/ipc_lite:liteipc_adapter",
+        "//foundation/distributedschedule/samgr_lite/samgr:samgr",
+        "//third_party/bounds_checking_function:libsec_shared",
+        "//build/lite/config/component/cJSON:cjson_shared",
+      ]
     }
-    ldflags = [ "-pthread" ]
 
-    deps = [
-      ":deviceauth",
-      "${hals_path}:${hal_module_name}",
-      "//utils/native/lite:utils",
-      "//base/hiviewdfx/hilog_lite/frameworks/featured:hilog_shared",
-      "//foundation/communication/ipc_lite:liteipc_adapter",
-      "//foundation/distributedschedule/samgr_lite/samgr:samgr",
-      "//third_party/bounds_checking_function:libsec_shared",
-      "//build/lite/config/component/cJSON:cjson_shared",
-    ]
-  }
+    shared_library("deviceauth_sdk") {
+      include_dirs = inc_path
+      include_dirs += hals_inc_path
+      include_dirs += [
+        "//third_party/cJSON",
+        "//utils/native/lite/include",
+        "//base/hiviewdfx/hilog_lite/interfaces/native/innerkits/hilog",
+        "//third_party/bounds_checking_function/include",
+        "${frameworks_path}/inc/lite",
+        "//foundation/communication/ipc_lite/interfaces/kits",
+        "//foundation/distributedschedule/samgr_lite/interfaces/kits/samgr"
+      ]
 
-  shared_library("deviceauth_sdk") {
-    include_dirs = inc_path
-    include_dirs += hals_inc_path
-    include_dirs += [
-      "//third_party/cJSON",
-      "//utils/native/lite/include",
-      "//base/hiviewdfx/hilog_lite/interfaces/native/innerkits/hilog",
-      "//third_party/bounds_checking_function/include",
-      "${frameworks_path}/inc/lite",
-      "//foundation/communication/ipc_lite/interfaces/kits",
-      "//foundation/distributedschedule/samgr_lite/interfaces/kits/samgr"
-    ]
+      sources = deviceauth_ipc_files
+      sources += [ "${frameworks_path}/src/ipc_sdk.c" ]
 
-    sources = deviceauth_ipc_files
-    sources += [ "${frameworks_path}/src/ipc_sdk.c" ]
+      defines = [ "HILOG_ENABLE" ]
+      if (ohos_kernel_type == "linux") {
+        defines += [ "__LINUX__" ]
+      }
+      cflags = build_flags
+      cflags += [ "-fPIC" ]
 
-    defines = [ "HILOG_ENABLE" ]
-    if (ohos_kernel_type == "linux") {
-      defines += [ "__LINUX__" ]
+      deps = [
+        "${hals_path}:${hal_module_name}",
+        "//utils/native/lite:utils",
+        "//base/hiviewdfx/hilog_lite/frameworks/featured:hilog_shared",
+        "//foundation/communication/ipc_lite:liteipc_adapter",
+        "//foundation/distributedschedule/samgr_lite/samgr:samgr",
+        "//third_party/bounds_checking_function:libsec_shared",
+      ]
     }
-    cflags = build_flags
-    cflags += [ "-fPIC" ]
-
-    deps = [
-      "${hals_path}:${hal_module_name}",
-      "//utils/native/lite:utils",
-      "//base/hiviewdfx/hilog_lite/frameworks/featured:hilog_shared",
-      "//foundation/communication/ipc_lite:liteipc_adapter",
-      "//foundation/distributedschedule/samgr_lite/samgr:samgr",
-      "//third_party/bounds_checking_function:libsec_shared",
-    ]
   }
 } else {
   ohos_static_library("deviceauth") {

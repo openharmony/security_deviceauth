@@ -15,6 +15,7 @@
 
 #include "soft_bus_channel.h"
 
+#include <stddef.h>
 #include "device_auth_defines.h"
 
 int32_t InitSoftBusChannelModule(void)

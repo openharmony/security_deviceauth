@@ -387,6 +387,19 @@ int32_t ConvertGroupIdToJsonStr(const char *groupId, char **returnJsonStr)
 
 int32_t GenerateBindSuccessData(const char *peerAuthId, const char *groupId, char **returnDataStr)
 {
+    if ((peerAuthId == NULL) || (groupId == NULL) || (returnDataStr == NULL)) {
+        LOGE("The input params contains NULL value!");
+        return HC_ERR_NULL_PTR;
+    }
+    char *tempGroupId = NULL;
+    char *tempAuthId = NULL;
+    ConvertToAnnoymousStr(groupId, &tempGroupId);
+    ConvertToAnnoymousStr(peerAuthId, &tempAuthId);
+    LOGI("Bind successfully! [GroupId]: %s, [AddId]: %s",
+        tempGroupId == NULL ? "NULL" : tempGroupId,
+        tempAuthId == NULL ? "NULL" : tempAuthId);
+    HcFree(tempGroupId);
+    HcFree(tempAuthId);
     CJson *jsonData = CreateJson();
     if (jsonData == NULL) {
         LOGE("Failed to allocate jsonData memory!");
@@ -414,6 +427,19 @@ int32_t GenerateBindSuccessData(const char *peerAuthId, const char *groupId, cha
 
 int32_t GenerateUnbindSuccessData(const char *peerAuthId, const char *groupId, char **returnDataStr)
 {
+    if ((peerAuthId == NULL) || (groupId == NULL) || (returnDataStr == NULL)) {
+        LOGE("The input params contains NULL value!");
+        return HC_ERR_NULL_PTR;
+    }
+    char *tempGroupId = NULL;
+    char *tempAuthId = NULL;
+    ConvertToAnnoymousStr(groupId, &tempGroupId);
+    ConvertToAnnoymousStr(peerAuthId, &tempAuthId);
+    LOGI("Unbind successfully! [GroupId]: %s, [DeleteId]: %s",
+        tempGroupId == NULL ? "NULL" : tempGroupId,
+        tempAuthId == NULL ? "NULL" : tempAuthId);
+    HcFree(tempGroupId);
+    HcFree(tempAuthId);
     CJson *jsonData = CreateJson();
     if (jsonData == NULL) {
         LOGE("Failed to allocate jsonData memory!");
