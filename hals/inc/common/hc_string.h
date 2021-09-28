@@ -86,7 +86,7 @@ uint32_t StringLength(const HcString *self);
  * Notice: You should delete string when you don't need the string anymore.
  * @return the created string.
  */
-HcString CreateString();
+HcString CreateString(void);
 
 /*
  * Delete a string. In fact it will not destroy the string,

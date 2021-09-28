@@ -25,17 +25,25 @@ void *HcMalloc(uint32_t size, char val)
         LOGE("Malloc size is invalid.");
         return NULL;
     }
-    void* addr = OhosMalloc(MEM_TYPE_HICHAIN, size);
+#if defined(OHOS_MEM)
+    void *addr = OhosMalloc(MEM_TYPE_HICHAIN, size);
+#else
+    void *addr = malloc(size);
+#endif
     if (addr != NULL) {
         (void)memset_s(addr, size, val, size);
     }
     return addr;
 }
 
-void HcFree(void* addr)
+void HcFree(void *addr)
 {
     if (addr != NULL) {
-        OhosFree(addr);
+#if defined(OHOS_MEM)
+    OhosFree(addr);
+#else
+    free(addr);
+#endif
     }
 }
 

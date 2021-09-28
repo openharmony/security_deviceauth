@@ -29,6 +29,6 @@ typedef struct {
     GetTcisCandidateGroupFunc getTcisCandidateGroup;
 } AccountRelatedGroupAuth;
 
-BaseGroupAuth *GetAccountRelatedGroupAuth();
+BaseGroupAuth *GetAccountRelatedGroupAuth(void);
 
 #endif

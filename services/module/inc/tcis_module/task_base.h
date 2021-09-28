@@ -20,7 +20,7 @@
 #include "tcis_module_defines.h"
 
 typedef struct _TaskBase {
-    TcisTaskType (*getTaskType)();
+    TcisTaskType (*getTaskType)(void);
     void (*destroyTask)(struct _TaskBase *);
     int (*process)(struct _TaskBase *, CJson *in, CJson *out, int *status);
     int taskStatus;

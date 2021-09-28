@@ -23,8 +23,8 @@
 #define BIND_TYPE 0
 #define AUTH_TYPE 1
 
-void InitSessionManager();
-void DestroySessionManager();
+void InitSessionManager(void);
+void DestroySessionManager(void);
 
 bool IsRequestExist(int64_t requestId);
 

@@ -329,6 +329,7 @@ static int32_t VerifyProof(const PakeBaseParams *params)
 
 int32_t ClientRequestPakeProtocol(const PakeBaseParams *params)
 {
+    (void)params;
     return HC_SUCCESS;
 }
 

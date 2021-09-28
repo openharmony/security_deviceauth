@@ -20,7 +20,7 @@
 #include "hc_types.h"
 #include "pake_defs.h"
 
-uint32_t GetPakeDlAlg();
+uint32_t GetPakeDlAlg(void);
 int32_t GenerateDlPakeParams(PakeBaseParams *params, const Uint8Buff *secret);
 int32_t GenerateDlSharedSecret(PakeBaseParams *params, Uint8Buff *sharedSecret);
 
