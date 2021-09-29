@@ -18,7 +18,7 @@ if (target_os == "liteos" ||
   hals_inc_path = [
     "${hals_path}/inc/common",
     "${hals_path}/inc/liteos",
-    "${hals_path}/inc/dev_info/watch",
+    "${hals_path}/inc/dev_info/3861",
   ]
   hal_module_name = "deviceauth_hal_liteos"
 } else {
