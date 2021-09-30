@@ -151,6 +151,7 @@ static int32_t save_import_auth_info(const struct hichain *hichain, const struct
     }
 
     int32_t ret = save_auth_info(hichain, pair_type, &cache);
+    (void)memset_s(&cache.ltpk, sizeof(struct ltpk), 0, sizeof(struct ltpk));
     if (ret != HC_OK) {
         LOGE("Save auth info failed, error code is %d", ret);
         return HC_IMPORT_AUTH_DATA_FAILED;
@@ -202,6 +203,7 @@ int32_t import_signed_auth_info_hilink(const struct hichain *hichain, const stru
 
     struct signature sign_result = { 0, {0} };
     if (memcpy_s(sign_result.signature, sizeof(sign_result.signature), receive_data, HC_SIGNATURE_LEN) != EOK) {
+        (void)memset_s(receive_data, len, 0, len);
         FREE(receive_data);
         return memory_copy_error(__func__, __LINE__);
     }
@@ -214,18 +216,23 @@ int32_t import_signed_auth_info_hilink(const struct hichain *hichain, const stru
         (char *)message.val, JSON_STRING_DATA);
     if (import_data == NULL) {
         LOGE("Parse import add auth data failed");
+        (void)memset_s(receive_data, len, 0, len);
         FREE(receive_data);
         return HC_BUILD_OBJECT_FAILED;
     }
 
     int32_t ret = verify_import_auth_info(hichain, import_data, &message, &sign_result);
     if (ret != HC_OK) {
+        (void)memset_s(receive_data, len, 0, len);
+        (void)memset_s(&import_data->ltpk, sizeof(struct ltpk), 0, sizeof(struct ltpk));
         FREE(receive_data);
         free_import_add_auth_data(import_data);
         return ret;
     }
 
     ret = save_import_auth_info(hichain, auth_id, import_data);
+    (void)memset_s(receive_data, len, 0, len);
+    (void)memset_s(&import_data->ltpk, sizeof(struct ltpk), 0, sizeof(struct ltpk));
     FREE(receive_data);
     free_import_add_auth_data(import_data);
     return ret;
@@ -262,11 +269,13 @@ int32_t import_signed_auth_info(const struct hichain *hichain, const struct hc_a
     int32_t ret = verify_import_auth_info(hichain, import_data, &message, &sign_result);
     if (ret != HC_OK) {
         LOGE("Verify failed!");
+        (void)memset_s(&import_data->ltpk, sizeof(struct ltpk), 0, sizeof(struct ltpk));
         free_import_add_auth_data(import_data);
         return ret;
     }
 
     ret = save_import_auth_info(hichain, auth_id, import_data);
+    (void)memset_s(&import_data->ltpk, sizeof(struct ltpk), 0, sizeof(struct ltpk));
     free_import_add_auth_data(import_data);
     LOGI("Import signed auth info success");
     return ret;
@@ -310,6 +319,7 @@ int32_t import_lite_auth_info(const struct hichain *hichain, const struct hc_aut
 
     struct import_auth_data *import_data = (struct import_auth_data *)parse_import_add_auth_data(
         (char *)out_plain.val, JSON_STRING_DATA);
+    (void)memset_s(out_plain.val, data->length, 0, data->length);
     free_import_add_auth_data(out_plain.val);
     out_plain.val = NULL;
     if (import_data == NULL) {
@@ -318,6 +328,7 @@ int32_t import_lite_auth_info(const struct hichain *hichain, const struct hc_aut
     }
 
     ret = save_import_auth_info(hichain, auth_id, import_data);
+    (void)memset_s(&import_data->ltpk, sizeof(struct ltpk), 0, sizeof(struct ltpk));
     free_import_add_auth_data(import_data);
     if (ret != HC_OK) {
         LOGE("Import lite auth info failed");
