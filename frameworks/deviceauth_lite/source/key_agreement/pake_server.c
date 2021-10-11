@@ -68,6 +68,11 @@ void destroy_pake_server(struct pake_server *pake_server)
     }
 
     LOGI("Destroy pake server object %u success", pake_server_sn(pake_server));
+    (void)memset_s(&pake_server->pin, sizeof(struct hc_pin), 0, sizeof(struct hc_pin));
+    (void)memset_s(&pake_server->self_esk, sizeof(struct esk), 0, sizeof(struct esk));
+    (void)memset_s(&pake_server->session_key, sizeof(struct pake_session_key), 0, sizeof(struct pake_session_key));
+    (void)memset_s(&pake_server->hmac_key, sizeof(struct pake_hmac_key), 0, sizeof(struct pake_hmac_key));
+    (void)memset_s(&pake_server->service_key, sizeof(struct hc_session_key), 0, sizeof(struct hc_session_key));
     FREE(pake_server);
 }
 
@@ -254,11 +259,13 @@ static int32_t generate_pake_params(struct pake_server *pake_server, struct epk 
 
     ret = cal_bignum_exp((struct var_buffer *)&secret, (struct var_buffer *)&exp,
         prime_len, (struct big_num *)&base);
+    (void)memset_s(&secret, sizeof(struct hkdf), 0, sizeof(struct hkdf));
     if (ret != HC_OK) {
         return HC_CAL_BIGNUM_EXP_FAILED;
     }
     ret = cal_bignum_exp((struct var_buffer *)&base, (struct var_buffer *)&pake_server->self_esk,
         prime_len, (struct big_num *)self_epk);
+    (void)memset_s(&base, sizeof(struct epk), 0, sizeof(struct epk));
     if (ret != HC_OK) {
         return HC_CAL_BIGNUM_EXP_FAILED;
     }
@@ -373,6 +380,7 @@ static int32_t generate_session_key(struct pake_server *pake_server, struct epk 
     struct hkdf hkdf = { 0, {0} };
     ret = compute_hkdf((struct var_buffer *)&shared_secret, &pake_server->salt,
         HICHAIN_SPEKE_SESSIONKEY_INFO, HC_HKDF_SECRET_LEN, (struct var_buffer *)&hkdf);
+    (void)memset_s(&shared_secret, sizeof(struct pake_shared_secret), 0, sizeof(struct pake_shared_secret));
     if (ret != HC_OK) {
         LOGE("Object %u generate hkdf failed, error code is %d", pake_server_sn(pake_server), ret);
         goto error;
@@ -384,6 +392,7 @@ static int32_t generate_session_key(struct pake_server *pake_server, struct epk 
                    hkdf.hkdf + PAKE_SESSION_KEY_LENGTH, PAKE_HMAC_KEY_LENGTH);
     pake_server->session_key.length = PAKE_SESSION_KEY_LENGTH;
     pake_server->hmac_key.length = PAKE_HMAC_KEY_LENGTH;
+    (void)memset_s(&hkdf, sizeof(struct hkdf), 0, sizeof(struct hkdf));
     return HC_OK;
 
 error:

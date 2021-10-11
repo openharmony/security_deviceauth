@@ -65,6 +65,11 @@ void destroy_pake_client(struct pake_client *pake_client)
     }
 
     LOGI("Destroy pake client object %u success", pake_client_sn(pake_client));
+    (void)memset_s(&pake_client->pin, sizeof(struct hc_pin), 0, sizeof(struct hc_pin));
+    (void)memset_s(&pake_client->self_esk, sizeof(struct esk), 0, sizeof(struct esk));
+    (void)memset_s(&pake_client->session_key, sizeof(struct pake_session_key), 0, sizeof(struct pake_session_key));
+    (void)memset_s(&pake_client->hmac_key, sizeof(struct pake_hmac_key), 0, sizeof(struct pake_hmac_key));
+    (void)memset_s(&pake_client->service_key, sizeof(struct hc_session_key), 0, sizeof(struct hc_session_key));
     FREE(pake_client);
 }
 
@@ -204,12 +209,14 @@ static int32_t parse_start_response_data(void *handle, void *data)
     uint32_t prime_len = 0;
     ret = gen_esk_prime_len(pake_client, receive, &esk_len, &prime_len);
     if (ret != HC_OK) {
+        (void)memset_s(&secret, sizeof(struct hkdf), 0, sizeof(struct hkdf));
         return ret;
     }
     if (pake_client->client_info.protocol_base_info.state == START_REQUEST) {
         struct random_value rand = generate_random(esk_len);
         if (rand.length == 0) {
             LOGE("Generate random value failed");
+            (void)memset_s(&secret, sizeof(struct hkdf), 0, sizeof(struct hkdf));
             return HC_GEN_RANDOM_FAILED;
         }
 
@@ -222,6 +229,7 @@ static int32_t parse_start_response_data(void *handle, void *data)
 
     ret = cal_bignum_exp((struct var_buffer *)&secret, (struct var_buffer *)&exp,
                          prime_len, (struct big_num *)&base);
+    (void)memset_s(&secret, sizeof(struct hkdf), 0, sizeof(struct hkdf));
     if (ret != HC_OK) {
         return HC_CAL_BIGNUM_EXP_FAILED;
     }
@@ -306,6 +314,7 @@ static int32_t generate_session_key(struct pake_client *pake_client, struct epk 
     struct hkdf hkdf = { 0, {0} };
     ret = compute_hkdf((struct var_buffer *)&shared_secret, &pake_client->salt,
                        HICHAIN_SPEKE_SESSIONKEY_INFO, HC_HKDF_SECRET_LEN, (struct var_buffer *)&hkdf);
+    (void)memset_s(&shared_secret, sizeof(struct pake_shared_secret), 0, sizeof(struct pake_shared_secret));
     if (ret != HC_OK) {
         LOGE("Object %u generate hkdf failed, error code is %d", pake_client_sn(pake_client), ret);
         goto error;
@@ -317,6 +326,7 @@ static int32_t generate_session_key(struct pake_client *pake_client, struct epk 
                    hkdf.hkdf + PAKE_SESSION_KEY_LENGTH, PAKE_HMAC_KEY_LENGTH);
     pake_client->session_key.length = PAKE_SESSION_KEY_LENGTH;
     pake_client->hmac_key.length = PAKE_HMAC_KEY_LENGTH;
+    (void)memset_s(&hkdf, sizeof(struct hkdf), 0, sizeof(struct hkdf));
     return HC_OK;
 
 error:
