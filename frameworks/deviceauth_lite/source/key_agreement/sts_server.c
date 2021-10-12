@@ -67,7 +67,9 @@ void destroy_sts_server(struct sts_server *handle)
         DBG_OUT("Destroy sts server object failed");
         return;
     }
-
+    (void)memset_s(&handle->self_private_key, sizeof(struct stsk), 0, sizeof(struct stsk));
+    (void)memset_s(&handle->session_key, sizeof(struct sts_session_key), 0, sizeof(struct sts_session_key));
+    (void)memset_s(&handle->service_key, sizeof(struct hc_session_key), 0, sizeof(struct hc_session_key));
     FREE(handle);
     LOGI("FREE sts server object success");
 }
@@ -206,6 +208,7 @@ static int32_t parse_start_request_data(void *handle, void *receive_data)
 
     ret = compute_hkdf((struct var_buffer *)&shared_secret, &sts_server->salt, HICHAIN_AUTH_INFO,
         STS_SESSION_KEY_LENGTH, (struct var_buffer *)&sts_server->session_key);
+    (void)memset_s(&shared_secret, sizeof(struct sts_shared_secret), 0, sizeof(struct sts_shared_secret));
     if (ret != HC_OK) {
         LOGE("Object %u compute_hkdf failed, error code is %d", sts_server_sn(sts_server), ret);
         return HC_COMPUTE_HKDF_FAILED;

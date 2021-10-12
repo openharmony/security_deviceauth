@@ -99,7 +99,7 @@ void ConvertToAnnoymousStr(const char *originalStr, char **anonymousStr)
     if ((originalStr == NULL) || (anonymousStr == NULL)) {
         return;
     }
-    int desensitizationLen = 4;
+    uint32_t desensitizationLen = 4;
     uint32_t len = HcStrlen(originalStr);
     if (len <= desensitizationLen) {
         LOGD("The input string length is too short!");
