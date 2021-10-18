@@ -41,7 +41,8 @@ if (defined(ohos_lite)) {
       ]
       sources = deviceauth_files
     } else {
-      include_dirs += [ "//base/hiviewdfx/hilog_lite/interfaces/native/kits/hilog_lite" ]
+      include_dirs +=
+          [ "//base/hiviewdfx/hilog_lite/interfaces/native/kits/hilog_lite" ]
       sources = deviceauth_lite0_files
     }
 
@@ -72,13 +73,13 @@ if (defined(ohos_lite)) {
         "//third_party/bounds_checking_function/include",
         "${frameworks_path}/inc/lite",
         "//foundation/communication/ipc_lite/interfaces/kits",
-        "//foundation/distributedschedule/samgr_lite/interfaces/kits/samgr"
+        "//foundation/distributedschedule/samgr_lite/interfaces/kits/samgr",
       ]
 
       sources = deviceauth_ipc_files
       sources += [
+        "${frameworks_path}/src/ipc_service.c",
         "${frameworks_path}/src/lite/ipc_service_init.c",
-        "${frameworks_path}/src/ipc_service.c"
       ]
 
       defines = [ "HILOG_ENABLE" ]
@@ -90,12 +91,12 @@ if (defined(ohos_lite)) {
       deps = [
         ":deviceauth",
         "${hals_path}:${hal_module_name}",
-        "//utils/native/lite:utils",
         "//base/hiviewdfx/hilog_lite/frameworks/featured:hilog_shared",
+        "//build/lite/config/component/cJSON:cjson_shared",
         "//foundation/communication/ipc_lite:liteipc_adapter",
         "//foundation/distributedschedule/samgr_lite/samgr:samgr",
         "//third_party/bounds_checking_function:libsec_shared",
-        "//build/lite/config/component/cJSON:cjson_shared",
+        "//utils/native/lite:utils",
       ]
     }
 
@@ -109,7 +110,7 @@ if (defined(ohos_lite)) {
         "//third_party/bounds_checking_function/include",
         "${frameworks_path}/inc/lite",
         "//foundation/communication/ipc_lite/interfaces/kits",
-        "//foundation/distributedschedule/samgr_lite/interfaces/kits/samgr"
+        "//foundation/distributedschedule/samgr_lite/interfaces/kits/samgr",
       ]
 
       sources = deviceauth_ipc_files
@@ -124,11 +125,11 @@ if (defined(ohos_lite)) {
 
       deps = [
         "${hals_path}:${hal_module_name}",
-        "//utils/native/lite:utils",
         "//base/hiviewdfx/hilog_lite/frameworks/featured:hilog_shared",
         "//foundation/communication/ipc_lite:liteipc_adapter",
         "//foundation/distributedschedule/samgr_lite/samgr:samgr",
         "//third_party/bounds_checking_function:libsec_shared",
+        "//utils/native/lite:utils",
       ]
     }
   }
@@ -163,8 +164,8 @@ if (defined(ohos_lite)) {
     ]
 
     external_deps = [
-      "hiviewdfx_hilog_native:libhilog",
       "dsoftbus_standard:softbus_client",
+      "hiviewdfx_hilog_native:libhilog",
     ]
   }
 
@@ -194,7 +195,7 @@ if (defined(ohos_lite)) {
       "//third_party/cJSON",
       "//utils/native/base/include",
       "${frameworks_path}/inc/standard",
-      "//utils/system/safwk/native/include"
+      "//utils/system/safwk/native/include",
     ]
 
     sources = deviceauth_ipc_files
@@ -217,7 +218,7 @@ if (defined(ohos_lite)) {
       "hiviewdfx_hilog_native:libhilog",
       "ipc:ipc_core",
       "safwk:system_ability_fwk",
-      "samgr_L2:samgr_proxy",
+      "samgr_standard:samgr_proxy",
     ]
   }
 
@@ -233,15 +234,15 @@ if (defined(ohos_lite)) {
       "${frameworks_path}/inc/standard",
       "//utils/system/safwk/native/include",
       "//foundation/communication/ipc/interfaces/innerkits/ipc_core/include",
-      "//foundation/distributedschedule/samgr/interfaces/innerkits/samgr_proxy/include"
+      "//foundation/distributedschedule/samgr/interfaces/innerkits/samgr_proxy/include",
     ]
 
     sources = deviceauth_ipc_files
     sources += [ "${frameworks_path}/src/ipc_sdk.c" ]
 
     defines = [
-        "__LINUX__",
-        "HILOG_ENABLE"
+      "__LINUX__",
+      "HILOG_ENABLE",
     ]
     cflags = [ "-fPIC" ]
     cflags += build_flags
@@ -258,7 +259,7 @@ if (defined(ohos_lite)) {
     external_deps = [
       "hiviewdfx_hilog_native:libhilog",
       "ipc:ipc_core",
-      "samgr_L2:samgr_proxy"
+      "samgr_standard:samgr_proxy",
     ]
   }
 }
