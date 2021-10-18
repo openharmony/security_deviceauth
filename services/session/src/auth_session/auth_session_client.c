@@ -151,8 +151,8 @@ static int32_t ProcessClientAuthSession(Session *session, CJson *in)
     CJson *out = CreateJson();
     if (out == NULL) {
         LOGE("Failed to create json for out!");
-        InformLocalAuthError(paramInSession, realSession->base.callback);
         InformPeerAuthError(paramInSession, realSession->base.callback);
+        InformLocalAuthError(paramInSession, realSession->base.callback);
         return HC_ERR_ALLOC_MEMORY;
     }
     res = ProcessClientAuthTask(realSession, GetAuthModuleType(paramInSession), in, out);
