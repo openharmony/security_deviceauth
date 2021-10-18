@@ -187,8 +187,8 @@ static int32_t StartServerAuthTask(AuthSession *session, const CJson *receivedDa
     CJson *out = CreateJson();
     if (out == NULL) {
         LOGE("Failed to create json!");
-        InformLocalAuthError(receivedData, session->base.callback);
         InformPeerAuthError(receivedData, session->base.callback);
+        InformLocalAuthError(receivedData, session->base.callback);
         return HC_ERR_ALLOC_MEMORY;
     }
     int32_t status = 0;
@@ -238,8 +238,8 @@ static int ProcessServerAuthSession(Session *session, CJson *in)
     CJson *out = CreateJson();
     if (out == NULL) {
         LOGE("Failed to create json for out!");
-        InformLocalAuthError(paramInSession, realSession->base.callback);
         InformPeerAuthError(paramInSession, realSession->base.callback);
+        InformLocalAuthError(paramInSession, realSession->base.callback);
         return HC_ERR_ALLOC_MEMORY;
     }
     int32_t moduleType = GetAuthModuleType(paramInSession);
@@ -288,8 +288,8 @@ static AuthSession *CreateServerAuthSessionInner(CJson *param, const DeviceAuthC
     }
     return (AuthSession *)session;
 err:
-    InformLocalAuthError(param, callback);
     InformPeerAuthError(param, callback);
+    InformLocalAuthError(param, callback);
     return NULL;
 }
 
@@ -298,8 +298,8 @@ Session *CreateServerAuthSession(CJson *param, const DeviceAuthCallback *callbac
     AuthSession *session = NULL;
     if (AddIntToJson(param, FIELD_OPERATION_CODE, AUTHENTICATE) != HC_SUCCESS) {
         LOGE("Failed to add operation code to json!");
-        InformLocalAuthError(param, callback);
         InformPeerAuthError(param, callback);
+        InformLocalAuthError(param, callback);
         return NULL;
     }
     session = CreateServerAuthSessionInner(param, callback);
