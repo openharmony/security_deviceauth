@@ -24,6 +24,7 @@
 #include "hc_log.h"
 #include "json_utils.h"
 
+#define MIN_PROTOCOL_VERSION "1.0.0"
 IMPLEMENT_HC_VECTOR(ParamsVec, void *, 1)
 
 static bool IsOldFormatParams(const CJson *param)
@@ -499,6 +500,64 @@ static int32_t ReturnErrorToLocalBySession(const AuthSession *session, int error
     return res;
 }
 
+static int32_t AddVersionMsgToPeer(CJson *errorToPeer)
+{
+    CJson *version = CreateJson();
+    if (version == NULL) {
+        LOGE("Failed to create json for version!");
+        return HC_ERR_JSON_CREATE;
+    }
+    CJson *payload = CreateJson();
+    if (payload == NULL) {
+        LOGE("Failed to create json for payload!");
+        FreeJson(version);
+        return HC_ERR_JSON_CREATE;
+    }
+    int32_t res = HC_SUCCESS;
+    do {
+        if (AddStringToJson(version, FIELD_MIN_VERSION, MIN_PROTOCOL_VERSION) != HC_SUCCESS) {
+            LOGE("Failed to add min version to json!");
+            res = HC_ERR_JSON_ADD;
+            break;
+        }
+        if (AddStringToJson(version, FIELD_CURRENT_VERSION, MIN_PROTOCOL_VERSION) != HC_SUCCESS) {
+            LOGE("Failed to add max version to json!");
+            res = HC_ERR_JSON_ADD;
+            break;
+        }
+        if (AddObjToJson(payload, FIELD_VERSION, version) != HC_SUCCESS) {
+            LOGE("Add version object to errorToPeer failed.");
+            res = HC_ERR_JSON_ADD;
+            break;
+        }
+        if (AddIntToJson(payload, FIELD_ERROR_CODE, -1) != HC_SUCCESS) {
+            LOGE("Failed to add errorCode for peer!");
+            res = HC_ERR_JSON_ADD;
+            break;
+        }
+        if (AddObjToJson(errorToPeer, FIELD_PAYLOAD, payload) != HC_SUCCESS) {
+            res = HC_ERR_JSON_ADD;
+            break;
+        }
+    } while (0);
+    FreeJson(version);
+    FreeJson(payload);
+    return res;
+}
+
+static int32_t PrepareErrorMsgToPeer(CJson *errorToPeer)
+{
+    if (AddIntToJson(errorToPeer, FIELD_GROUP_ERROR_MSG, GROUP_ERR_MSG) != HC_SUCCESS) {
+        LOGE("Failed to add groupErrorMsg for peer!");
+        return HC_ERR_JSON_FAIL;
+    }
+    if (AddIntToJson(errorToPeer, FIELD_MESSAGE, GROUP_ERR_MSG) != HC_SUCCESS) {
+        LOGE("Failed to add message for peer!");
+        return HC_ERR_JSON_FAIL;
+    }
+    return AddVersionMsgToPeer(errorToPeer);
+}
+
 static int32_t ReturnErrorToPeerBySession(const CJson *authParam, const DeviceAuthCallback *callback)
 {
     int64_t requestId = 0;
@@ -511,10 +570,10 @@ static int32_t ReturnErrorToPeerBySession(const CJson *authParam, const DeviceAu
         LOGE("Failed to allocate memory for errorToPeer!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    if (AddIntToJson(errorToPeer, FIELD_GROUP_ERROR_MSG, GROUP_ERR_MSG) != HC_SUCCESS) {
-        LOGE("Failed to add err message to return data!");
+    int32_t res = PrepareErrorMsgToPeer(errorToPeer);
+    if (res != HC_SUCCESS) {
         FreeJson(errorToPeer);
-        return HC_ERR_JSON_FAIL;
+        return res;
     }
     char *errorToPeerStr = PackJsonToString(errorToPeer);
     FreeJson(errorToPeer);
@@ -523,7 +582,6 @@ static int32_t ReturnErrorToPeerBySession(const CJson *authParam, const DeviceAu
         return HC_ERR_ALLOC_MEMORY;
     }
 
-    int32_t res = HC_SUCCESS;
     do {
         if ((callback == NULL) || (callback->onTransmit == NULL)) {
             LOGE("The callback of onTransmit is null!");
