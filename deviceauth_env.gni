@@ -12,7 +12,14 @@
 # limitations under the License.
 
 deviceauth_path = "//base/security/deviceauth"
+common_lib_path = "${deviceauth_path}/common_lib"
+deps_adapter_path = "${deviceauth_path}/deps_adapter"
+key_management_adapter_path =
+    "${deviceauth_path}/deps_adapter/key_management_adapter"
+os_adapter_path = "${deviceauth_path}/deps_adapter/os_adapter"
+
 hals_path = "${deviceauth_path}/hals"
+
 innerkits_path = "${deviceauth_path}/interfaces/innerkits"
 frameworks_path = "${deviceauth_path}/frameworks"
 services_path = "${deviceauth_path}/services"
