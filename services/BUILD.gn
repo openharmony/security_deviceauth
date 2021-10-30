@@ -16,7 +16,7 @@ if (defined(ohos_lite)) {
 } else {
   import("//build/ohos.gni")
 }
-import("//base/security/deviceauth/hals/deviceauth_hals.gni")
+import("//base/security/deviceauth/deps_adapter/deviceauth_hals.gni")
 import("deviceauth.gni")
 
 if (defined(ohos_lite)) {
@@ -47,7 +47,7 @@ if (defined(ohos_lite)) {
     }
 
     deps = [
-      "${hals_path}:${hal_module_name}",
+      "${deps_adapter_path}:${hal_module_name}",
       "//build/lite/config/component/cJSON:cjson_shared",
       "//utils/native/lite:utils",
     ]
@@ -90,7 +90,7 @@ if (defined(ohos_lite)) {
 
       deps = [
         ":deviceauth",
-        "${hals_path}:${hal_module_name}",
+        "${deps_adapter_path}:${hal_module_name}",
         "//base/hiviewdfx/hilog_lite/frameworks/featured:hilog_shared",
         "//build/lite/config/component/cJSON:cjson_shared",
         "//foundation/communication/ipc_lite:liteipc_adapter",
@@ -124,7 +124,7 @@ if (defined(ohos_lite)) {
       cflags += [ "-fPIC" ]
 
       deps = [
-        "${hals_path}:${hal_module_name}",
+        "${deps_adapter_path}:${hal_module_name}",
         "//base/hiviewdfx/hilog_lite/frameworks/featured:hilog_shared",
         "//foundation/communication/ipc_lite:liteipc_adapter",
         "//foundation/distributedschedule/samgr_lite/samgr:samgr",
@@ -158,7 +158,7 @@ if (defined(ohos_lite)) {
     }
 
     deps = [
-      "${hals_path}:${hal_module_name}",
+      "${deps_adapter_path}:${hal_module_name}",
       "//third_party/cJSON:cjson_static",
       "//utils/native/base:utils",
     ]
@@ -209,7 +209,7 @@ if (defined(ohos_lite)) {
     deps = [
       ":auth_service.rc",
       ":deviceauth",
-      "${hals_path}:${hal_module_name}",
+      "${deps_adapter_path}:${hal_module_name}",
       "//third_party/cJSON:cjson_static",
       "//utils/native/base:utils",
     ]
@@ -251,7 +251,7 @@ if (defined(ohos_lite)) {
     }
 
     deps = [
-      "${hals_path}:${hal_module_name}",
+      "${deps_adapter_path}:${hal_module_name}",
       "//third_party/cJSON:cjson_static",
       "//utils/native/base:utils",
     ]
