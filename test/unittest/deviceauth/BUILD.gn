@@ -11,7 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import("//base/security/deviceauth/hals/deviceauth_hals.gni")
+import("//base/security/deviceauth/deps_adapter/deviceauth_hals.gni")
 import("//base/security/deviceauth/services/deviceauth.gni")
 import("//build/test.gni")
 
@@ -31,22 +31,22 @@ ohos_unittest("deviceauth_llt") {
   include_dirs += hals_inc_path
 
   sources = [
-    "${hals_path}/src/common/alg_loader.c",
-    "${hals_path}/src/common/common_util.c",
-    "${hals_path}/src/common/hc_parcel.c",
-    "${hals_path}/src/common/hc_string.c",
-    "${hals_path}/src/common/hc_task_thread.c",
-    "${hals_path}/src/common/hc_tlv_parser.c",
-    "${hals_path}/src/common/json_utils.c",
-    "${hals_path}/src/linux/standard/crypto_hash_to_point.c",
-    "${hals_path}/src/linux/standard/huks_adapter.c",
-    "${hals_path}/src/linux/hc_condition.c",
-    "${hals_path}/src/linux/hc_file.c",
-    "${hals_path}/src/linux/hc_init_protection.c",
-    "${hals_path}/src/linux/hc_mutex.c",
-    "${hals_path}/src/linux/hc_thread.c",
-    "${hals_path}/src/linux/hc_time.c",
-    "${hals_path}/src/linux/hc_types.c",
+    "${common_lib_path}/impl/src/common_util.c",
+    "${common_lib_path}/impl/src/hc_parcel.c",
+    "${common_lib_path}/impl/src/hc_string.c",
+    "${common_lib_path}/impl/src/hc_tlv_parser.c",
+    "${common_lib_path}/impl/src/json_utils.c",
+    "${key_management_adapter_path}/impl/src/alg_loader.c",
+    "${key_management_adapter_path}/impl/src/standard/crypto_hash_to_point.c",
+    "${key_management_adapter_path}/impl/src/standard/huks_adapter.c",
+    "${os_adapter_path}/impl/src/hc_task_thread.c",
+    "${os_adapter_path}/impl/src/linux/hc_condition.c",
+    "${os_adapter_path}/impl/src/linux/hc_file.c",
+    "${os_adapter_path}/impl/src/linux/hc_init_protection.c",
+    "${os_adapter_path}/impl/src/linux/hc_mutex.c",
+    "${os_adapter_path}/impl/src/linux/hc_thread.c",
+    "${os_adapter_path}/impl/src/linux/hc_time.c",
+    "${os_adapter_path}/impl/src/linux/hc_types.c",
   ]
   sources += deviceauth_files
   sources += [
@@ -64,7 +64,7 @@ ohos_unittest("deviceauth_llt") {
   ]
 
   external_deps = [
-    "hiviewdfx_hilog_native:libhilog",
     "dsoftbus_standard:softbus_client",
+    "hiviewdfx_hilog_native:libhilog",
   ]
 }
