@@ -18,8 +18,10 @@
 
 #include "auth_session_common_defines.h"
 #include "common_defs.h"
-#include "database_manager.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 void InformLocalAuthError(const CJson *param, const DeviceAuthCallback *callback);
 void InformPeerAuthError(const CJson *param, const DeviceAuthCallback *callback);
 int32_t InformAuthError(AuthSession *session, const CJson *out, int errorCode);
@@ -34,5 +36,7 @@ void CreateAuthParamsVec(ParamsVec *vec);
 void DestroyAuthParamsVec(ParamsVec *vec);
 int32_t ReturnSessionKey(int64_t requestId, const CJson *authParam,
     const CJson *out, const DeviceAuthCallback *callback);
-
+#ifdef __cplusplus
+}
+#endif
 #endif

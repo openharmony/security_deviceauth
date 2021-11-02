@@ -21,9 +21,14 @@
 #include "device_auth.h"
 #include "json_utils.h"
 
-
-int32_t GetGroupAuth(int32_t groupAuthType, BaseGroupAuth **groupAuthHandle);
+#ifdef __cplusplus
+extern "C" {
+#endif
+BaseGroupAuth *GetGroupAuth(int32_t groupAuthType);
 int32_t GetAuthModuleType(const CJson *in);
 int32_t GetInfoHash(const uint8_t *info, uint32_t infoLen, char *str, uint32_t strLen);
-
+bool IsBleAuthForAcrossAccount(const CJson *authParam);
+#ifdef __cplusplus
+}
+#endif
 #endif

@@ -14,8 +14,10 @@
  */
 
 #include "account_related_group_auth.h"
+#include "hc_log.h"
 
 BaseGroupAuth *GetAccountRelatedGroupAuth()
 {
+    LOGD("Device auth do not support account related auth!");
     return NULL;
 }

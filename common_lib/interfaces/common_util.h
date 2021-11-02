@@ -58,6 +58,13 @@ int64_t StringToInt64(const char *cp);
  * @param originalStr: string to be converted
  * @param anonymousStr: the converted result
  */
-void ConvertToAnnoymousStr(const char *originalStr, char **anonymousStr);
+void ConvertToAnonymousStr(const char *originalStr, char **anonymousStr);
 
+/*
+ * Convert string to upper case.
+ * @param oriStr: original string.
+ * @param desStr: the converted result. Need free.
+ * @return success(0), otherwise, failure.
+ */
+int32_t ToUpperCase(const char *oriStr, char **desStr);
 #endif

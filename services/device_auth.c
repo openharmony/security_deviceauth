@@ -226,7 +226,7 @@ static bool InitAuthDeviceTask(AuthDeviceTask *task, int64_t authReqId, CJson *a
 static bool InitProcessDataTask(AuthDeviceTask *task, int64_t authReqId, CJson *receivedData,
     const DeviceAuthCallback *gaCallback)
 {
-    task->base.doAction = DoProcessData;
+    task->base.doAction = DoProcessAuthData;
     task->base.destroy = DestroyGroupAuthTask;
     task->authReqId = authReqId;
     if (AddByteToJson(receivedData, FIELD_REQUEST_ID, (const uint8_t*)&authReqId, sizeof(int64_t)) != HC_SUCCESS) {

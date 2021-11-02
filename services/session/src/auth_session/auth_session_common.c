@@ -20,6 +20,7 @@
 #include "auth_session_util.h"
 #include "common_defs.h"
 #include "common_util.h"
+#include "database_manager.h"
 #include "dev_auth_module_manager.h"
 #include "hc_log.h"
 #include "json_utils.h"
@@ -48,13 +49,17 @@ static int32_t UnifyOldFormatParams(const CJson *param, ParamsVec *paramsVec)
     }
     int64_t uid = 0;
     uint32_t groupIdLen = SHA256_LEN * BYTE_TO_HEX_OPER_LENGTH + 1;
-    char groupId[SHA256_LEN * BYTE_TO_HEX_OPER_LENGTH + 1] = { 0 };
+    char *groupId = (char *)HcMalloc(groupIdLen, 0);
+    if (groupId == NULL) {
+        LOGE("Failed to allocate memory for groupId!");
+        FreeJson(oldFormatParams);
+        return HC_ERR_ALLOC_MEMORY;
+    }
     int32_t res = HC_SUCCESS;
     do {
         if (GetByteFromJson(param, FIELD_USER_ID, (uint8_t *)&uid, sizeof(int64_t)) != HC_SUCCESS) {
             LOGI("No uid in auth param!");
-        }
-        if (uid == 0L) {
+            res = HC_ERR_JSON_GET;
             break;
         }
         if (GetInfoHash((const uint8_t *)&uid, sizeof(int64_t), groupId, groupIdLen) != HC_SUCCESS) {
@@ -68,6 +73,8 @@ static int32_t UnifyOldFormatParams(const CJson *param, ParamsVec *paramsVec)
             break;
         }
     } while (0);
+    HcFree(groupId);
+    groupId = NULL;
     if (res != HC_SUCCESS) {
         FreeJson(oldFormatParams);
         return res;
@@ -81,7 +88,7 @@ static bool IsGroupAvailable(const char *groupId, const char *pkgName)
     if (IsGroupAccessible(groupId, pkgName)) {
         return true;
     }
-    LOGI("%s don't have enough right for group: %s!", pkgName, groupId);
+    LOGD("%s don't have enough right for group: %s!", pkgName, groupId);
     return false;
 }
 
@@ -90,6 +97,8 @@ static int32_t GroupTypeToAuthForm(int32_t groupType)
     int32_t authForm;
     switch (groupType) {
         case PEER_TO_PEER_GROUP:
+            authForm = AUTH_FORM_ACCOUNT_UNRELATED;
+            break;
         case COMPATIBLE_GROUP:
             authForm = AUTH_FORM_ACCOUNT_UNRELATED;
             break;
@@ -110,35 +119,26 @@ static int32_t GroupTypeToAuthForm(int32_t groupType)
 static int32_t AddGeneralParams(const char *groupId, int32_t groupType, const DeviceInfo *localAuthInfo,
     CJson *paramsData)
 {
-    int32_t res = HC_SUCCESS;
     int32_t authForm = GroupTypeToAuthForm(groupType);
+    if (AddStringToJson(paramsData, FIELD_GROUP_ID, groupId) != HC_SUCCESS) {
+        LOGE("Failed to add groupId for client auth!");
+        return HC_ERR_JSON_FAIL;
+    }
+    if (AddIntToJson(paramsData, FIELD_AUTH_FORM, authForm) != HC_SUCCESS) {
+        LOGE("Failed to add authFrom for client auth!");
+        return HC_ERR_JSON_FAIL;
+    }
     const char *serviceType = StringGet(&(localAuthInfo->serviceType));
-    do {
-        if (AddStringToJson(paramsData, FIELD_GROUP_ID, groupId) != HC_SUCCESS) {
-            LOGE("Failed to add groupId for client auth!");
-            res = HC_ERR_JSON_FAIL;
-            break;
+    if ((groupType == COMPATIBLE_GROUP) && (serviceType != NULL)) {
+        if (AddStringToJson(paramsData, FIELD_SERVICE_TYPE, serviceType) != HC_SUCCESS) {
+            LOGE("Failed to add serviceType for client compatible group auth!");
+            return HC_ERR_JSON_FAIL;
         }
-        if (AddIntToJson(paramsData, FIELD_AUTH_FORM, authForm) != HC_SUCCESS) {
-            LOGE("Failed to add authFrom for client auth!");
-            res = HC_ERR_JSON_FAIL;
-            break;
-        }
-        if ((groupType == COMPATIBLE_GROUP) && (serviceType != NULL)) {
-            if (AddStringToJson(paramsData, FIELD_SERVICE_TYPE, serviceType) != HC_SUCCESS) {
-                LOGE("Failed to add serviceType for client compatible group auth!");
-                res = HC_ERR_JSON_FAIL;
-                break;
-            }
-        } else {
-            if (AddStringToJson(paramsData, FIELD_SERVICE_TYPE, groupId) != HC_SUCCESS) {
-                LOGE("Failed to add serviceType with groupId for client auth!");
-                res = HC_ERR_JSON_FAIL;
-                break;
-            }
-        }
-    } while (0);
-    return res;
+    } else if (AddStringToJson(paramsData, FIELD_SERVICE_TYPE, groupId) != HC_SUCCESS) {
+        LOGE("Failed to add serviceType with groupId for client auth!");
+        return HC_ERR_JSON_FAIL;
+    }
+    return HC_SUCCESS;
 }
 
 static int32_t GetLocalDeviceInfoFromDatabase(const char *groupId, DeviceInfo *localAuthInfo)
@@ -162,7 +162,7 @@ static int32_t ExtractAndAddParams(const char *groupId, const GroupInfo *groupIn
     int32_t res;
     DeviceInfo *localAuthInfo = CreateDeviceInfoStruct();
     if (localAuthInfo == NULL) {
-        LOGE("Failed to allocate memory for peerAuthInfo!");
+        LOGE("Failed to allocate memory for localAuthInfo!");
         return HC_ERR_ALLOC_MEMORY;
     }
     int32_t groupType = groupInfo->type;
@@ -177,9 +177,8 @@ static int32_t ExtractAndAddParams(const char *groupId, const GroupInfo *groupIn
             LOGE("Failed to add general params!");
             break;
         }
-        BaseGroupAuth *groupAuth = NULL;
-        res = GetGroupAuth(GetGroupAuthType(authForm), &groupAuth);
-        if (res != HC_SUCCESS) {
+        BaseGroupAuth *groupAuth = GetGroupAuth(GetGroupAuthType(authForm));
+        if (groupAuth == NULL) {
             LOGE("Failed to get group auth handle!");
             break;
         }
@@ -198,7 +197,7 @@ static int32_t FillAuthParams(const CJson *param, const GroupInfoVec *vec, Param
     const char *pkgName = GetStringFromJson(param, FIELD_SERVICE_PKG_NAME);
     if (pkgName == NULL) {
         LOGE("Pkg name is null, can't extract params from db!");
-        return HC_ERR_INVALID_PARAMS;
+        return HC_ERR_NULL_PTR;
     }
     uint32_t index;
     void **ptr = NULL;
@@ -219,49 +218,61 @@ static int32_t FillAuthParams(const CJson *param, const GroupInfoVec *vec, Param
             LOGE("Failed to duplicate auth param data!");
             return HC_ERR_JSON_FAIL;
         }
-        if (ExtractAndAddParams(groupId, groupInfo, paramsData) == HC_SUCCESS) {
-            paramsVec->pushBack(paramsVec, (const void **)&paramsData);
+        int32_t res = ExtractAndAddParams(groupId, groupInfo, paramsData);
+        if (res != HC_SUCCESS) {
+            LOGE("Failed to extract and add param!");
+            FreeJson(paramsData);
+            continue;
         }
+        paramsVec->pushBack(paramsVec, (const void **)&paramsData);
     }
     return HC_SUCCESS;
 }
 
 static void GetCandidateGroupByOrder(const CJson *param, GroupQueryParams *queryParams, GroupInfoVec *vec)
 {
-    BaseGroupAuth *groupAuth = NULL;
-    if (GetGroupAuth(ACCOUNT_RELATED_GROUP_AUTH_TYPE, &groupAuth) == HC_SUCCESS) {
+    BaseGroupAuth *groupAuth = GetGroupAuth(ACCOUNT_RELATED_GROUP_AUTH_TYPE);
+    if (groupAuth != NULL) {
         AccountRelatedGroupAuth *realGroupAuth = (AccountRelatedGroupAuth *)groupAuth;
         realGroupAuth->getTcisCandidateGroup(param, queryParams, vec);
     }
     queryParams->type = PEER_TO_PEER_GROUP;
-    (void)GetJoinedGroupInfoVecByDevId(queryParams, vec);
+    if (GetJoinedGroupInfoVecByDevId(queryParams, vec) != HC_SUCCESS) {
+        LOGD("No peer to peer group in db.");
+    }
     queryParams->type = COMPATIBLE_GROUP;
-    (void)GetJoinedGroupInfoVecByDevId(queryParams, vec);
+    if (GetJoinedGroupInfoVecByDevId(queryParams, vec) != HC_SUCCESS) {
+        LOGD("No compatible group in db.");
+    }
 }
 
 static int32_t InitGroupQueryParams(const char *peerUdid, const char *peerAuthId, GroupQueryParams *queryParams)
 {
+    uint32_t peerUdidLen = HcStrlen(peerUdid) + 1;
+    uint32_t peerAuthIdLen = HcStrlen(peerAuthId) + 1;
     queryParams->type = ALL_GROUP_TYPE;
     queryParams->visibility = ANY_GROUP_VISIBILITY;
+    queryParams->udid = NULL;
+    queryParams->authId = NULL;
     if (peerUdid != NULL) {
-        queryParams->udid = (char *)HcMalloc(HcStrlen(peerUdid) + 1, 0);
+        queryParams->udid = (char *)HcMalloc(peerUdidLen, 0);
         if (queryParams->udid == NULL) {
             LOGE("Failed to allocate memory for queryParams of udid!");
             return HC_ERR_ALLOC_MEMORY;
         }
-        if (strcpy_s(queryParams->udid, HcStrlen(peerUdid) + 1, peerUdid) != HC_SUCCESS) {
+        if (strcpy_s(queryParams->udid, peerUdidLen, peerUdid) != EOK) {
             LOGE("Failed to copy udid for queryParams!");
             HcFree(queryParams->udid);
             queryParams->udid = NULL;
             return HC_ERR_MEMORY_COPY;
         }
     } else if (peerAuthId != NULL) {
-        queryParams->authId = (char *)HcMalloc(HcStrlen(peerAuthId) + 1, 0);
+        queryParams->authId = (char *)HcMalloc(peerAuthIdLen, 0);
         if (queryParams->authId == NULL) {
             LOGE("Failed to allocate memory for queryParams of authId!");
             return HC_ERR_ALLOC_MEMORY;
         }
-        if (strcpy_s(queryParams->authId, HcStrlen(peerAuthId) + 1, peerAuthId) != HC_SUCCESS) {
+        if (strcpy_s(queryParams->authId, peerAuthIdLen, peerAuthId) != EOK) {
             LOGE("Failed to copy authId for queryParams!");
             HcFree(queryParams->authId);
             queryParams->authId = NULL;
@@ -271,12 +282,13 @@ static int32_t InitGroupQueryParams(const char *peerUdid, const char *peerAuthId
     return HC_SUCCESS;
 }
 
-static void DestroyGroupQueryParams(const char *peerUdid, const char *peerAuthId, GroupQueryParams *queryParams)
+static void DestroyGroupQueryParams(GroupQueryParams *queryParams)
 {
-    if (peerUdid != NULL) {
+    if (queryParams->udid != NULL) {
         HcFree(queryParams->udid);
         queryParams->udid = NULL;
-    } else if (peerAuthId != NULL) {
+    }
+    if (queryParams->authId != NULL) {
         HcFree(queryParams->authId);
         queryParams->authId = NULL;
     }
@@ -299,12 +311,12 @@ static void GetCandidateGroupInfo(const CJson *param, const char *peerUdid,
         return;
     }
     if (deviceLevelFlag && isClient) {
-        GetCandidateGroupByOrder(param, &queryParams, vec);
+        LOGI("Try to get device-level candidate groups for auth.");
     } else {
         queryParams.visibility = GROUP_VISIBILITY_PUBLIC;
-        GetCandidateGroupByOrder(param, &queryParams, vec);
     }
-    DestroyGroupQueryParams(peerUdid, peerAuthId, &queryParams);
+    GetCandidateGroupByOrder(param, &queryParams, vec);
+    DestroyGroupQueryParams(&queryParams);
 }
 
 static void GetGroupInfoByGroupId(const char *groupId, const char *peerUdid, const char *peerAuthId, GroupInfoVec *vec)
@@ -330,14 +342,26 @@ static void GetGroupInfoByGroupId(const char *groupId, const char *peerUdid, con
     }
 }
 
+static int32_t GetBleGroupInfoAndAuthParams(const CJson *param, ParamsVec *paramsVec)
+{
+    CJson *bleAuthParams = DuplicateJson(param);
+    if (bleAuthParams == NULL) {
+        LOGE("Failed to create json for ble auth params!");
+        return HC_ERR_JSON_FAIL;
+    }
+    if (AddIntToJson(bleAuthParams, FIELD_AUTH_FORM, AUTH_FORM_ACROSS_ACCOUNT) != HC_SUCCESS) {
+        LOGE("Failed to add ble authForm!");
+        FreeJson(bleAuthParams);
+        return HC_ERR_JSON_FAIL;
+    }
+    paramsVec->pushBack(paramsVec, (const void **)&bleAuthParams);
+    return HC_SUCCESS;
+}
+
 static int32_t GetCandidateAuthInfo(const char *groupId, const CJson *param, ParamsVec *authParamsVec)
 {
     const char *peerUdid = GetStringFromJson(param, FIELD_PEER_CONN_DEVICE_ID);
     const char *peerAuthId = GetStringFromJson(param, FIELD_PEER_AUTH_ID);
-    if ((peerUdid == NULL) && (peerAuthId == NULL)) {
-        LOGE("Invalid input, peer udid and peer auth id are both null!");
-        return HC_ERR_INVALID_PARAMS;
-    }
     GroupInfoVec vec;
     CreateGroupInfoVecStruct(&vec);
     if (groupId == NULL) {
@@ -348,11 +372,23 @@ static int32_t GetCandidateAuthInfo(const char *groupId, const CJson *param, Par
     if (vec.size(&vec) == 0) {
         LOGE("No satisfied candidate group!");
         DestroyGroupInfoVecStruct(&vec);
+        char *anonyPeerUdid = NULL;
+        char *anonyPeerAuthId = NULL;
+        ConvertToAnonymousStr(peerUdid, &anonyPeerUdid);
+        ConvertToAnonymousStr(peerAuthId, &anonyPeerAuthId);
+        LOGE("[GetCandidateAuthInfo] [peerUdid]: %s", ((anonyPeerUdid == NULL) ? "NULL" : anonyPeerUdid));
+        LOGE("[GetCandidateAuthInfo] [peerAuthId]: %s", ((anonyPeerAuthId == NULL) ? "NULL" : anonyPeerAuthId));
+        HcFree(anonyPeerUdid);
+        HcFree(anonyPeerAuthId);
+        if (peerUdid != NULL) {
+            LOGE("[GetCandidateAuthInfo] peerUdid-IsTrustedDeviceExist = %s",
+                (IsTrustedDeviceExist(peerUdid) == true) ? "true" : "false");
+        }
         return HC_ERR_NO_CANDIDATE_GROUP;
     }
-    int32_t ret = FillAuthParams(param, &vec, authParamsVec);
+    int32_t res = FillAuthParams(param, &vec, authParamsVec);
     DestroyGroupInfoVecStruct(&vec);
-    return ret;
+    return res;
 }
 
 static int32_t AddGroupAuthTransmitData(const AuthSession *session, CJson *sendToPeer)
@@ -375,7 +411,12 @@ static int32_t AddGroupAuthTransmitData(const AuthSession *session, CJson *sendT
         return HC_ERR_JSON_GET;
     }
     if (isClient && (session->currentIndex < (list.size(&list) - 1))) {
-        const char *altGroup = GetStringFromJson(list.get(&list, session->currentIndex + 1), FIELD_SERVICE_TYPE);
+        CJson *nextParam = list.get(&list, session->currentIndex + 1);
+        if (nextParam == NULL) {
+            LOGE("Failed to get next auth params!");
+            return HC_ERR_JSON_FAIL;
+        }
+        const char *altGroup = GetStringFromJson(nextParam, FIELD_SERVICE_TYPE);
         if ((altGroup != NULL) && (AddStringToJson(sendToPeer, FIELD_ALTERNATIVE, altGroup) != HC_SUCCESS)) {
             LOGE("Failed to add alternative group!");
             return HC_ERR_JSON_FAIL;
@@ -420,10 +461,12 @@ static int32_t ReturnTransmitData(const AuthSession *session, CJson *out)
             ret = HC_ERR_TRANSMIT_FAIL;
             break;
         }
-        if (!callback->onTransmit(requestId, (uint8_t *)outStr, (uint32_t)strlen(outStr) + 1)) {
+        LOGI("Start to transmit data to peer for auth!");
+        if (!callback->onTransmit(requestId, (uint8_t *)outStr, HcStrlen(outStr) + 1)) {
             LOGE("Failed to transmit data to peer!");
             ret = HC_ERR_TRANSMIT_FAIL;
         }
+        LOGI("End transmit data to peer for auth!");
     } while (0);
     FreeJsonString(outStr);
     return ret;
@@ -439,6 +482,9 @@ int32_t GetAuthParamsList(const CJson *param, ParamsVec *authParamsVec)
     if (IsOldFormatParams(param)) {
         LOGI("The input params' type is in old format!");
         ret = UnifyOldFormatParams(param, authParamsVec);
+    } else if (IsBleAuthForAcrossAccount(param)) {
+        LOGD("This is across-account auth for ble device.");
+        ret = GetBleGroupInfoAndAuthParams(param, authParamsVec);
     } else {
         ret = GetCandidateAuthInfo(groupId, param, authParamsVec);
     }
@@ -447,10 +493,6 @@ int32_t GetAuthParamsList(const CJson *param, ParamsVec *authParamsVec)
 
 static void ReturnFinishData(const AuthSession *session, const CJson *out)
 {
-    if (out == NULL) {
-        LOGE("The return data is null!");
-        return;
-    }
     ParamsVec list = session->paramsList;
     const CJson *authParam = list.get(&list, session->currentIndex);
     if (authParam == NULL) {
@@ -467,8 +509,8 @@ static void ReturnFinishData(const AuthSession *session, const CJson *out)
         LOGE("Failed to get auth type!");
         return;
     }
-    BaseGroupAuth *groupAuth = NULL;
-    if (GetGroupAuth(GetGroupAuthType(authForm), &groupAuth) == HC_SUCCESS) {
+    BaseGroupAuth *groupAuth = GetGroupAuth(GetGroupAuthType(authForm));
+    if (groupAuth != NULL) {
         groupAuth->onFinish(requestId, authParam, out, session->base.callback);
     }
 }
@@ -492,12 +534,12 @@ static int32_t ReturnErrorToLocalBySession(const AuthSession *session, int error
         return HC_ERR_JSON_GET;
     }
 
-    BaseGroupAuth *groupAuth = NULL;
-    int32_t res = GetGroupAuth(GetGroupAuthType(authForm), &groupAuth);
-    if (res == HC_SUCCESS) {
+    BaseGroupAuth *groupAuth = GetGroupAuth(GetGroupAuthType(authForm));
+    if (groupAuth != NULL) {
+        LOGE("Invoke ReturnErrorToLocalBySession for authForm:%d!", authForm);
         groupAuth->onError(requestId, session, errorCode);
     }
-    return res;
+    return HC_SUCCESS;
 }
 
 static int32_t AddVersionMsgToPeer(CJson *errorToPeer)
@@ -588,11 +630,13 @@ static int32_t ReturnErrorToPeerBySession(const CJson *authParam, const DeviceAu
             res = HC_ERR_NULL_PTR;
             break;
         }
-        if (!callback->onTransmit(requestId, (uint8_t *)errorToPeerStr, (uint32_t)strlen(errorToPeerStr) + 1)) {
-            LOGE("Failed to invoke onTransmit!");
+        LOGD("Begin transmit error msg to peer by session!");
+        if (!callback->onTransmit(requestId, (uint8_t *)errorToPeerStr, HcStrlen(errorToPeerStr) + 1)) {
+            LOGE("Failed to invoke onTransmit by session!");
             res = HC_ERR_TRANSMIT_FAIL;
             break;
         }
+        LOGD("End transmit error msg to peer by session!");
     } while (0);
     FreeJsonString(errorToPeerStr);
     return res;
@@ -601,10 +645,6 @@ static int32_t ReturnErrorToPeerBySession(const CJson *authParam, const DeviceAu
 static int32_t ReturnErrorToPeerByTask(const CJson *sendToPeer, const CJson *authParam,
     const DeviceAuthCallback *callback)
 {
-    if (sendToPeer == NULL) {
-        LOGD("NO need to send data to peer!");
-        return HC_SUCCESS;
-    }
     int64_t requestId = 0;
     if (GetByteFromJson(authParam, FIELD_REQUEST_ID, (uint8_t *)&requestId, sizeof(int64_t)) != HC_SUCCESS) {
         LOGE("Failed to get request id!");
@@ -623,11 +663,13 @@ static int32_t ReturnErrorToPeerByTask(const CJson *sendToPeer, const CJson *aut
             res = HC_ERR_NULL_PTR;
             break;
         }
-        if (!callback->onTransmit(requestId, (uint8_t *)sendToPeerStr, (uint32_t)strlen(sendToPeerStr) + 1)) {
-            LOGE("Failed to invoke onTransmit!");
+        LOGD("Begin transmit error msg to peer by task!");
+        if (!callback->onTransmit(requestId, (uint8_t *)sendToPeerStr, HcStrlen(sendToPeerStr) + 1)) {
+            LOGE("Failed to invoke onTransmit by task!");
             res = HC_ERR_TRANSMIT_FAIL;
             break;
         }
+        LOGD("End transmit error msg to peer by task!");
     } while (0);
     FreeJsonString(sendToPeerStr);
     return res;
@@ -655,12 +697,11 @@ static int32_t ProcessNextGroupIfPossible(AuthSession *session)
         return HC_ERR_NULL_PTR;
     }
     CJson *outNext = CreateJson();
+    if (outNext == NULL) {
+        LOGE("Failed to create json for outNext!");
+        return HC_ERR_ALLOC_MEMORY;
+    }
     do {
-        if (outNext == NULL) {
-            LOGE("Failed to create json for outNext!");
-            res = HC_ERR_ALLOC_MEMORY;
-            break;
-        }
         int32_t status = 0;
         res = CreateAndProcessTask(session, paramInNextSession, outNext, &status);
         if (res != HC_SUCCESS) {
@@ -679,7 +720,6 @@ static int32_t ProcessNextGroupIfPossible(AuthSession *session)
 int32_t ReturnSessionKey(int64_t requestId, const CJson *authParam,
     const CJson *out, const DeviceAuthCallback *callback)
 {
-    LOGI("Begin return session key.");
     int32_t keyLen = DEFAULT_RETURN_KEY_LENGTH;
     (void)GetIntFromJson(authParam, FIELD_KEY_LENGTH, &keyLen);
     uint8_t *sessionKey = (uint8_t *)HcMalloc(keyLen, 0);
@@ -700,12 +740,13 @@ int32_t ReturnSessionKey(int64_t requestId, const CJson *authParam,
             res = HC_ERR_INVALID_PARAMS;
             break;
         }
+        LOGI("Begin invoke onSessionKeyReturned.");
         callback->onSessionKeyReturned(requestId, sessionKey, keyLen);
+        LOGI("End invoke onSessionKeyReturned, res = %d.", res);
     } while (0);
     (void)memset_s(sessionKey, keyLen, 0, keyLen);
     HcFree(sessionKey);
     sessionKey = NULL;
-    LOGI("End return session key, res = %d.", res);
     return res;
 }
 
@@ -713,7 +754,6 @@ void DeleteCachedData(CJson *paramInSession)
 {
     DeleteItemFromJson(paramInSession, FIELD_PAYLOAD);
     DeleteItemFromJson(paramInSession, FIELD_SELF_AUTH_ID);
-    DeleteItemFromJson(paramInSession, FIELD_PEER_AUTH_ID);
     DeleteItemFromJson(paramInSession, FIELD_OPERATION_CODE);
 }
 
@@ -723,6 +763,7 @@ int32_t GetGroupAuthType(int32_t authForm)
         case AUTH_FORM_ACCOUNT_UNRELATED:
             return ACCOUNT_UNRELATED_GROUP_AUTH_TYPE;
         case AUTH_FORM_IDENTICAL_ACCOUNT:
+            return ACCOUNT_RELATED_GROUP_AUTH_TYPE;
         case AUTH_FORM_ACROSS_ACCOUNT:
             return ACCOUNT_RELATED_GROUP_AUTH_TYPE;
         default:
@@ -746,10 +787,12 @@ int32_t InformAuthError(AuthSession *session, const CJson *out, int errorCode)
         return res;
     }
     const CJson *sendToPeer = GetObjFromJson(out, FIELD_SEND_TO_PEER);
-    res = ReturnErrorToPeerByTask(sendToPeer, paramInSession, session->base.callback);
-    if (res != HC_SUCCESS) {
-        LOGE("Failed to return task's error msg to peer!");
-        return res;
+    if (sendToPeer != NULL) {
+        res = ReturnErrorToPeerByTask(sendToPeer, paramInSession, session->base.callback);
+        if (res != HC_SUCCESS) {
+            LOGE("Failed to return task's error msg to peer!");
+            return res;
+        }
     }
 
     res = ProcessNextGroupIfPossible(session);
@@ -782,7 +825,7 @@ int32_t ProcessTaskStatusForAuth(const AuthSession *session, const CJson *param,
     int32_t res = HC_SUCCESS;
     switch (status) {
         case IGNORE_MSG:
-            LOGI("Ignore this msg.");
+            LOGD("Ignore this msg.");
             break;
         case CONTINUE:
             res = ReturnTransmitData(session, out);
@@ -808,6 +851,10 @@ int32_t CreateAndProcessTask(AuthSession *session, CJson *paramInSession, CJson 
 {
     int32_t moduleType = GetAuthModuleType(paramInSession);
     const char *pkgName = GetStringFromJson(paramInSession, FIELD_SERVICE_PKG_NAME);
+    if (pkgName == NULL) {
+        LOGE("Pkg name is null!");
+        return HC_ERR_NULL_PTR;
+    }
     if (AddStringToJson(paramInSession, FIELD_PKG_NAME, pkgName) != HC_SUCCESS) {
         LOGE("Failed to add pkg name to json!");
         return HC_ERR_JSON_FAIL;
@@ -821,6 +868,7 @@ int32_t CreateAndProcessTask(AuthSession *session, CJson *paramInSession, CJson 
     res = ProcessTask(session->curTaskId, paramInSession, out, status, moduleType);
     DeleteCachedData(paramInSession);
     if (res != HC_SUCCESS) {
+        DestroyTask(session->curTaskId, GetAuthModuleType(paramInSession));
         LOGE("Failed to process task for auth!");
         return res;
     }
@@ -842,6 +890,7 @@ void InformLocalAuthError(const CJson *authParam, const DeviceAuthCallback *call
         return;
     }
     if ((callback != NULL) && (callback->onError != NULL)) {
+        LOGE("Invoke InformLocalAuthError!");
         callback->onError(requestId, AUTH_FORM_INVALID_TYPE, HC_ERR_CREATE_SESSION_FAIL, NULL);
     }
 }

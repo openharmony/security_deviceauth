@@ -20,15 +20,18 @@
 #include "base_group_auth.h"
 #include "database_manager.h"
 
-#define DEFAULT_CREDENTIAL_TYPE 2
-
-typedef void (*GetTcisCandidateGroupFunc)(const CJson *param, GroupQueryParams *queryParams, GroupInfoVec *vec);
+typedef void (*GetTcisCandidateGroupFunc)(const CJson *param, const GroupQueryParams *queryParams, GroupInfoVec *vec);
 
 typedef struct {
     BaseGroupAuth base;
     GetTcisCandidateGroupFunc getTcisCandidateGroup;
 } AccountRelatedGroupAuth;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 BaseGroupAuth *GetAccountRelatedGroupAuth(void);
-
+#ifdef __cplusplus
+}
+#endif
 #endif
