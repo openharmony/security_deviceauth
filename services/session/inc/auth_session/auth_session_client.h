@@ -18,6 +18,11 @@
 
 #include "auth_session_common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 Session *CreateClientAuthSession(CJson *param, const DeviceAuthCallback *callback);
-
+#ifdef __cplusplus
+}
+#endif
 #endif

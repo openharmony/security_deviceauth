@@ -22,6 +22,7 @@
 
 #define OUT_OF_HEX 16
 #define NUMBER_9_IN_DECIMAL 9
+#define ASCII_CASE_DIFFERENCE_VALUE 32
 
 static char HexToChar(uint8_t hex)
 {
@@ -94,7 +95,7 @@ int64_t StringToInt64(const char *cp)
     return strtoll(cp, NULL, DEC);
 }
 
-void ConvertToAnnoymousStr(const char *originalStr, char **anonymousStr)
+void ConvertToAnonymousStr(const char *originalStr, char **anonymousStr)
 {
     if ((originalStr == NULL) || (anonymousStr == NULL)) {
         return;
@@ -122,4 +123,25 @@ void ConvertToAnnoymousStr(const char *originalStr, char **anonymousStr)
         *anonymousStr = NULL;
         return;
     }
+}
+
+int32_t ToUpperCase(const char *oriStr, char **desStr)
+{
+    if (oriStr == NULL || desStr == NULL) {
+        LOGE("Params is null.");
+        return HAL_ERR_INVALID_PARAM;
+    }
+    *desStr = HcMalloc(HcStrlen(oriStr) + 1, 0);
+    if (*desStr == NULL) {
+        LOGE("Failed to allocate desStr memory!");
+        return HAL_ERR_BAD_ALLOC;
+    }
+    for (uint32_t i = 0; i < HcStrlen(oriStr); i++) {
+        if ((oriStr[i] >= 'a') && (oriStr[i] <= 'f')) {
+            (*desStr)[i] = oriStr[i] - ASCII_CASE_DIFFERENCE_VALUE;
+        } else {
+            (*desStr)[i] = oriStr[i];
+        }
+    }
+    return HAL_SUCCESS;
 }
