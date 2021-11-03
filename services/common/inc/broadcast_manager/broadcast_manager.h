@@ -19,6 +19,10 @@
 #include "database.h"
 #include "device_auth.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
     void (*postOnGroupCreated)(const GroupInfo *groupInfo);
     void (*postOnGroupDeleted)(const GroupInfo *groupInfo);
@@ -36,4 +40,7 @@ Broadcaster *GetBroadcaster(void);
 int32_t AddListener(const char *appId, const DataChangeListener *listener);
 int32_t RemoveListener(const char *appId);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

@@ -167,6 +167,7 @@ static int OnChannelOpenedCb(int sessionId, int result)
         DestroySession(requestId);
         return HC_ERR_SOFT_BUS;
     }
+    LOGD("[Start]: OnChannelOpened! [ReqId]: %" PRId64 ", [ChannelId]: %d", requestId, sessionId);
     SoftBusTask *task = (SoftBusTask *)HcMalloc(sizeof(SoftBusTask), 0);
     if (task == NULL) {
         LOGE("Failed to allocate task memory!");
@@ -216,6 +217,7 @@ static int32_t OpenSoftBusChannel(const char *connectParams, int64_t requestId, 
     }
     LOGD("[SoftBus][In]: OpenChannel!");
     int64_t channelId = (int64_t)OpenAuthSession(GROUP_MANAGER_PACKAGE_NAME, NULL, 0, connectParams);
+    LOGD("[SoftBus][Out]: OpenChannel! channelId: %" PRId64, channelId);
     /* If the value of channelId is less than 0, the soft bus fails to open the channel */
     if (channelId < 0) {
         LOGE("Failed to open soft bus channel!");

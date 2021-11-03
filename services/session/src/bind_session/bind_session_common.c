@@ -14,11 +14,12 @@
  */
 
 #include "bind_session_common.h"
+#include "bind_session_common_util.h"
 #include "callback_manager.h"
 #include "channel_manager.h"
 #include "database_manager.h"
 #include "dev_auth_module_manager.h"
-#include "group_common.h"
+#include "group_operation_common.h"
 #include "hc_dev_info.h"
 #include "hc_log.h"
 #include "session_common.h"
@@ -43,7 +44,7 @@ static int32_t AddGroupInfoToSendData(const BindSession *session, CJson *data)
         LOGE("Failed to add groupName to data!");
         return HC_ERR_JSON_FAIL;
     }
-    if (AddIntToJson(data, FIELD_GROUP_OP, session->operationCode) != HC_SUCCESS) {
+    if (AddIntToJson(data, FIELD_GROUP_OP, session->opCode) != HC_SUCCESS) {
         LOGE("Failed to add groupOp to data!");
         return HC_ERR_JSON_FAIL;
     }
@@ -79,16 +80,11 @@ static int32_t AddDevInfoToSendData(const BindSession *session, CJson *data)
 
 static int32_t AddRequestInfoToSendData(const BindSession *session, CJson *data)
 {
-    const char *appId = GetStringFromJson(session->params, FIELD_APP_ID);
-    if (appId == NULL) {
-        LOGE("Failed to get appId from params!");
-        return HC_ERR_JSON_GET;
-    }
-    if (AddStringToJson(data, FIELD_APP_ID, appId) != HC_SUCCESS) {
+    if (AddStringToJson(data, FIELD_APP_ID, session->appId) != HC_SUCCESS) {
         LOGE("Failed to add appId to data!");
         return HC_ERR_JSON_FAIL;
     }
-    if (AddInt64StringToJson(data, FIELD_REQUEST_ID, session->requestId) != HC_SUCCESS) {
+    if (AddInt64StringToJson(data, FIELD_REQUEST_ID, session->reqId) != HC_SUCCESS) {
         LOGE("Failed to add requestId to data!");
         return HC_ERR_JSON_FAIL;
     }
@@ -101,12 +97,11 @@ static int32_t AddRequestInfoToSendData(const BindSession *session, CJson *data)
 
 static int32_t GenerateCompatibleInfo(CJson *groupInfo)
 {
-    uint8_t udid[INPUT_UDID_LEN] = { 0 };
-    if (HcGetUdid(udid, INPUT_UDID_LEN) != HC_SUCCESS) {
-        LOGE("Get local udid failed");
-        return HC_ERROR;
+    const char *udid = GetLocalDevUdid();
+    if (udid == NULL) {
+        return HC_ERR_DB;
     }
-    if (AddStringToJson(groupInfo, FIELD_DEVICE_ID, (const char *)udid) != HC_SUCCESS) {
+    if (AddStringToJson(groupInfo, FIELD_DEVICE_ID, udid) != HC_SUCCESS) {
         LOGE("Failed to add deviceId to groupInfo!");
         return HC_ERR_JSON_FAIL;
     }
@@ -192,7 +187,7 @@ static int32_t AddGroupAndDevInfoToParams(const BindSession *session, CJson *mod
 static int32_t AddRequestInfoToParams(bool isClient, const BindSession *session, CJson *moduleParams)
 {
     if (AddByteToJson(moduleParams, FIELD_REQUEST_ID,
-        (const uint8_t *)&session->requestId, sizeof(int64_t)) != HC_SUCCESS) {
+        (const uint8_t *)&session->reqId, sizeof(int64_t)) != HC_SUCCESS) {
         LOGE("Failed to add requestId to moduleParams!");
         return HC_ERR_JSON_FAIL;
     }
@@ -214,7 +209,7 @@ static int32_t AddRequestInfoToParams(bool isClient, const BindSession *session,
 
 static int32_t AddPinCodeToParamsIfNeed(BindSession *session, CJson *moduleParams)
 {
-    if (session->operationCode == MEMBER_DELETE) {
+    if (session->opCode == MEMBER_DELETE) {
         return HC_SUCCESS;
     }
     const char *pinCode = GetStringFromJson(session->params, FIELD_PIN_CODE);
@@ -261,7 +256,7 @@ static int32_t AddPeerUserTypeToParams(BindSession *session, CJson *moduleParams
 
 static int32_t AddPeerAuthIdAndUserTypeToParamsIfNeed(BindSession *session, CJson *moduleParams)
 {
-    if (session->operationCode != MEMBER_DELETE) {
+    if (session->opCode != MEMBER_DELETE) {
         return HC_SUCCESS;
     }
     int32_t result = AddPeerAuthIdToParams(session, moduleParams);
@@ -324,7 +319,7 @@ static int32_t AddGroupInfoByDatabase(const char *groupId, CJson *params)
         LOGE("Failed to allocate groupEntry memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    if (GetGroupEntryByGroupId(groupId, entry) != HC_SUCCESS) {
+    if (GetGroupInfoById(groupId, entry) != HC_SUCCESS) {
         LOGE("Failed to obtain the group information from the database!");
         DestroyGroupInfoStruct(entry);
         return HC_ERR_DB;
@@ -339,17 +334,16 @@ static int32_t AddGroupInfoByDatabase(const char *groupId, CJson *params)
 
 static int32_t AddDevInfoByDatabase(const char *groupId, CJson *params)
 {
-    uint8_t udid[INPUT_UDID_LEN] = { 0 };
-    if (HcGetUdid(udid, INPUT_UDID_LEN) != HC_SUCCESS) {
-        LOGE("Get local udid failed");
-        return HC_ERROR;
+    const char *udid = GetLocalDevUdid();
+    if (udid == NULL) {
+        return HC_ERR_DB;
     }
     DeviceInfo *devAuthParams = CreateDeviceInfoStruct();
     if (devAuthParams == NULL) {
         LOGE("Failed to allocate devEntry memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    if (GetDeviceInfoForDevAuth((const char *)udid, groupId, devAuthParams) != HC_SUCCESS) {
+    if (GetDeviceInfoById(udid, true, groupId, devAuthParams) != HC_SUCCESS) {
         LOGE("Failed to obtain the device information from the database!");
         DestroyDeviceInfoStruct(devAuthParams);
         return HC_ERR_DB;
@@ -450,23 +444,23 @@ static int32_t CheckAuthIdAndUserTypeValid(int userType, const char *groupId, co
     if (!IsGroupExistByGroupId(groupId)) {
         return HC_SUCCESS;
     }
-    uint8_t udid[INPUT_UDID_LEN] = { 0 };
-    if (HcGetUdid(udid, INPUT_UDID_LEN) != HC_SUCCESS) {
-        LOGE("Get local udid failed");
-        return HC_ERROR;
+    const char *udid = GetLocalDevUdid();
+    if (udid == NULL) {
+        return HC_ERR_DB;
     }
     DeviceInfo *deviceInfo = CreateDeviceInfoStruct();
     if (deviceInfo == NULL) {
         LOGE("Failed to allocate deviceInfo memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    int32_t result = GetDeviceInfoForDevAuth((char *)udid, groupId, deviceInfo);
+    int32_t result = GetDeviceInfoById(udid, true, groupId, deviceInfo);
     if (result != HC_SUCCESS) {
         LOGE("Failed to obtain the local device information from the database!");
         DestroyDeviceInfoStruct(deviceInfo);
         return result;
     }
-    if ((deviceInfo->devType != userType) || (strcmp(StringGet(&deviceInfo->authId), authId) != 0)) {
+    const char *oriAuthId = StringGet(&deviceInfo->authId);
+    if ((deviceInfo->devType != userType) || ((oriAuthId != NULL) && (strcmp(oriAuthId, authId) != 0))) {
         LOGE("Once a group is created, the service cannot change the local authId and userType used in the group!");
         DestroyDeviceInfoStruct(deviceInfo);
         return HC_ERR_INVALID_PARAMS;
@@ -483,15 +477,13 @@ static int32_t AddAuthIdAndUserTypeIfValidOrDefault(const char *groupId, const C
         LOGE("The input userType is invalid!");
         return HC_ERR_INVALID_PARAMS;
     }
-    uint8_t udid[INPUT_UDID_LEN] = { 0 };
     const char *authId = GetStringFromJson(jsonParams, FIELD_DEVICE_ID);
     if (authId == NULL) {
         LOGD("No authId is found. The default value is udid!");
-        if (HcGetUdid(udid, INPUT_UDID_LEN) != HC_SUCCESS) {
-            LOGE("Get local udid failed");
-            return HC_ERROR;
+        authId = GetLocalDevUdid();
+        if (authId == NULL) {
+            return HC_ERR_DB;
         }
-        authId = (const char *)udid;
     }
     int32_t result = CheckAuthIdAndUserTypeValid(userType, groupId, authId);
     if (result != HC_SUCCESS) {
@@ -510,12 +502,11 @@ static int32_t AddAuthIdAndUserTypeIfValidOrDefault(const char *groupId, const C
 
 static int32_t AddUdid(CJson *params)
 {
-    uint8_t udid[INPUT_UDID_LEN] = { 0 };
-    if (HcGetUdid(udid, INPUT_UDID_LEN) != HC_SUCCESS) {
-        LOGE("Get local udid failed");
-        return HC_ERROR;
+    const char *udid = GetLocalDevUdid();
+    if (udid == NULL) {
+        return HC_ERR_DB;
     }
-    if (AddStringToJson(params, FIELD_CONN_DEVICE_ID, (const char *)udid) != HC_SUCCESS) {
+    if (AddStringToJson(params, FIELD_CONN_DEVICE_ID, udid) != HC_SUCCESS) {
         LOGE("Failed to add udid to params!");
         return HC_ERR_JSON_FAIL;
     }
@@ -582,12 +573,9 @@ static int32_t GenerateParamsByDatabase(const char *groupId, CJson *params)
 
 static int32_t AddIsForceDeleteIfNeed(int isClient, const CJson *jsonParams, BindSession *session)
 {
-    if ((isClient == CLIENT) && (session->operationCode == MEMBER_DELETE)) {
+    if ((isClient == CLIENT) && (session->opCode == MEMBER_DELETE)) {
         bool isForceDelete = false;
-        if (GetBoolFromJson(jsonParams, FIELD_IS_FORCE_DELETE, &isForceDelete) != HC_SUCCESS) {
-            LOGE("Failed to get isForceDelete from jsonParams!");
-            return HC_ERR_JSON_GET;
-        }
+        (void)GetBoolFromJson(jsonParams, FIELD_IS_FORCE_DELETE, &isForceDelete);
         if (AddBoolToJson(session->params, FIELD_IS_FORCE_DELETE, isForceDelete) != HC_SUCCESS) {
             LOGE("Failed to add isForceDelete to params!");
             return HC_ERR_JSON_FAIL;
@@ -611,7 +599,7 @@ static int32_t AddChannelIdIfNeed(int isClient, const CJson *jsonParams, BindSes
 
 static int32_t AddPinCodeIfNeed(const CJson *jsonParams, BindSession *session)
 {
-    if (session->operationCode != MEMBER_DELETE) {
+    if (session->opCode != MEMBER_DELETE) {
         const char *pinCode = GetStringFromJson(jsonParams, FIELD_PIN_CODE);
         if (pinCode == NULL) {
             LOGE("Failed to get pinCode from jsonParams!");
@@ -680,7 +668,7 @@ static int32_t AddPeerUserTypeIfDelete(BindSession *session)
         LOGE("Failed to allocate devEntry memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    if (GetDeviceInfoByAuthId(peerAuthId, groupId, devAuthParams) != HC_SUCCESS) {
+    if (GetDeviceInfoById(peerAuthId, false, groupId, devAuthParams) != HC_SUCCESS) {
         LOGE("Failed to obtain the device information from the database!");
         DestroyDeviceInfoStruct(devAuthParams);
         return HC_ERR_DB;
@@ -695,7 +683,7 @@ static int32_t AddPeerUserTypeIfDelete(BindSession *session)
 
 static int32_t AddPeerDevInfoIfNeed(bool isClient, const CJson *jsonParams, BindSession *session)
 {
-    if (session->operationCode == MEMBER_DELETE) {
+    if (session->opCode == MEMBER_DELETE) {
         int32_t result = AddPeerAuthIdIfDelete(isClient, jsonParams, session);
         if (result != HC_SUCCESS) {
             return result;
@@ -712,25 +700,11 @@ static int32_t AddGroupAndDevInfo(int isClient, const CJson *jsonParams, BindSes
         LOGE("Failed to get groupId from jsonParams!");
         return HC_ERR_JSON_GET;
     }
-    if (NeedCreateGroup(isClient, session->operationCode)) {
+    if (NeedCreateGroup(isClient, session->opCode)) {
         return GenerateParamsByInput(groupId, jsonParams, session->params);
     } else {
         return GenerateParamsByDatabase(groupId, session->params);
     }
-}
-
-static int32_t AddAppId(const CJson *jsonParams, BindSession *session)
-{
-    const char *appId = GetStringFromJson(jsonParams, FIELD_APP_ID);
-    if (appId == NULL) {
-        LOGE("Failed to get appId from in!");
-        return HC_ERR_JSON_GET;
-    }
-    if (AddStringToJson(session->params, FIELD_APP_ID, appId) != HC_SUCCESS) {
-        LOGE("Failed to add appId to params!");
-        return HC_ERR_JSON_FAIL;
-    }
-    return HC_SUCCESS;
 }
 
 static int32_t InteractWithPeer(const BindSession *session, CJson *sendData)
@@ -748,7 +722,7 @@ static int32_t InformSelfBindSuccess(const char *peerAuthId, const char *groupId
 {
     uint8_t sessionKey[DEFAULT_RETURN_KEY_LENGTH] = { 0 };
     if (GetByteFromJson(out, FIELD_SESSION_KEY, sessionKey, DEFAULT_RETURN_KEY_LENGTH) == HC_SUCCESS) {
-        ProcessSessionKeyCallback(session->requestId, sessionKey, DEFAULT_RETURN_KEY_LENGTH, session->base.callback);
+        ProcessSessionKeyCallback(session->reqId, sessionKey, DEFAULT_RETURN_KEY_LENGTH, session->base.callback);
         (void)memset_s(sessionKey, DEFAULT_RETURN_KEY_LENGTH, 0, DEFAULT_RETURN_KEY_LENGTH);
         ClearSensitiveStringInJson(out, FIELD_SESSION_KEY);
     }
@@ -759,7 +733,7 @@ static int32_t InformSelfBindSuccess(const char *peerAuthId, const char *groupId
         LOGE("Failed to generate the data to be sent to the service!");
         return result;
     }
-    ProcessFinishCallback(session->requestId, session->operationCode, jsonDataStr, session->base.callback);
+    ProcessFinishCallback(session->reqId, session->opCode, jsonDataStr, session->base.callback);
     FreeJsonString(jsonDataStr);
     return HC_SUCCESS;
 }
@@ -772,7 +746,7 @@ static int32_t InformSelfUnbindSuccess(const char *peerAuthId, const char *group
         LOGE("Failed to generate the data to be sent to the service!");
         return result;
     }
-    ProcessFinishCallback(session->requestId, session->operationCode, jsonDataStr, session->base.callback);
+    ProcessFinishCallback(session->reqId, session->opCode, jsonDataStr, session->base.callback);
     FreeJsonString(jsonDataStr);
     return HC_SUCCESS;
 }
@@ -805,14 +779,9 @@ static int32_t SetGroupName(const CJson *params, GroupInfo *groupParams)
     return HC_SUCCESS;
 }
 
-static int32_t SetGroupOwner(const CJson *params, GroupInfo *groupParams)
+static int32_t SetGroupOwner(const char *ownerAppId, GroupInfo *groupParams)
 {
-    const char *groupOwner = GetStringFromJson(params, FIELD_APP_ID);
-    if (groupOwner == NULL) {
-        LOGE("Failed to get appId from params!");
-        return HC_ERR_JSON_GET;
-    }
-    if (!StringSetPointer(&groupParams->ownerName, groupOwner)) {
+    if (!StringSetPointer(&groupParams->ownerName, ownerAppId)) {
         LOGE("Failed to copy groupOwner!");
         return HC_ERR_MEMORY_COPY;
     }
@@ -869,28 +838,28 @@ static int32_t ForceDeletePeerKey(CJson *params)
     return DeletePeerAuthInfo(appId, groupId, &peerAuthIdBuff, peerUserType, DAS_MODULE);
 }
 
-static int32_t GenerateGroupParams(const CJson *params, GroupInfo *groupParams)
+static int32_t GenerateGroupParams(const BindSession *session, GroupInfo *groupParams)
 {
     int32_t result;
-    if (((result = SetGroupId(params, groupParams)) != HC_SUCCESS) ||
-        ((result = SetGroupName(params, groupParams)) != HC_SUCCESS) ||
-        ((result = SetGroupOwner(params, groupParams)) != HC_SUCCESS) ||
-        ((result = SetGroupType(params, groupParams)) != HC_SUCCESS) ||
-        ((result = SetGroupVisibility(params, groupParams)) != HC_SUCCESS) ||
-        ((result = SetGroupExpireTime(params, groupParams)) != HC_SUCCESS)) {
+    if (((result = SetGroupId(session->params, groupParams)) != HC_SUCCESS) ||
+        ((result = SetGroupName(session->params, groupParams)) != HC_SUCCESS) ||
+        ((result = SetGroupOwner(session->appId, groupParams)) != HC_SUCCESS) ||
+        ((result = SetGroupType(session->params, groupParams)) != HC_SUCCESS) ||
+        ((result = SetGroupVisibility(session->params, groupParams)) != HC_SUCCESS) ||
+        ((result = SetGroupExpireTime(session->params, groupParams)) != HC_SUCCESS)) {
         return result;
     }
     return HC_SUCCESS;
 }
 
-static int32_t AddGroupToDatabase(const CJson *params)
+static int32_t AddGroupToDatabase(const BindSession *session)
 {
     GroupInfo *groupParams = CreateGroupInfoStruct();
     if (groupParams == NULL) {
         LOGE("Failed to allocate groupParams memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    int32_t result = GenerateGroupParams(params, groupParams);
+    int32_t result = GenerateGroupParams(session, groupParams);
     if (result != HC_SUCCESS) {
         LOGE("Failed to generate groupParams!");
         DestroyGroupInfoStruct(groupParams);
@@ -942,48 +911,45 @@ static int32_t AddGroupAndLocalDevIfNotExist(const char *groupId, const BindSess
 {
     int32_t result = HC_SUCCESS;
     if (!IsGroupExistByGroupId(groupId)) {
-        result = AddGroupToDatabase(session->params);
+        const char *udid = GetLocalDevUdid();
+        if (udid == NULL) {
+            return HC_ERR_DB;
+        }
+        result = AddGroupToDatabase(session);
         if (result != HC_SUCCESS) {
             return result;
-        }
-        uint8_t udid[INPUT_UDID_LEN] = { 0 };
-        if (HcGetUdid(udid, INPUT_UDID_LEN) != HC_SUCCESS) {
-            LOGE("Get local udid failed");
-            return HC_ERROR;
         }
         const char *authId = GetStringFromJson(session->params, FIELD_AUTH_ID);
         if (authId == NULL) {
             LOGI("No authId is found. The default value is udid!");
-            authId = (const char *)udid;
+            authId = udid;
         }
         int userType = DEVICE_TYPE_ACCESSORY;
         (void)GetIntFromJson(session->params, FIELD_USER_TYPE, &userType);
-        return AddTrustDevToDatabase(authId, (char *)udid, groupId, userType);
+        return AddTrustDevToDatabase(authId, udid, groupId, userType);
     }
-    LOGI("The group corresponding to the groupId already exists. "
-         "Therefore, the group will not be created again, and some data transferred by the service may be ignored!");
     return result;
 }
 
 static int32_t AddPeerDevToGroup(const char *peerAuthId, const char *peerUdid,
     const char *groupId, const BindSession *session)
 {
-    if (IsTrustedDeviceInGroupByAuthId(groupId, peerAuthId)) {
-        LOGI("The peer device already exists in the group! RequestId: %" PRId64, session->requestId);
-        if (DelTrustedDeviceByAuthId(peerAuthId, groupId) != HC_SUCCESS) {
-            LOGE("Failed to delete the original data! RequestId: %" PRId64, session->requestId);
+    if (IsTrustedDeviceInGroup(groupId, peerAuthId, false)) {
+        LOGI("The peer device already exists in the group! RequestId: %" PRId64, session->reqId);
+        if (DelTrustedDevice(peerAuthId, false, groupId) != HC_SUCCESS) {
+            LOGE("Failed to delete the original data! RequestId: %" PRId64, session->reqId);
             return HC_ERR_DB;
         }
-        LOGI("Delete the original data successfully! RequestId: %" PRId64, session->requestId);
+        LOGI("Delete the original data successfully! RequestId: %" PRId64, session->reqId);
     }
     int peerUserType = DEVICE_TYPE_ACCESSORY;
     (void)GetIntFromJson(session->params, FIELD_PEER_USER_TYPE, &peerUserType);
     int32_t result = AddTrustDevToDatabase(peerAuthId, peerUdid, groupId, peerUserType);
     if (result != HC_SUCCESS) {
-        LOGE("Failed to update the peer trusted device information! RequestId: %" PRId64, session->requestId);
+        LOGE("Failed to update the peer trusted device information! RequestId: %" PRId64, session->reqId);
         return result;
     }
-    LOGI("The peer trusted device is added to the database successfully! RequestId: %" PRId64, session->requestId);
+    LOGI("The peer trusted device is added to the database successfully! RequestId: %" PRId64, session->reqId);
     return HC_SUCCESS;
 }
 
@@ -1010,7 +976,7 @@ static int32_t HandleBindSuccess(const char *peerAuthId, const char *peerUdid,
 static int32_t HandleUnbindSuccess(const char *peerAuthId, const char *groupId, const BindSession *session)
 {
     if (IsGroupExistByGroupId(groupId)) {
-        if (DelTrustedDeviceByAuthId(peerAuthId, groupId) != HC_SUCCESS) {
+        if (DelTrustedDevice(peerAuthId, false, groupId) != HC_SUCCESS) {
             LOGE("Failed to unbind device from database!");
             return HC_ERR_DB;
         }
@@ -1042,7 +1008,7 @@ static int32_t OnBindOrUnbindFinish(const BindSession *session, const CJson *jso
         LOGE("Failed to get groupId from session params!");
         return HC_ERR_JSON_GET;
     }
-    if (session->operationCode == MEMBER_DELETE) {
+    if (session->opCode == MEMBER_DELETE) {
         return HandleUnbindSuccess(peerAuthId, groupId, session);
     } else {
         return HandleBindSuccess(peerAuthId, peerUdid, groupId, session, out);
@@ -1065,41 +1031,10 @@ static int32_t OnSessionFinish(const BindSession *session, CJson *jsonParams, CJ
         LOGE("An error occurred when processing different end operations!");
         return result;
     }
-    LOGI("The device is successfully %s!", (session->operationCode == MEMBER_DELETE) ? "unbound" : "bound");
+    LOGI("The session completed successfully! [ReqId]: %" PRId64, session->reqId);
     SetAuthResult(session->channelType, session->channelId);
     CloseChannel(session->channelType, session->channelId);
     return HC_SUCCESS;
-}
-
-static int32_t CheckPeerStatus(const CJson *jsonParams, bool *isNeedInform)
-{
-    int32_t errorCode = 0;
-    if (GetIntFromJson(jsonParams, FIELD_GROUP_ERROR_MSG, &errorCode) == HC_SUCCESS) {
-        LOGE("An error occurs in the peer service! [ErrorCode]: %d", errorCode);
-        *isNeedInform = false;
-        return errorCode;
-    }
-    return HC_SUCCESS;
-}
-
-static CJson *GenerateGroupErrorMsg(int32_t errorCode, int64_t requestId)
-{
-    CJson *errorData = CreateJson();
-    if (errorData == NULL) {
-        LOGE("Failed to allocate errorData memory!");
-        return NULL;
-    }
-    if (AddIntToJson(errorData, FIELD_GROUP_ERROR_MSG, errorCode) != HC_SUCCESS) {
-        LOGE("Failed to add errorCode to errorData!");
-        FreeJson(errorData);
-        return NULL;
-    }
-    if (AddInt64StringToJson(errorData, FIELD_REQUEST_ID, requestId) != HC_SUCCESS) {
-        LOGE("Failed to add requestId to errorData!");
-        FreeJson(errorData);
-        return NULL;
-    }
-    return errorData;
 }
 
 static int32_t ProcessBindSessionInner(BindSession *session, CJson *jsonParams, int32_t *status, bool *isNeedInform)
@@ -1118,7 +1053,7 @@ static int32_t ProcessBindSessionInner(BindSession *session, CJson *jsonParams, 
     result = ProcessModule(session, jsonParams, out, status);
     if (result != HC_SUCCESS) {
         *isNeedInform = false;
-        InformPeerModuleErrorIfNeed(out, session);
+        InformPeerModuleError(out, session);
         FreeJson(out);
         return result;
     }
@@ -1142,31 +1077,29 @@ static int32_t ProcessBindSessionInner(BindSession *session, CJson *jsonParams, 
     return result;
 }
 
-static int32_t ProcessBindSession(Session *session, CJson *jsonParams)
+int32_t ProcessBindSession(Session *session, CJson *jsonParams)
 {
     if ((session == NULL) || (jsonParams == NULL)) {
         LOGE("The input session or jsonParams is NULL!");
         return HC_ERR_INVALID_PARAMS;
     }
     BindSession *realSession = (BindSession *)session;
-    LOGI("Start to process bind session! [RequestId]: %" PRId64 ", [OperationCode]: %d",
-        realSession->requestId, realSession->operationCode);
+    LOGI("Start to process bind session successfully! [ReqId]: %" PRId64, realSession->reqId);
 
     bool isNeedInform = true;
     int32_t status = CONTINUE;
     int32_t result = ProcessBindSessionInner(realSession, jsonParams, &status, &isNeedInform);
     if (result != HC_SUCCESS) {
         LOGE("An error occurs during processing bind session. We need to notify the service!");
-        InformPeerProcessErrorIfNeed(isNeedInform, result, realSession);
+        InformPeerGroupErrorIfNeed(isNeedInform, result, realSession);
         if ((!NeedForceDelete(realSession)) || (ForceUnbindDevice(realSession) != HC_SUCCESS)) {
-            ProcessErrorCallback(realSession->requestId, realSession->operationCode, result, NULL,
+            ProcessErrorCallback(realSession->reqId, realSession->opCode, result, NULL,
                 realSession->base.callback);
         }
         CloseChannel(realSession->channelType, realSession->channelId);
         return result;
     }
-    LOGI("Process bind session successfully! [RequestId]: %" PRId64 ", [OperationCode]: %d",
-         realSession->requestId, realSession->operationCode);
+    LOGI("Process bind session successfully! [ReqId]: %" PRId64, realSession->reqId);
     if (status == FINISH) {
         return status;
     }
@@ -1202,7 +1135,7 @@ int32_t ForceUnbindDevice(const BindSession *session)
         LOGE("Failed to get groupId from jsonParams!");
         return HC_ERR_JSON_GET;
     }
-    int32_t result = DelTrustedDeviceByAuthId(peerAuthId, groupId);
+    int32_t result = DelTrustedDevice(peerAuthId, false, groupId);
     if (result != HC_SUCCESS) {
         LOGE("Failed to delete trust device from database!");
         return result;
@@ -1221,7 +1154,7 @@ int32_t ForceUnbindDevice(const BindSession *session)
     if (result != HC_SUCCESS) {
         return result;
     }
-    ProcessFinishCallback(session->requestId, MEMBER_DELETE, returnDataStr, session->base.callback);
+    ProcessFinishCallback(session->reqId, MEMBER_DELETE, returnDataStr, session->base.callback);
     FreeJsonString(returnDataStr);
     return HC_SUCCESS;
 }
@@ -1237,106 +1170,13 @@ int32_t GenerateBindParams(int isClient, const CJson *jsonParams, BindSession *s
     }
 
     int32_t result;
-    if (((result = AddAppId(jsonParams, session)) != HC_SUCCESS) ||
-        ((result = AddIsForceDeleteIfNeed(isClient, jsonParams, session)) != HC_SUCCESS) ||
+    if (((result = AddIsForceDeleteIfNeed(isClient, jsonParams, session)) != HC_SUCCESS) ||
         ((result = AddChannelIdIfNeed(isClient, jsonParams, session)) != HC_SUCCESS) ||
         ((result = AddPinCodeIfNeed(jsonParams, session)) != HC_SUCCESS) ||
         ((result = AddGroupAndDevInfo(isClient, jsonParams, session)) != HC_SUCCESS) ||
         ((result = AddPeerDevInfoIfNeed(isClient, jsonParams, session)) != HC_SUCCESS)) {
         return result;
     }
-    return HC_SUCCESS;
-}
-
-int32_t SendBindSessionData(const BindSession *session, const CJson *sendData)
-{
-    char *sendDataStr = PackJsonToString(sendData);
-    if (sendDataStr == NULL) {
-        LOGE("An error occurred when converting json to string!");
-        return HC_ERR_JSON_FAIL;
-    }
-    int32_t result = HcSendMsg(session->channelType, session->requestId,
-        session->channelId, session->base.callback, sendDataStr);
-    FreeJsonString(sendDataStr);
-    return result;
-}
-
-void InformPeerProcessErrorIfNeed(bool isNeedInform, int32_t errorCode, const BindSession *session)
-{
-    if (!isNeedInform) {
-        return;
-    }
-    CJson *errorData = GenerateGroupErrorMsg(errorCode, session->requestId);
-    if (errorData == NULL) {
-        return;
-    }
-    int32_t result = SendBindSessionData(session, errorData);
-    FreeJson(errorData);
-    if (result != HC_SUCCESS) {
-        LOGE("An error occurred when notifying the peer service!");
-        return;
-    }
-    LOGI("Succeeded in notifying the peer device that an error occurred at the local end!");
-}
-
-void InformPeerModuleErrorIfNeed(CJson *out, const BindSession *session)
-{
-    CJson *errorData = GetObjFromJson(out, FIELD_SEND_TO_PEER);
-    if (errorData == NULL) {
-        return;
-    }
-    if (AddInt64StringToJson(errorData, FIELD_REQUEST_ID, session->requestId) != HC_SUCCESS) {
-        LOGE("Failed to add requestId to errorData!");
-        return;
-    }
-    int32_t result = SendBindSessionData(session, errorData);
-    if (result != HC_SUCCESS) {
-        LOGE("An error occurred when notifying the peer service!");
-        return;
-    }
-    LOGI("Succeeded in notifying the peer device that an error occurred at the local end!");
-}
-
-void DestroyBindSession(Session *session)
-{
-    if (session == NULL) {
-        return;
-    }
-    BindSession *realSession = (BindSession *)session;
-    DestroyTask(realSession->curTaskId, DAS_MODULE);
-    FreeJson(realSession->params);
-    realSession->params = NULL;
-    HcFree(realSession);
-    realSession = NULL;
-}
-
-int32_t ProcessModule(const BindSession *session, const CJson *in, CJson *out, int *status)
-{
-    LOGI("Start to process DAS module task!");
-    int32_t result = ProcessTask(session->curTaskId, in, out, status, DAS_MODULE);
-    if (result != HC_SUCCESS) {
-        LOGE("An error occurs when the module processes task! [ErrorCode]: %d", result);
-        return result;
-    }
-    LOGI("Process DAS module task successfully!");
-    return HC_SUCCESS;
-}
-
-int32_t CreateAndProcessModule(BindSession *session, const CJson *in, CJson *out)
-{
-    int status = 0;
-    LOGI("Start to create and process DAS module task!");
-    int32_t result = CreateTask(&(session->curTaskId), in, out, DAS_MODULE);
-    if (result != HC_SUCCESS) {
-        LOGE("An error occurs when creating a module task! [ErrorCode]: %d", result);
-        return result;
-    }
-    result = ProcessTask(session->curTaskId, in, out, &status, DAS_MODULE);
-    if (result != HC_SUCCESS) {
-        LOGE("An error occurs when the module processes task! [ErrorCode]: %d", result);
-        return result;
-    }
-    LOGI("Create and process DAS module task successfully!");
     return HC_SUCCESS;
 }
 
@@ -1362,26 +1202,4 @@ int32_t GenerateBasicModuleParams(bool isClient, BindSession *session, CJson *mo
         return result;
     }
     return HC_SUCCESS;
-}
-
-void InitBindSession(int bindType, int operationCode, int64_t requestId, const DeviceAuthCallback *callback,
-    BindSession *session)
-{
-    session->base.process = ProcessBindSession;
-    session->base.destroy = DestroyBindSession;
-    session->curTaskId = 0;
-    session->base.callback = callback;
-    int res = GenerateSessionOrTaskId(&session->base.sessionId);
-    if (res != 0) {
-        return;
-    }
-    session->base.type = bindType;
-    session->channelType = NO_CHANNEL;
-    session->operationCode = operationCode;
-    session->requestId = requestId;
-    session->channelId = DEFAULT_CHANNEL_ID;
-    session->isWaiting = HC_FALSE;
-    session->params = NULL;
-    session->onChannelOpened = NULL;
-    session->onConfirmationReceived = NULL;
 }

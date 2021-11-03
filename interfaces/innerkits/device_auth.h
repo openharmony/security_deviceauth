@@ -55,13 +55,25 @@
 #define FIELD_SERVICE_PKG_NAME "servicePkgName"
 #define FIELD_USER_TYPE "userType"
 #define FIELD_USER_ID "userId"
+#define FIELD_SHARED_USER_ID "sharedUserId"
+#define FIELD_OWNER_USER_ID "ownerUserId"
 #define FIELD_DEVICE_ID "deviceId"
 #define FIELD_UID_HASH "uidHash"
 #define FIELD_PIN_CODE "pinCode"
 #define FIELD_AUTH_ID "authId"
+#define FIELD_UDID "udid"
+#define FIELD_IS_SELF_PK "isSelfPk"
 #define FIELD_GROUP_VISIBILITY "groupVisibility"
 #define FIELD_EXPIRE_TIME "expireTime"
 #define FIELD_IS_DELETE_ALL "isDeleteAll"
+
+typedef enum {
+    ALL_GROUP = 0,
+    IDENTICAL_ACCOUNT_GROUP = 1,
+    PEER_TO_PEER_GROUP = 256,
+    COMPATIBLE_GROUP = 512,
+    ACROSS_ACCOUNT_AUTHORIZE_GROUP = 1282
+} GroupType;
 
 typedef enum {
     GROUP_CREATE = 0,
@@ -85,9 +97,11 @@ typedef enum {
     DEVICE_TYPE_PROXY = 2
 } UserType;
 
-#define REQUEST_REJECTED 0x80000005
-#define REQUEST_ACCEPTED 0x80000006
-#define REQUEST_WAITING 0x80000007
+typedef enum {
+    REQUEST_REJECTED = 0x80000005,
+    REQUEST_ACCEPTED = 0x80000006,
+    REQUEST_WAITING = 0x80000007
+} RequestResponse;
 
 typedef struct {
     void (*onGroupCreated)(const char *groupInfo);
@@ -130,13 +144,16 @@ typedef struct {
     int32_t (*processData)(int64_t requestId, const uint8_t *data, uint32_t dataLen);
     int32_t (*confirmRequest)(int64_t requestId, const char *appId, const char *confirmParams);
     int32_t (*bindPeer)(int64_t requestId, const char *appId, const char *bindParams);
-    int32_t (*unbindPeer)(int64_t requestId, const char *appId, const char *unBindParams);
+    int32_t (*unbindPeer)(int64_t requestId, const char *appId, const char *unbindParams);
     int32_t (*processLiteData)(int64_t requestId, const char *appId, const uint8_t *data, uint32_t dataLen);
     int32_t (*authKeyAgree)(int64_t requestId, const char *appId, const char *buildParams);
     int32_t (*processKeyAgreeData)(int64_t requestId, const char *appId, const uint8_t *data, uint32_t dataLen);
     int32_t (*processCredential)(int operationCode, const char *reqJsonStr, char **returnJsonStr);
     int32_t (*getRegisterInfo)(char **returnRegisterInfo);
     int32_t (*getLocalConnectInfo)(char *returnInfo, int32_t bufLen);
+    int32_t (*checkAccessToGroup)(const char *appId, const char *groupId);
+    int32_t (*getPkInfoList)(const char *appId, const char *queryParams, char **returnInfoList,
+        uint32_t *returnInfoNum);
     int32_t (*addGroupManager)(const char *appId, const char *groupId, const char *managerAppId);
     int32_t (*addGroupFriend)(const char *appId, const char *groupId, const char *friendAppId);
     int32_t (*deleteGroupManager)(const char *appId, const char *groupId, const char *managerAppId);
@@ -147,9 +164,9 @@ typedef struct {
     int32_t (*getGroupInfo)(const char *appId, const char *queryParams, char **returnGroupVec, uint32_t *groupNum);
     int32_t (*getJoinedGroups)(const char *appId, int groupType, char **returnGroupVec, uint32_t *groupNum);
     int32_t (*getRelatedGroups)(const char *appId, const char *peerDeviceId, char **returnGroupVec, uint32_t *groupNum);
-    int32_t (*getDeviceInfoById)(const char *appId, const char *deviceId, const char *groupId, char **returnDeviceInfo);
+    int32_t (*getDeviceInfoById)(const char *appId, const char *deviceId, const char *groupId,
+        char **returnDeviceInfo);
     int32_t (*getTrustedDevices)(const char *appId, const char *groupId, char **returnDevInfoVec, uint32_t *deviceNum);
-    int32_t (*checkAccessToGroup)(const char *appId, const char *groupId);
     bool (*isDeviceInGroup)(const char *appId, const char *groupId, const char *deviceId);
     void (*destroyInfo)(char **returnInfo);
 } DeviceGroupManager;

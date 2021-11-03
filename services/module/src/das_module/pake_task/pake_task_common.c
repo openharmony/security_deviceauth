@@ -57,7 +57,7 @@ int32_t ConstructOutJson(const PakeParams *params, CJson *out)
         LOGE("Add payload to sendToPeer failed, res: %d.", res);
         goto err;
     }
-    
+
     res = AddObjToJson(out, FIELD_SEND_TO_PEER, sendToPeer);
     if (res != HC_SUCCESS) {
         LOGE("Add sendToPeer to out failed, res: %d.", res);

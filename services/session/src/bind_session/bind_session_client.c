@@ -14,16 +14,17 @@
  */
 
 #include "bind_session_client.h"
+#include "bind_session_common_util.h"
 #include "callback_manager.h"
 #include "channel_manager.h"
-#include "group_common.h"
+#include "group_operation_common.h"
 #include "hc_log.h"
 #include "session_manager.h"
 
 static int32_t GenerateClientModuleParams(BindSession *session, CJson *moduleParams)
 {
     if (AddIntToJson(moduleParams, FIELD_OPERATION_CODE,
-        ((session->operationCode == MEMBER_DELETE) ? OP_UNBIND : OP_BIND)) != HC_SUCCESS) {
+        ((session->opCode == MEMBER_DELETE) ? OP_UNBIND : OP_BIND)) != HC_SUCCESS) {
         LOGE("Failed to add operationCode to moduleParams!");
         return HC_ERR_JSON_FAIL;
     }
@@ -117,7 +118,7 @@ static void OnBindChannelOpened(Session *session, int64_t channelId, int64_t req
     /* Double check channelId. If the two channelIds are different, the channel fails to be established. */
     int32_t result = DoubleCheckChannelId(channelId, realSession->channelId);
     if (result != HC_SUCCESS) {
-        ProcessErrorCallback(requestId, realSession->operationCode, result, NULL, realSession->base.callback);
+        ProcessErrorCallback(requestId, realSession->opCode, result, NULL, realSession->base.callback);
         DestroySession(requestId);
         return;
     }
@@ -126,8 +127,7 @@ static void OnBindChannelOpened(Session *session, int64_t channelId, int64_t req
     if (result != HC_SUCCESS) {
         LOGI("An error occurs before the client send data to the server. We need to notify the service!");
         if ((!NeedForceDelete(realSession)) || (ForceUnbindDevice(realSession) != HC_SUCCESS)) {
-            ProcessErrorCallback(requestId, realSession->operationCode, result, NULL,
-                realSession->base.callback);
+            ProcessErrorCallback(requestId, realSession->opCode, result, NULL, realSession->base.callback);
         }
         CloseChannel(realSession->channelType, realSession->channelId);
         DestroySession(requestId);
@@ -140,34 +140,22 @@ static int32_t PrepareClient(const CJson *jsonParams, BindSession *session)
     if (result != HC_SUCCESS) {
         return result;
     }
-    return OpenChannel(session->channelType, jsonParams, session->requestId, &session->channelId);
-}
-
-static void InitClientChannel(const DeviceAuthCallback *callback, const CJson *jsonParams, BindSession *session)
-{
-    session->channelType = GetChannelType(callback, jsonParams);
+    return OpenChannel(session->channelType, jsonParams, session->reqId, &session->channelId);
 }
 
 Session *CreateClientBindSession(CJson *jsonParams, const DeviceAuthCallback *callback)
 {
-    int64_t requestId = DEFAULT_REQUEST_ID;
-    if (GetInt64FromJson(jsonParams, FIELD_REQUEST_ID, &requestId) != HC_SUCCESS) {
-        LOGE("Failed to get requestId from jsonParams!");
+    int opCode = MEMBER_INVITE;
+    if (GetIntFromJson(jsonParams, FIELD_OPERATION_CODE, &opCode) != HC_SUCCESS) {
+        LOGE("Failed to get opCode from json!");
         return NULL;
     }
-    int operationCode = MEMBER_INVITE;
-    if (GetIntFromJson(jsonParams, FIELD_OPERATION_CODE, &operationCode) != HC_SUCCESS) {
-        LOGE("Failed to get operationCode from jsonParams!");
-        return NULL;
-    }
-    LOGI("Start to create client bind session! [RequestId]: %" PRId64 ", [OperationCode]: %d",
-        requestId, operationCode);
     /*
      * If service want to join the peer group,
      * the identity key pair of the corresponding group needs to be generated here.
      */
     int32_t result;
-    if (NeedCreateGroup(CLIENT, operationCode)) {
+    if (NeedCreateGroup(CLIENT, opCode)) {
         const char *groupId = GetStringFromJson(jsonParams, FIELD_GROUP_ID);
         if (groupId == NULL) {
             LOGE("Failed to get groupId from jsonParams!");
@@ -179,22 +167,20 @@ Session *CreateClientBindSession(CJson *jsonParams, const DeviceAuthCallback *ca
         }
     }
 
-    BindSession *session = (BindSession *)HcMalloc(sizeof(BindSession), 0);
+    BindSession *session = CreateBaseBindSession(TYPE_CLIENT_BIND_SESSION, opCode,
+        jsonParams, callback, ProcessBindSession);
     if (session == NULL) {
-        LOGE("Failed to allocate session memory!");
         return NULL;
     }
-    InitBindSession(TYPE_CLIENT_BIND_SESSION, operationCode, requestId, callback, session);
     InitClientChannel(callback, jsonParams, session);
     /* The client bind session needs to receive a message indicating that the channel is open. */
     session->onChannelOpened = OnBindChannelOpened;
 
     result = PrepareClient(jsonParams, session);
     if (result != HC_SUCCESS) {
+        ProcessErrorCallback(session->reqId, session->opCode, result, NULL, session->base.callback);
         DestroyBindSession((Session *)session);
         return NULL;
     }
-    LOGI("Create client bind session successfully! [RequestId]: %" PRId64 ", [OperationCode]: %d",
-        requestId, operationCode);
     return (Session *)session;
 }

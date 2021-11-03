@@ -15,24 +15,21 @@
 
 #include "broadcast_manager.h"
 #include "device_auth_defines.h"
-#include "hc_log.h"
+#include "stddef.h"
 
-bool IsBroadcastSupported()
+bool IsBroadcastSupported(void)
 {
     return false;
 }
 
-int32_t InitBroadcastManager()
+int32_t InitBroadcastManager(void)
 {
     return HC_SUCCESS;
 }
 
-void DestroyBroadcastManager()
-{
-    return;
-}
+void DestroyBroadcastManager(void) {}
 
-Broadcaster *GetBroadcaster()
+Broadcaster *GetBroadcaster(void)
 {
     return NULL;
 }
@@ -41,13 +38,11 @@ int32_t AddListener(const char *appId, const DataChangeListener *listener)
 {
     (void)appId;
     (void)listener;
-    LOGE("Broadcast manager is not supported!");
     return HC_ERR_NOT_SUPPORT;
 }
 
 int32_t RemoveListener(const char *appId)
 {
     (void)appId;
-    LOGE("Broadcast manager is not supported!");
     return HC_ERR_NOT_SUPPORT;
 }

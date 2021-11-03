@@ -16,37 +16,13 @@
 #ifndef BIND_SESSION_COMMON_H
 #define BIND_SESSION_COMMON_H
 
-#include "base_session.h"
-#include "common_defs.h"
-#include "hc_types.h"
+#include "bind_session_common_defines.h"
 
-typedef struct {
-    Session base;
-    void (*onChannelOpened)(Session *, int64_t channelId, int64_t requestId);
-    void (*onConfirmationReceived)(Session *, CJson *returnData);
-    int curTaskId;
-    int operationCode;
-    ChannelType channelType;
-    bool isWaiting;
-    int64_t requestId;
-    int64_t channelId;
-    CJson *params;
-} BindSession;
-
-void DestroyBindSession(Session *session);
-
-/* session interfaces */
-int32_t SendBindSessionData(const BindSession *session, const CJson *out);
-void InformPeerProcessErrorIfNeed(bool isModuleError, int32_t errorCode, const BindSession *session);
-void InformPeerModuleErrorIfNeed(CJson *out, const BindSession *session);
-void InitBindSession(int bindType, int operationCode, int64_t requestId, const DeviceAuthCallback *callback,
-    BindSession *session);
-int32_t CreateAndProcessModule(BindSession *session, const CJson *in, CJson *out);
-int32_t ProcessModule(const BindSession *session, const CJson *in, CJson *out, int *status);
 int32_t AddInfoToSendData(bool isNeedCompatibleInfo, const BindSession *session, CJson *data);
 int32_t GenerateBasicModuleParams(bool isClient, BindSession *session, CJson *moduleParams);
 int32_t GenerateBindParams(int isClient, const CJson *jsonParams, BindSession *session);
 bool NeedCreateGroup(int isClient, int operationCode);
 bool NeedForceDelete(const BindSession *session);
 int32_t ForceUnbindDevice(const BindSession *session);
+int32_t ProcessBindSession(Session *session, CJson *jsonParams);
 #endif
