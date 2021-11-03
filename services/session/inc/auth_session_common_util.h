@@ -20,8 +20,14 @@
 #include "device_auth.h"
 #include "json_utils.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 char *GetServerConfirmation(const CJson *paramsFromClient, const CJson *reqParam,
     const DeviceAuthCallback *callback);
 int32_t GetGeneralReqParams(const CJson *receiveData, CJson *reqParam);
-
+bool IsUidHashEqual(const char *uidHashInDb, const char *peerUidHash);
+#ifdef __cplusplus
+}
+#endif
 #endif

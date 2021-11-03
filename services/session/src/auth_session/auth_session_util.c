@@ -36,26 +36,19 @@ static int32_t AuthFormToModuleType(int32_t authForm)
     return moduleType;
 }
 
-int32_t GetGroupAuth(int32_t groupAuthType, BaseGroupAuth **groupAuthHandle)
+BaseGroupAuth *GetGroupAuth(int32_t groupAuthType)
 {
     switch (groupAuthType) {
         case ACCOUNT_UNRELATED_GROUP_AUTH_TYPE:
             LOGI("Non-account auth type.");
-            *groupAuthHandle = GetNonAccountGroupAuth();
-            break;
+            return GetAccountUnrelatedGroupAuth();
         case ACCOUNT_RELATED_GROUP_AUTH_TYPE:
             LOGI("Account-related auth type.");
-            *groupAuthHandle = GetAccountRelatedGroupAuth();
-            break;
+            return GetAccountRelatedGroupAuth();
         default:
             LOGE("Invalid auth type!");
-            break;
     }
-    if ((*groupAuthHandle) == NULL) {
-        LOGE("Device auth do not support groupAuthType: %d, !", groupAuthType);
-        return HC_ERR_NULL_PTR;
-    }
-    return HC_SUCCESS;
+    return NULL;
 }
 
 int32_t GetAuthModuleType(const CJson *in)
@@ -67,6 +60,17 @@ int32_t GetAuthModuleType(const CJson *in)
     }
     return AuthFormToModuleType(authForm);
 }
+
+bool IsBleAuthForAcrossAccount(const CJson *authParam)
+{
+    int32_t credentialType = CREDENTIAL_TYPE_DEFAULT_CONTROLLER;
+    if (GetIntFromJson(authParam, FIELD_CREDENTIAL_TYPE, &credentialType) != HC_SUCCESS) {
+        return false;
+    }
+    bool isBle = ((uint32_t)credentialType & CREDENTIAL_TYPE_BLE);
+    return isBle;
+}
+
 
 int32_t GetInfoHash(const uint8_t *info, uint32_t infoLen, char *str, uint32_t strLen)
 {

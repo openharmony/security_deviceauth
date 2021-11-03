@@ -18,11 +18,16 @@
 
 #include "group_auth_common_defines.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 int32_t GetAuthState(int64_t authReqId, const char *groupId, const char *peerUdid, uint8_t *out, uint32_t *outLen);
 void InformDeviceDisconnection(const char *udid);
 bool IsTrustedDevice(const char *udid);
 int32_t QueryTrustedDeviceNum(void);
 void DoAuthDevice(HcTaskBase *task);
-void DoProcessData(HcTaskBase *task);
-
+void DoProcessAuthData(HcTaskBase *task);
+#ifdef __cplusplus
+}
+#endif
 #endif

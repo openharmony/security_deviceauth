@@ -14,7 +14,6 @@
  */
 
 #include "auth_session_common_lite.h"
-#include "auth_session_util.h"
 #include "common_defs.h"
 #include "das_module_defines.h"
 #include "dev_auth_module_manager.h"
@@ -33,13 +32,28 @@ static int32_t ProcessAuthTaskLite(AuthSessionLite *session, int32_t moduleType,
         InformAuthErrorLite(in, session->base.callback, out, res);
         return res;
     }
-    res = ProcessLiteTaskStatusForAuth(session, out, status);
-    return res;
+    return ProcessLiteTaskStatusForAuth(session, out, status);
+}
+
+static int32_t GetAuthModuleTypeLite(const CJson *in)
+{
+    int32_t authForm = AUTH_FORM_INVALID_TYPE;
+    if (GetIntFromJson(in, FIELD_AUTH_FORM, &authForm) != HC_SUCCESS) {
+        LOGE("Failed to get auth form!");
+        return INVALID_MODULE_TYPE;
+    }
+    if (authForm == AUTH_FORM_ACCOUNT_UNRELATED) {
+        return DAS_MODULE;
+    } else if ((authForm == AUTH_FORM_IDENTICAL_ACCOUNT) || (authForm == AUTH_FORM_ACROSS_ACCOUNT)) {
+        return TCIS_MODULE;
+    }
+    LOGE("Invalid authForm for repeated payload check in auth session lite!");
+    return INVALID_MODULE_TYPE;
 }
 
 static int ProcessAuthSessionLite(Session *session, CJson *in)
 {
-    LOGI("Begin process authSession lite.");
+    LOGD("Begin process authSession lite.");
     if ((session == NULL) || (in == NULL)) {
         LOGE("Invalid input params!");
         return HC_ERR_INVALID_PARAMS;
@@ -51,7 +65,7 @@ static int ProcessAuthSessionLite(Session *session, CJson *in)
         LOGE("Failed to create json!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    int32_t res = ProcessAuthTaskLite(realSession, GetAuthModuleType(realSession->authParams), in, out);
+    int32_t res = ProcessAuthTaskLite(realSession, GetAuthModuleTypeLite(realSession->authParams), in, out);
     FreeJson(out);
     LOGI("End process authSession lite, res = %d.", res);
     return res;
@@ -75,6 +89,7 @@ static void ReturnErrorDataLite(const CJson *in, const DeviceAuthCallback *callb
         return;
     }
     if ((callback != NULL) && (callback->onError != NULL)) {
+        LOGE("Begin to invoke onError for lite auth!");
         callback->onError(requestId, authForm, errorCode, returnStr);
     }
     FreeJsonString(returnStr);
@@ -102,6 +117,7 @@ static int32_t ReturnSessionKeyLite(int64_t requestId, const CJson *authParams,
             res = HC_ERR_JSON_GET;
             break;
         }
+        LOGD("Begin to invoke onSessionKeyReturned for lite auth.");
         callback->onSessionKeyReturned(requestId, sessionKey, keyLen);
     } while (0);
     (void)memset_s(sessionKey, keyLen, 0, keyLen);
@@ -126,11 +142,13 @@ static void ReturnFinishDataLiteInner(int64_t requestId, const CJson *in, const 
             return;
         }
         if ((callback != NULL) && (callback->onTransmit != NULL)) {
+            LOGD("Begin to invoke onTransmit for lite auth!");
             if (!callback->onTransmit(requestId, (uint8_t *)sendToPeerStr, (uint32_t)strlen(sendToPeerStr) + 1)) {
                 LOGE("Failed to transmit data to peer!");
                 FreeJsonString(sendToPeerStr);
                 return;
             }
+            LOGD("End to invoke onTransmit for lite auth!");
         }
         FreeJsonString(sendToPeerStr);
     }
@@ -139,12 +157,12 @@ static void ReturnFinishDataLiteInner(int64_t requestId, const CJson *in, const 
         return;
     }
     char *returnStr = PackJsonToString(sendToSelf);
-    ClearSensitiveStringInJson(sendToSelf, FIELD_SESSION_KEY);
     if (returnStr == NULL) {
         LOGE("Failed to pack returnStr for onFinish!");
         return;
     }
     if ((callback != NULL) && (callback->onFinish != NULL)) {
+        LOGD("Begin to invoke onFinish for lite auth.");
         callback->onFinish(requestId, authForm, returnStr);
     }
     ClearAndFreeJsonString(returnStr);
@@ -194,10 +212,12 @@ int32_t ReturnTransmitDataLite(const AuthSessionLite *session, CJson *out)
             ret = HC_ERR_NULL_PTR;
             break;
         }
+        LOGD("Begin to invoke onTransmit for lite auth.");
         if (!callback->onTransmit(requestId, (uint8_t *)outStr, (uint32_t)strlen(outStr) + 1)) {
             LOGE("Failed to transmit data to peer!");
             ret = HC_ERR_TRANSMIT_FAIL;
         }
+        LOGD("End to invoke onTransmit for lite auth.");
     } while (0);
     FreeJsonString(outStr);
     return ret;
@@ -211,6 +231,7 @@ void InformLocalAuthErrorLite(const CJson *authParam, const DeviceAuthCallback *
         return;
     }
     if ((callback != NULL) && (callback->onError != NULL)) {
+        LOGE("Begin to invoke onError for lite auth.");
         callback->onError(requestId, AUTH_FORM_INVALID_TYPE, HC_ERR_CREATE_SESSION_FAIL, NULL);
     }
 }
@@ -250,6 +271,7 @@ void InformPeerAuthErrorLite(const CJson *in, const DeviceAuthCallback *callback
         return;
     }
     if ((callback != NULL) && (callback->onTransmit != NULL)) {
+        LOGD("Begin to invoke onTransmit for lite auth.");
         (void)callback->onTransmit(requestId, (uint8_t *)errorToPeerStr, (uint32_t)strlen(errorToPeerStr) + 1);
     }
     FreeJsonString(errorToPeerStr);
@@ -278,6 +300,7 @@ void InformAuthErrorLite(const CJson *in, const DeviceAuthCallback *callback, co
         return;
     }
     if ((callback != NULL) && (callback->onTransmit != NULL)) {
+        LOGD("Begin to invoke onTransmit for lite auth in InformAuthErrorLite.");
         (void)callback->onTransmit(requestId, (uint8_t *)sendToPeerStr, (uint32_t)strlen(sendToPeerStr) + 1);
     }
     FreeJsonString(sendToPeerStr);
@@ -285,25 +308,16 @@ void InformAuthErrorLite(const CJson *in, const DeviceAuthCallback *callback, co
 
 int32_t CreateAndProcessLiteTask(AuthSessionLite *session, CJson *out, int32_t *status)
 {
-    int32_t moduleType = GetAuthModuleType(session->authParams);
-    const char *pkgName = GetStringFromJson(session->authParams, FIELD_SERVICE_PKG_NAME);
-    if (AddStringToJson(session->authParams, FIELD_PKG_NAME, pkgName) != HC_SUCCESS) {
-        LOGE("Failed to add pkg name to json!");
-        InformLocalAuthErrorLite(session->authParams, session->base.callback);
-        InformPeerAuthErrorLite(session->authParams, session->base.callback);
-        return HC_ERR_JSON_FAIL;
-    }
+    int32_t moduleType = GetAuthModuleTypeLite(session->authParams);
     session->curTaskId = 0;
     int32_t res = CreateTask(&(session->curTaskId), session->authParams, out, moduleType);
     if (res != HC_SUCCESS) {
         LOGE("Failed to create task for auth!");
-        InformAuthErrorLite(session->authParams, session->base.callback, out, res);
         return res;
     }
     res = ProcessTask(session->curTaskId, session->authParams, out, status, moduleType);
     if (res != HC_SUCCESS) {
         LOGE("Failed to process task for auth!");
-        InformAuthErrorLite(session->authParams, session->base.callback, out, res);
         return res;
     }
     return HC_SUCCESS;
@@ -314,11 +328,10 @@ int32_t ProcessLiteTaskStatusForAuth(const AuthSessionLite *session, CJson *out,
     int32_t res = HC_SUCCESS;
     switch (status) {
         case IGNORE_MSG:
-            LOGI("Ignore this msg.");
+            LOGD("Ignore this msg.");
             break;
         case CONTINUE:
             res = ReturnTransmitDataLite(session, out);
-            FreeJson(out);
             if (res != HC_SUCCESS) {
                 LOGE("Failed to transmit lite auth data to peer!");
                 InformLocalAuthErrorLite(session->authParams, session->base.callback);
@@ -326,6 +339,7 @@ int32_t ProcessLiteTaskStatusForAuth(const AuthSessionLite *session, CJson *out,
             break;
         case FINISH:
             ReturnFinishDataLite(session->authParams, session->base.callback, out);
+            ClearSensitiveStringInJson(out, FIELD_SESSION_KEY);
             res = FINISH;
             break;
         default:
@@ -347,7 +361,7 @@ void DestroyAuthSessionLite(Session *session)
     realSession = NULL;
 }
 
-AuthSessionLite *InitAuthSessionLite(CJson *param, const DeviceAuthCallback *callback)
+AuthSessionLite *InitAuthSessionLite(const CJson *in, const DeviceAuthCallback *callback)
 {
     AuthSessionLite *session = (AuthSessionLite *)HcMalloc(sizeof(AuthSessionLite), 0);
     if (session == NULL) {
@@ -357,7 +371,7 @@ AuthSessionLite *InitAuthSessionLite(CJson *param, const DeviceAuthCallback *cal
     session->base.process = ProcessAuthSessionLite;
     session->base.destroy = DestroyAuthSessionLite;
     session->base.callback = callback;
-    session->authParams = DuplicateJson(param);
+    session->authParams = DuplicateJson(in);
     if (session->authParams == NULL) {
         LOGE("Failed to duplicate param!");
         DestroyAuthSessionLite((Session *)session);

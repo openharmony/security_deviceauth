@@ -29,12 +29,28 @@ static int32_t StartServerAuthLiteTask(AuthSessionLite *session)
         InformPeerAuthErrorLite(session->authParams, session->base.callback);
         return HC_ERR_ALLOC_MEMORY;
     }
+
+    const char *pkgName = GetStringFromJson(session->authParams, FIELD_SERVICE_PKG_NAME);
+    if (pkgName == NULL) {
+        LOGE("Pkg name is null, the input is invalid!");
+        FreeJson(out);
+        return HC_ERR_INVALID_PARAMS;
+    }
+    if (AddStringToJson(session->authParams, FIELD_PKG_NAME, pkgName) != HC_SUCCESS) {
+        LOGE("Failed to add pkg name for server!");
+        FreeJson(out);
+        InformPeerAuthErrorLite(session->authParams, session->base.callback);
+        InformLocalAuthErrorLite(session->authParams, session->base.callback);
+        return HC_ERR_JSON_FAIL;
+    }
+
     int32_t status = 0;
     int32_t res = CreateAndProcessLiteTask(session, out, &status);
     DeleteItemFromJson(session->authParams, FIELD_PAYLOAD);
     if (res != HC_SUCCESS) {
+        LOGE("Failed to process for server auth lite session!");
+        InformAuthErrorLite(session->authParams, session->base.callback, out, res);
         FreeJson(out);
-        LOGE("Failed to process for Server auth lite session!");
         return res;
     }
     res = ProcessLiteTaskStatusForAuth(session, out, status);
@@ -44,11 +60,6 @@ static int32_t StartServerAuthLiteTask(AuthSessionLite *session)
 
 static int32_t CombineServerParamsLite(const CJson *confirmationJson, CJson *dataFromClient)
 {
-    bool isClient = false;
-    if (AddBoolToJson(dataFromClient, FIELD_IS_CLIENT, isClient) != HC_SUCCESS) {
-        LOGE("Failed to combine server param with isClient!");
-        return HC_ERR_JSON_FAIL;
-    }
     const char *pkgName = GetStringFromJson(confirmationJson, FIELD_SERVICE_PKG_NAME);
     if (pkgName == NULL) {
         LOGE("Failed to get pkgName from confirmation data!");
@@ -59,23 +70,23 @@ static int32_t CombineServerParamsLite(const CJson *confirmationJson, CJson *dat
         return HC_ERR_JSON_FAIL;
     }
     const char *selfId = GetStringFromJson(confirmationJson, FIELD_SELF_AUTH_ID);
-    if (selfId == NULL) {
-        LOGE("Failed to get selfId from confirmation data!");
-        return HC_ERR_JSON_GET;
+    if (selfId != NULL) {
+        LOGD("Begin to add selfId for server auth!");
+        if (AddStringToJson(dataFromClient, FIELD_SELF_AUTH_ID, selfId) != HC_SUCCESS) {
+            LOGE("Failed to combine server param with selfId!");
+            return HC_ERR_JSON_FAIL;
+        }
     }
-    if (AddStringToJson(dataFromClient, FIELD_SELF_AUTH_ID, selfId) != HC_SUCCESS) {
-        LOGE("Failed to combine server param with selfId!");
-        return HC_ERR_JSON_FAIL;
-    }
+
     int32_t selfType;
-    if (GetIntFromJson(confirmationJson, FIELD_SELF_TYPE, &selfType) != HC_SUCCESS) {
-        LOGE("Failed to get selfId from confirmation data!");
-        return HC_ERR_JSON_GET;
+    if (GetIntFromJson(confirmationJson, FIELD_SELF_TYPE, &selfType) == HC_SUCCESS) {
+        LOGD("Begin to add selfId for server auth!");
+        if (AddIntToJson(dataFromClient, FIELD_SELF_TYPE, selfType) != HC_SUCCESS) {
+            LOGE("Failed to combine server param with selfType!");
+            return HC_ERR_JSON_FAIL;
+        }
     }
-    if (AddIntToJson(dataFromClient, FIELD_SELF_TYPE, selfType) != HC_SUCCESS) {
-        LOGE("Failed to combine server param with selfType!");
-        return HC_ERR_JSON_FAIL;
-    }
+
     const char *serviceType = GetStringFromJson(confirmationJson, FIELD_SERVICE_TYPE);
     if (serviceType == NULL) {
         LOGE("Failed to get serviceType from confirmation data!");
@@ -160,7 +171,7 @@ static Session *CreateServerAuthSessionLiteInner(CJson *in, const DeviceAuthCall
 Session *CreateServerAuthSessionLite(CJson *in, const DeviceAuthCallback *callback)
 {
     if (AddBoolToJson(in, FIELD_IS_CLIENT, false) != HC_SUCCESS) {
-        LOGE("Failed to add isClient to json!");
+        LOGE("Failed to add isClient to json for server auth!");
         InformLocalAuthErrorLite(in, callback);
         InformPeerAuthErrorLite(in, callback);
         return NULL;

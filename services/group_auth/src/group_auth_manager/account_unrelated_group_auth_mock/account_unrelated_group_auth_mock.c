@@ -14,8 +14,10 @@
  */
 
 #include "account_unrelated_group_auth.h"
+#include "hc_log.h"
 
-BaseGroupAuth *GetNonAccountGroupAuth()
+BaseGroupAuth *GetAccountUnrelatedGroupAuth()
 {
+    LOGD("Device auth do not support account unrelated auth!");
     return NULL;
 }

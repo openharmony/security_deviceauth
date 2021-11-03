@@ -20,9 +20,11 @@
 #include "device_auth.h"
 #include "json_utils.h"
 
-#define INDEX_OF_PARAMS_FOR_TASK 1
-#define LIST_SIZE_ONE 1
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 Session *CreateServerAuthSession(CJson *param, const DeviceAuthCallback *callback);
-
+#ifdef __cplusplus
+}
+#endif
 #endif

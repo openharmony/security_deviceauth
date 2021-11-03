@@ -39,41 +39,21 @@ int32_t CheckInputAuthParams(const CJson *authParam)
     return HC_SUCCESS;
 }
 
-static AuthSession *InitClientAuthSession(const DeviceAuthCallback *callback, ParamsVec *authParamsVec)
-{
-    AuthSession *session = (AuthSession *)HcMalloc(sizeof(AuthSession), 0);
-    if (session == NULL) {
-        LOGE("Failed to allocate memory for session!");
-        DestroyAuthParamsVec(authParamsVec);
-        return NULL;
-    }
-    session->base.process = ProcessClientAuthSession;
-    session->base.destroy = DestroyAuthSession;
-    session->base.callback = callback;
-    session->currentIndex = 0;
-    session->paramsList = *authParamsVec;
-    int32_t res = GenerateSessionOrTaskId(&session->base.sessionId);
-    if (res != HC_SUCCESS) {
-        LOGE("Failed to generate session id!");
-        DestroyAuthSession((Session *)session);
-        return NULL;
-    }
-    return session;
-}
-
 static int32_t ProcessClientAuthTask(AuthSession *session, int32_t moduleType, CJson *in, CJson *out)
 {
     int32_t status = 0;
     CJson *paramInSession = (session->paramsList).get(&(session->paramsList), session->currentIndex);
+    if (paramInSession == NULL) {
+        LOGE("Failed to get param in session!");
+        return HC_ERR_NULL_PTR;
+    }
     int32_t res = ProcessTask(session->curTaskId, in, out, &status, moduleType);
     DeleteItemFromJson(in, FIELD_PAYLOAD);
     if (res != HC_SUCCESS) {
         DestroyTask(session->curTaskId, moduleType);
-        res = InformAuthError(session, out, res);
-        return res;
+        return InformAuthError(session, out, res);
     }
-    res = ProcessTaskStatusForAuth(session, paramInSession, out, status);
-    return res;
+    return ProcessTaskStatusForAuth(session, paramInSession, out, status);
 }
 
 static int32_t StartClientAuthTask(AuthSession *session)
@@ -84,21 +64,17 @@ static int32_t StartClientAuthTask(AuthSession *session)
         return HC_ERR_NULL_PTR;
     }
     CJson *out = CreateJson();
-    int32_t res;
+    if (out == NULL) {
+        LOGE("Failed to create json!");
+        InformLocalAuthError(paramInSession, session->base.callback);
+        return HC_ERR_ALLOC_MEMORY;
+    }
     int32_t status = 0;
-    do {
-        if (out == NULL) {
-            LOGE("Failed to create json!");
-            res = HC_ERR_ALLOC_MEMORY;
-            break;
-        }
-        res = CreateAndProcessTask(session, paramInSession, out, &status);
-    } while (0);
+    int32_t res = CreateAndProcessTask(session, paramInSession, out, &status);
     if (res != HC_SUCCESS) {
-        DestroyTask(session->curTaskId, GetAuthModuleType(paramInSession));
         res = InformAuthError(session, out, res);
         FreeJson(out);
-        LOGD("Start process client auth task, res  = %d.", res);
+        LOGD("Start process client auth task, res = %d.", res);
         return res;
     }
     res = ProcessTaskStatusForAuth(session, paramInSession, out, status);
@@ -108,8 +84,8 @@ static int32_t StartClientAuthTask(AuthSession *session)
 
 int32_t CheckClientGroupAuthMsg(AuthSession *session, const CJson *in)
 {
-    int32_t GroupErrMsg = 0;
-    if (GetIntFromJson(in, FIELD_GROUP_ERROR_MSG, (int *)&GroupErrMsg) != HC_SUCCESS) {
+    int32_t groupErrMsg = 0;
+    if (GetIntFromJson(in, FIELD_GROUP_ERROR_MSG, (int *)&groupErrMsg) != HC_SUCCESS) {
         return HC_SUCCESS;
     }
     CJson *outData = CreateJson();
@@ -117,7 +93,7 @@ int32_t CheckClientGroupAuthMsg(AuthSession *session, const CJson *in)
         LOGE("Failed to malloc for outData!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    if (AddIntToJson(outData, FIELD_GROUP_ERROR_MSG, GroupErrMsg) != HC_SUCCESS) {
+    if (AddIntToJson(outData, FIELD_GROUP_ERROR_MSG, groupErrMsg) != HC_SUCCESS) {
         LOGE("Failed to add info to outData!");
         FreeJson(outData);
         return HC_ERR_JSON_FAIL;
@@ -159,7 +135,7 @@ static int32_t ProcessClientAuthSession(Session *session, CJson *in)
     ClearSensitiveStringInJson(out, FIELD_SESSION_KEY);
     FreeJson(out);
     if (res == FINISH) {
-        LOGI("End process client authSession, auth completed successfully.");
+        LOGD("End process client authSession.");
     }
     return res;
 }
@@ -168,26 +144,34 @@ static Session *CreateClientAuthSessionInner(CJson *param, const DeviceAuthCallb
 {
     ParamsVec authParamsVec;
     CreateAuthParamsVec(&authParamsVec);
-    AuthSession *session = NULL;
     int32_t res = GetAuthParamsList(param, &authParamsVec);
-    if (res != HC_SUCCESS) {
-        LOGE("Failed to get auth param list!");
+    if ((res != HC_SUCCESS) || (authParamsVec.size(&authParamsVec) == 0)) {
+        LOGE("Failed to get auth param list, candidate group = %u!", authParamsVec.size(&authParamsVec));
         DestroyAuthParamsVec(&authParamsVec);
         InformLocalAuthError(param, callback);
         return NULL;
     }
-    if (authParamsVec.size(&authParamsVec) == 0) {
-        LOGE("No candidate auth group!");
-        DestroyAuthParamsVec(&authParamsVec);
-        InformLocalAuthError(param, callback);
-        return NULL;
-    }
-    session = InitClientAuthSession(callback, &authParamsVec);
+
+    AuthSession *session = (AuthSession *)HcMalloc(sizeof(AuthSession), 0);
     if (session == NULL) {
-        LOGE("Failed to initial session!");
+        LOGE("Failed to allocate memory for session!");
+        DestroyAuthParamsVec(&authParamsVec);
         InformLocalAuthError(param, callback);
         return NULL;
     }
+    session->base.process = ProcessClientAuthSession;
+    session->base.destroy = DestroyAuthSession;
+    session->base.callback = callback;
+    session->currentIndex = 0;
+    session->paramsList = authParamsVec;
+    res = GenerateSessionOrTaskId(&session->base.sessionId);
+    if (res != HC_SUCCESS) {
+        LOGE("Failed to generate session id!");
+        DestroyAuthSession((Session *)session);
+        InformLocalAuthError(param, callback);
+        return NULL;
+    }
+
     res = StartClientAuthTask(session);
     if (res != HC_SUCCESS) {
         DestroyAuthSession((Session *)session);
@@ -198,6 +182,7 @@ static Session *CreateClientAuthSessionInner(CJson *param, const DeviceAuthCallb
 
 Session *CreateClientAuthSession(CJson *param, const DeviceAuthCallback *callback)
 {
+    LOGD("Begin create client authSession.");
     Session *session = NULL;
     if (CheckInputAuthParams(param) != HC_SUCCESS) {
         LOGE("Invalid input params!");
@@ -214,5 +199,6 @@ Session *CreateClientAuthSession(CJson *param, const DeviceAuthCallback *callbac
         LOGE("Failed to create client auth session!");
         return NULL;
     }
+    LOGD("End create client authSession.");
     return session;
 }

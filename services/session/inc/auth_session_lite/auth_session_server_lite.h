@@ -18,6 +18,11 @@
 
 #include "auth_session_common_lite.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 Session *CreateServerAuthSessionLite(CJson *in, const DeviceAuthCallback *callback);
-
+#ifdef __cplusplus
+}
+#endif
 #endif
