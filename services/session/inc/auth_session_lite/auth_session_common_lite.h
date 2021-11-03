@@ -27,6 +27,9 @@ typedef struct AuthSessionLiteT {
     CJson *authParams;
 } AuthSessionLite;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 int32_t ReturnTransmitDataLite(const AuthSessionLite *session, CJson *out);
 void InformLocalAuthErrorLite(const CJson *authParam, const DeviceAuthCallback *callback);
 void InformPeerAuthErrorLite(const CJson *in, const DeviceAuthCallback *callback);
@@ -34,6 +37,8 @@ void InformAuthErrorLite(const CJson *in, const DeviceAuthCallback *callback, co
 int32_t CreateAndProcessLiteTask(AuthSessionLite *session, CJson *out, int32_t *status);
 int32_t ProcessLiteTaskStatusForAuth(const AuthSessionLite *session, CJson *out, int32_t status);
 void DestroyAuthSessionLite(Session *session);
-AuthSessionLite *InitAuthSessionLite(CJson *param, const DeviceAuthCallback *callback);
-
+AuthSessionLite *InitAuthSessionLite(const CJson *in, const DeviceAuthCallback *callback);
+#ifdef __cplusplus
+}
+#endif
 #endif

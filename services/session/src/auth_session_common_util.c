@@ -14,11 +14,22 @@
  */
 
 #include "auth_session_common_util.h"
-#include "auth_session_common_defines.h"
 #include "common_defs.h"
 #include "common_util.h"
 #include "device_auth_defines.h"
 #include "hc_log.h"
+#include "hc_types.h"
+#define UID_HASH_HEX_STRING_LEN_MAX 64
+#define UID_HASH_HEX_STRING_LEN_MIN 10
+
+static bool IsPeerUidHashLenValid(uint32_t peerUidHashLen)
+{
+    if ((peerUidHashLen < UID_HASH_HEX_STRING_LEN_MIN) || (peerUidHashLen > UID_HASH_HEX_STRING_LEN_MAX)) {
+        LOGE("The input uid hash len is invalid, input uid hash in hex string len = %d", peerUidHashLen);
+        return false;
+    }
+    return true;
+}
 
 static int32_t AddPeerIdToReqParam(const CJson *receiveData, CJson *reqParam)
 {
@@ -27,7 +38,7 @@ static int32_t AddPeerIdToReqParam(const CJson *receiveData, CJson *reqParam)
         LOGE("Failed to get peerId from the data transmitted by the client!");
         return HC_ERR_JSON_GET;
     }
-    uint32_t peerIdLen = strlen(peerId);
+    uint32_t peerIdLen = HcStrlen(peerId);
     if ((peerIdLen == 0) || (peerIdLen > MAX_AUTH_ID_LEN) || ((peerIdLen % 2) != 0)) { /* 2: even numbers. */
         LOGE("Invalid len of peerId!");
         return HC_ERR_JSON_GET;
@@ -77,7 +88,9 @@ char *GetServerConfirmation(const CJson *paramsFromClient, const CJson *reqParam
             LOGE("Failed to get request callback!");
             break;
         }
+        LOGD("Begin to invoke onRequest for auth!");
         serverInfo = callback->onRequest(requestId, authForm, reqParamStr);
+        LOGD("End to invoke onRequest for auth!");
         if (serverInfo == NULL) {
             LOGE("Failed to get server confirmation info!");
         }
@@ -128,4 +141,34 @@ int32_t GetGeneralReqParams(const CJson *receiveData, CJson *reqParam)
         return HC_ERR_JSON_FAIL;
     }
     return HC_SUCCESS;
+}
+
+bool IsUidHashEqual(const char *uidHashInDb, const char *peerUidHash)
+{
+    if ((uidHashInDb == NULL) || (peerUidHash == NULL)) {
+        LOGE("Input is null for uid hash!");
+        return false;
+    }
+    char *peerUidHashToUpper = NULL;
+    int32_t result = ToUpperCase(peerUidHash, &peerUidHashToUpper);
+    if (result != HC_SUCCESS) {
+        LOGE("Failed to convert the input uidHash to upper case!");
+        return result;
+    }
+    uint32_t uidHashInDbLen = strlen(uidHashInDb);
+    uint32_t peerUidHashLen = strlen(peerUidHash);
+    if (!IsPeerUidHashLenValid(peerUidHashLen)) {
+        HcFree(peerUidHashToUpper);
+        peerUidHashToUpper = NULL;
+        return false;
+    }
+    uint32_t cmpHashLen = (uidHashInDbLen > peerUidHashLen) ? peerUidHashLen : uidHashInDbLen;
+    if (memcmp(uidHashInDb, peerUidHashToUpper, cmpHashLen) == EOK) {
+        HcFree(peerUidHashToUpper);
+        peerUidHashToUpper = NULL;
+        return true;
+    }
+    HcFree(peerUidHashToUpper);
+    peerUidHashToUpper = NULL;
+    return false;
 }

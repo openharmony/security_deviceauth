@@ -14,10 +14,28 @@
  */
 
 #include "group_auth_manager.h"
+#include "common_defs.h"
 #include "database_manager.h"
+#include "dev_auth_module_manager.h"
 #include "device_auth_defines.h"
 #include "hc_log.h"
 #include "session_manager.h"
+
+static int32_t GetModuleTypeFromPayload(const CJson *authParams)
+{
+    int32_t authForm = AUTH_FORM_INVALID_TYPE;
+    if (GetIntFromJson(authParams, FIELD_AUTH_FORM, &authForm) != HC_SUCCESS) {
+        LOGE("[GetModuleTypeFromPayload], Failed to get authForm!");
+        return INVALID_MODULE_TYPE;
+    }
+    if (authForm == AUTH_FORM_ACCOUNT_UNRELATED) {
+        return DAS_MODULE;
+    } else if ((authForm == AUTH_FORM_IDENTICAL_ACCOUNT) || (authForm == AUTH_FORM_ACROSS_ACCOUNT)) {
+        return TCIS_MODULE;
+    }
+    LOGE("Invalid authForm for repeated payload check!");
+    return INVALID_MODULE_TYPE;
+}
 
 int32_t GetAuthState(int64_t authReqId, const char *groupId, const char *peerUdid, uint8_t *out, uint32_t *outLen)
 {
@@ -38,7 +56,7 @@ void InformDeviceDisconnection(const char *udid)
 bool IsTrustedDevice(const char *udid)
 {
     if (udid == NULL) {
-        LOGE("InValid params in IsTrustedDevice");
+        LOGE("Invalid params in IsTrustedDevice");
         return false;
     }
     return IsTrustedDeviceExist(udid);
@@ -61,34 +79,52 @@ void DoAuthDevice(HcTaskBase *task)
         LOGE("Failed to get role of client or server when start auth!");
         return;
     }
-    int32_t result;
-    if (isClient) {
-        result = CreateSession(realTask->authReqId, TYPE_CLIENT_AUTH_SESSION, realTask->authParams, realTask->callback);
-    } else {
-        result = CreateSession(realTask->authReqId, TYPE_SERVER_AUTH_SESSION, realTask->authParams, realTask->callback);
+    if (!isClient) {
+        LOGI("Server invokes authDevice, return directly.");
+        return;
     }
+    int32_t result = CreateSession(realTask->authReqId, TYPE_CLIENT_AUTH_SESSION, realTask->authParams,
+        realTask->callback);
     if (result != HC_SUCCESS) {
         LOGE("Failed to create session for authDevice!");
+        if ((result != HC_ERR_CREATE_SESSION_FAIL) && (realTask->callback != NULL) &&
+            (realTask->callback->onError != NULL)) {
+            LOGE("[DoAuthDevice] Begin invoke onError by group auth manager!");
+            realTask->callback->onError(realTask->authReqId, AUTH_FORM_INVALID_TYPE, result, NULL);
+            LOGE("[DoAuthDevice] End invoke onError by group auth manager!");
+        }
     }
 }
 
-void DoProcessData(HcTaskBase *task)
+void DoProcessAuthData(HcTaskBase *task)
 {
     if (task == NULL) {
         LOGE("The input task is NULL, can't process auth data!");
         return;
     }
     AuthDeviceTask *realTask = (AuthDeviceTask *)task;
+    int32_t res;
     if (IsRequestExist(realTask->authReqId)) {
-        int ret = ProcessSession(realTask->authReqId, AUTH_TYPE, realTask->authParams);
-        if (ret != HC_SUCCESS) {
+        res = ProcessSession(realTask->authReqId, AUTH_TYPE, realTask->authParams);
+        if (res != HC_SUCCESS) {
             DestroySession(realTask->authReqId);
         }
         return;
     }
-    int32_t result = CreateSession(realTask->authReqId, TYPE_SERVER_AUTH_SESSION, realTask->authParams,
+    res = CheckMsgRepeatability(realTask->authParams, GetModuleTypeFromPayload(realTask->authParams));
+    if (res != HC_SUCCESS) {
+        LOGD("Caller inputs repeated payload, so we will ignore it.");
+        return;
+    }
+    res = CreateSession(realTask->authReqId, TYPE_SERVER_AUTH_SESSION, realTask->authParams,
         realTask->callback);
-    if (result != HC_SUCCESS) {
+    if (res != HC_SUCCESS) {
         LOGE("Failed to create session for process auth data!");
+        if ((res != HC_ERR_CREATE_SESSION_FAIL) && (realTask->callback != NULL) &&
+            (realTask->callback->onError != NULL)) {
+            LOGE("Begin invoke onError by group auth manager!");
+            realTask->callback->onError(realTask->authReqId, AUTH_FORM_INVALID_TYPE, res, NULL);
+            LOGE("End invoke onError by group auth manager!");
+        }
     }
 }

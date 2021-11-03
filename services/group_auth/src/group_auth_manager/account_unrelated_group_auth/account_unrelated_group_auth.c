@@ -26,7 +26,7 @@ static void OnDasFinish(int64_t requestId, const CJson *authParam, const CJson *
     const DeviceAuthCallback *callback);
 static int32_t FillNonAccountAuthInfo(const GroupInfo *entry, const DeviceInfo *localAuthInfo, CJson *paramsData);
 static void OnDasError(int64_t requestId, const AuthSession *session, int errorCode);
-static int32_t GetDasAuthParamForServer(CJson *dataFromClient, ParamsVec *authParamsVec);
+static int32_t GetDasAuthParamForServer(const CJson *dataFromClient, ParamsVec *authParamsVec);
 static int32_t GetDasReqParams(const CJson *receiveData, CJson *reqParam);
 static int32_t CombineDasServerConfirmParams(const CJson *confirmationJson, CJson *dataFromClient);
 
@@ -58,11 +58,26 @@ static int32_t AddPeerUdidToSelfData(const CJson *authParam, CJson *returnToSelf
 {
     const char *peerUdid = GetStringFromJson(authParam, FIELD_PEER_CONN_DEVICE_ID);
     if (peerUdid == NULL) {
-        LOGE("Failed to get peerUdid from authParam!");
-        return HC_ERR_JSON_GET;
+        LOGD("The input has no peerUdid in authParam!");
+        return HC_SUCCESS;
     }
     if (AddStringToJson(returnToSelf, FIELD_PEER_CONN_DEVICE_ID, peerUdid) != HC_SUCCESS) {
         LOGE("Failed to add peer udid!");
+        return HC_ERR_JSON_FAIL;
+    }
+    return HC_SUCCESS;
+}
+
+static int32_t AddPeerAuthIdToSelfData(const CJson *authParam, CJson *returnToSelf)
+{
+    const char *peerAuthId = GetStringFromJson(authParam, FIELD_PEER_AUTH_ID);
+    if (peerAuthId == NULL) {
+        LOGD("No peerAuthId in auth session cached params!");
+        return HC_SUCCESS;
+    }
+
+    if (AddStringToJson(returnToSelf, FIELD_PEER_AUTH_ID, peerAuthId) != HC_SUCCESS) {
+        LOGE("Failed to add peerAuthId!");
         return HC_ERR_JSON_FAIL;
     }
     return HC_SUCCESS;
@@ -134,6 +149,10 @@ static int32_t PrepareDasReturnToSelfData(const CJson *authParam, const CJson *s
     if (res != HC_SUCCESS) {
         return res;
     }
+    res = AddPeerAuthIdToSelfData(authParam, returnToSelf);
+    if (res != HC_SUCCESS) {
+        return res;
+    }
     res = AddSelfTypeToSelfData(authParam, returnToSelf);
     if (res != HC_SUCCESS) {
         return res;
@@ -163,10 +182,12 @@ static int32_t DasOnFinishToPeer(int64_t requestId, const CJson *out, const Devi
         return HC_ERR_ALLOC_MEMORY;
     }
     if ((callback != NULL) && (callback->onTransmit != NULL)) {
+        LOGD("Begin to transmit data to peer for auth in DasOnFinishToPeer.");
         if (!callback->onTransmit(requestId, (uint8_t *)sendToPeerStr, (uint32_t)strlen(sendToPeerStr) + 1)) {
             LOGE("Failed to transmit data to peer!");
             res = HC_ERR_TRANSMIT_FAIL;
         }
+        LOGD("End to transmit data to peer for auth in DasOnFinishToPeer.");
     }
     FreeJsonString(sendToPeerStr);
     return res;
@@ -200,6 +221,7 @@ static int32_t DasOnFinishToSelf(int64_t requestId, const CJson *authParam, cons
         return HC_ERR_ALLOC_MEMORY;
     }
     if ((callback != NULL) && (callback->onFinish != NULL)) {
+        LOGD("Group auth call onFinish for account unrelated auth.");
         callback->onFinish(requestId, AUTH_FORM_ACCOUNT_UNRELATED, returnStr);
     }
     ClearAndFreeJsonString(returnStr);
@@ -225,48 +247,34 @@ static int32_t AddNonAccountPkgName(const GroupInfo *entry, CJson *paramsData)
     return res;
 }
 
-static int32_t AddPeerUdidIfPossible(const char *peerUdid, const DeviceInfo *peerAuthInfo, CJson *paramsData)
-{
-    if (peerUdid != NULL) {
-        return HC_SUCCESS;
-    }
-    const char *peerUdidFromDb = StringGet(&peerAuthInfo->udid);
-    if (peerUdidFromDb == NULL) {
-        LOGE("Peer device's udid in db is null!");
-        return HC_ERR_DB;
-    }
-    if (AddStringToJson(paramsData, FIELD_PEER_CONN_DEVICE_ID, peerUdidFromDb) != HC_SUCCESS) {
-        LOGE("Failed to add peer udid in db to paramsData!");
-        return HC_ERR_JSON_FAIL;
-    }
-    return HC_SUCCESS;
-}
-
 static int32_t AddNonAccountAuthInfo(const DeviceInfo *localAuthInfo, const DeviceInfo *peerAuthInfo,
     CJson *paramsData)
 {
     int32_t keyLen = DEFAULT_RETURN_KEY_LENGTH;
     (void)GetIntFromJson(paramsData, FIELD_KEY_LENGTH, &keyLen);
     if (AddIntToJson(paramsData, FIELD_KEY_LENGTH, keyLen) != HC_SUCCESS) {
-        LOGE("Failed to add keyLen for client auth!");
+        LOGE("Failed to add keyLen for auth!");
         return HC_ERR_JSON_FAIL;
     }
     if (AddStringToJson(paramsData, FIELD_SELF_AUTH_ID, StringGet(&localAuthInfo->authId))
         != HC_SUCCESS) {
-        LOGE("Failed to add self authId to paramsData!");
+        LOGE("Failed to add self authId to paramsData from db!");
         return HC_ERR_JSON_FAIL;
     }
     if (AddIntToJson(paramsData, FIELD_SELF_TYPE, localAuthInfo->devType) != HC_SUCCESS) {
-        LOGE("Failed to add self devType to paramsData!");
+        LOGE("Failed to add self devType to paramsData from db!");
         return HC_ERR_JSON_FAIL;
     }
-    if (AddStringToJson(paramsData, FIELD_PEER_AUTH_ID, StringGet(&peerAuthInfo->authId))
-        != HC_SUCCESS) {
-        LOGE("Failed to add peer authId to paramsData!");
-        return HC_ERR_JSON_FAIL;
+    const char *peerAuthId = GetStringFromJson(paramsData, FIELD_PEER_AUTH_ID);
+    if (peerAuthId == NULL) {
+        if (AddStringToJson(paramsData, FIELD_PEER_AUTH_ID, StringGet(&peerAuthInfo->authId))
+            != HC_SUCCESS) {
+            LOGE("Failed to add peer authId to paramsData!");
+            return HC_ERR_JSON_FAIL;
+        }
     }
     if (AddIntToJson(paramsData, FIELD_PEER_USER_TYPE, peerAuthInfo->devType) != HC_SUCCESS) {
-        LOGE("Failed to add peer devType to paramsData!");
+        LOGE("Failed to add peer devType to paramsData from db!");
         return HC_ERR_JSON_FAIL;
     }
     return HC_SUCCESS;
@@ -301,6 +309,11 @@ static void OnDasError(int64_t requestId, const AuthSession *session, int errorC
         FreeJson(returnData);
         return;
     }
+    res = AddPeerAuthIdToSelfData(authParam, returnData);
+    if (res != HC_SUCCESS) {
+        FreeJson(returnData);
+        return;
+    }
     char *returnStr = PackJsonToString(returnData);
     FreeJson(returnData);
     if (returnStr == NULL) {
@@ -308,6 +321,7 @@ static void OnDasError(int64_t requestId, const AuthSession *session, int errorC
         return;
     }
     if ((callback != NULL) && (callback->onError != NULL)) {
+        LOGE("Invoke OnDasError!");
         callback->onError(requestId, AUTH_FORM_ACCOUNT_UNRELATED, errorCode, returnStr);
     }
     FreeJsonString(returnStr);
@@ -340,11 +354,6 @@ static int32_t FillNonAccountAuthInfo(const GroupInfo *entry, const DeviceInfo *
         res = AddNonAccountPkgName(entry, paramsData);
         if (res != HC_SUCCESS) {
             LOGE("Failed to add pkg name to paramsData!");
-            break;
-        }
-        res = AddPeerUdidIfPossible(peerUdid, peerAuthInfo, paramsData);
-        if (res != HC_SUCCESS) {
-            LOGE("Failed to add peer udid!");
             break;
         }
         res = AddNonAccountAuthInfo(localAuthInfo, peerAuthInfo, paramsData);
@@ -412,7 +421,7 @@ static int32_t CombineDasServerConfirmParams(const CJson *confirmationJson, CJso
     return HC_SUCCESS;
 }
 
-static int32_t GetDasAuthParamForServer(CJson *dataFromClient, ParamsVec *authParamsVec)
+static int32_t GetDasAuthParamForServer(const CJson *dataFromClient, ParamsVec *authParamsVec)
 {
     LOGI("Begin get non-account auth params for server.");
     int32_t res = GetAuthParamsList(dataFromClient, authParamsVec);
@@ -441,7 +450,7 @@ static void OnDasFinish(int64_t requestId, const CJson *authParam, const CJson *
     LOGI("Call onFinish for non-account auth successfully.");
 }
 
-BaseGroupAuth *GetNonAccountGroupAuth()
+BaseGroupAuth *GetAccountUnrelatedGroupAuth()
 {
     return (BaseGroupAuth *)&g_nonAccountGroupAuth;
 }

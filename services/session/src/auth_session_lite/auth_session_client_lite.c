@@ -27,11 +27,26 @@ static int32_t StartClientAuthLiteTask(AuthSessionLite *session)
         InformLocalAuthErrorLite(session->authParams, session->base.callback);
         return HC_ERR_ALLOC_MEMORY;
     }
+    const char *pkgName = GetStringFromJson(session->authParams, FIELD_SERVICE_PKG_NAME);
+    if (pkgName == NULL) {
+        LOGE("Pkg name is null, the input is invalid!");
+        FreeJson(out);
+        InformLocalAuthErrorLite(session->authParams, session->base.callback);
+        return HC_ERR_INVALID_PARAMS;
+    }
+    if (AddStringToJson(session->authParams, FIELD_PKG_NAME, pkgName) != HC_SUCCESS) {
+        LOGE("Failed to add pkg name for client!");
+        FreeJson(out);
+        InformLocalAuthErrorLite(session->authParams, session->base.callback);
+        return HC_ERR_JSON_FAIL;
+    }
+
     int32_t status = 0;
     int32_t res = CreateAndProcessLiteTask(session, out, &status);
     if (res != HC_SUCCESS) {
+        LOGE("Failed to process for client auth session lite!");
+        InformAuthErrorLite(session->authParams, session->base.callback, out, res);
         FreeJson(out);
-        LOGE("Failed to process for client auth session!");
         return res;
     }
     res = ProcessLiteTaskStatusForAuth(session, out, status);
@@ -39,12 +54,12 @@ static int32_t StartClientAuthLiteTask(AuthSessionLite *session)
     return res;
 }
 
-static Session *CreateClientAuthSessionLiteInner(CJson *param, const DeviceAuthCallback *callback)
+static Session *CreateClientAuthSessionLiteInner(const CJson *in, const DeviceAuthCallback *callback)
 {
-    AuthSessionLite *session = InitAuthSessionLite(param, callback);
+    AuthSessionLite *session = InitAuthSessionLite(in, callback);
     if (session == NULL) {
         LOGE("Failed to initial session!");
-        InformLocalAuthErrorLite(param, callback);
+        InformLocalAuthErrorLite(in, callback);
         return NULL;
     }
     int32_t res = StartClientAuthLiteTask(session);

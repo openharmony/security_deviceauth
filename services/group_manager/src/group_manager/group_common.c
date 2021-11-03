@@ -393,8 +393,8 @@ int32_t GenerateBindSuccessData(const char *peerAuthId, const char *groupId, cha
     }
     char *tempGroupId = NULL;
     char *tempAuthId = NULL;
-    ConvertToAnnoymousStr(groupId, &tempGroupId);
-    ConvertToAnnoymousStr(peerAuthId, &tempAuthId);
+    ConvertToAnonymousStr(groupId, &tempGroupId);
+    ConvertToAnonymousStr(peerAuthId, &tempAuthId);
     LOGI("Bind successfully! [GroupId]: %s, [AddId]: %s",
         tempGroupId == NULL ? "NULL" : tempGroupId,
         tempAuthId == NULL ? "NULL" : tempAuthId);
@@ -433,8 +433,8 @@ int32_t GenerateUnbindSuccessData(const char *peerAuthId, const char *groupId, c
     }
     char *tempGroupId = NULL;
     char *tempAuthId = NULL;
-    ConvertToAnnoymousStr(groupId, &tempGroupId);
-    ConvertToAnnoymousStr(peerAuthId, &tempAuthId);
+    ConvertToAnonymousStr(groupId, &tempGroupId);
+    ConvertToAnonymousStr(peerAuthId, &tempAuthId);
     LOGI("Unbind successfully! [GroupId]: %s, [DeleteId]: %s",
         tempGroupId == NULL ? "NULL" : tempGroupId,
         tempAuthId == NULL ? "NULL" : tempAuthId);

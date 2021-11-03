@@ -34,13 +34,12 @@ static int32_t CombineServerParams(const CJson *confirmationJson, CJson *dataFro
         return HC_ERR_JSON_GET;
     }
     int32_t groupAuthType = GetGroupAuthType(authForm);
-    BaseGroupAuth *groupAuthHandle = NULL;
-    int32_t res = GetGroupAuth(groupAuthType, &groupAuthHandle);
-    if (res != HC_SUCCESS) {
+    BaseGroupAuth *groupAuthHandle = GetGroupAuth(groupAuthType);
+    if (groupAuthHandle == NULL) {
         LOGE("Failed to get group auth handle!");
-        return res;
+        return HC_ERR_NOT_SUPPORT;
     }
-    res = groupAuthHandle->combineServerConfirmParams(confirmationJson, dataFromClient);
+    int32_t res = groupAuthHandle->combineServerConfirmParams(confirmationJson, dataFromClient);
     if (res != HC_SUCCESS) {
         LOGE("Failed to combine server confirm params!");
     }
@@ -55,14 +54,12 @@ static int32_t GetAuthInfoForServer(CJson *dataFromClient, ParamsVec *authParams
         return HC_ERR_JSON_FAIL;
     }
     int32_t groupAuthType = GetGroupAuthType(authForm);
-    BaseGroupAuth *groupAuthHandle = NULL;
-    int32_t res = GetGroupAuth(groupAuthType, &groupAuthHandle);
-    if (res != HC_SUCCESS) {
+    BaseGroupAuth *groupAuthHandle = GetGroupAuth(groupAuthType);
+    if (groupAuthHandle == NULL) {
         LOGE("Failed to get group auth handle!");
-        return res;
+        return HC_ERR_NOT_SUPPORT;
     }
-    res = groupAuthHandle->getAuthParamForServer(dataFromClient, authParamsVec);
-    return res;
+    return groupAuthHandle->getAuthParamForServer(dataFromClient, authParamsVec);
 }
 
 static char *StartServerRequest(const CJson *dataFromClient, const DeviceAuthCallback *callback)
@@ -80,13 +77,12 @@ static char *StartServerRequest(const CJson *dataFromClient, const DeviceAuthCal
             break;
         }
         int32_t groupAuthType = GetGroupAuthType(authForm);
-        BaseGroupAuth *groupAuthHandle = NULL;
-        int32_t res = GetGroupAuth(groupAuthType, &groupAuthHandle);
-        if (res != HC_SUCCESS) {
+        BaseGroupAuth *groupAuthHandle = GetGroupAuth(groupAuthType);
+        if (groupAuthHandle == NULL) {
             LOGE("Failed to get group auth handle!");
             break;
         }
-        res = groupAuthHandle->getReqParams(dataFromClient, reqParam);
+        int32_t res = groupAuthHandle->getReqParams(dataFromClient, reqParam);
         if (res != HC_SUCCESS) {
             LOGE("Failed to get request params!");
             break;
@@ -133,28 +129,6 @@ static int32_t AddAuthParamByRequest(CJson *dataFromClient, const DeviceAuthCall
     return res;
 }
 
-static AuthSession *InitServerAuthSession(const DeviceAuthCallback *callback, ParamsVec *authParamsVec)
-{
-    AuthSession *session = (AuthSession *)HcMalloc(sizeof(AuthSession), 0);
-    if (session == NULL) {
-        LOGE("Failed to malloc memory for session!");
-        DestroyAuthParamsVec(authParamsVec);
-        return NULL;
-    }
-    session->base.process = ProcessServerAuthSession;
-    session->base.destroy = DestroyAuthSession;
-    session->base.callback = callback;
-    session->currentIndex = 0;
-    session->paramsList = *authParamsVec;
-    int32_t res = GenerateSessionOrTaskId(&session->base.sessionId);
-    if (res != HC_SUCCESS) {
-        LOGE("Failed to generate session id!");
-        DestroyAuthSession((Session *)session);
-        return NULL;
-    }
-    return session;
-}
-
 static int32_t ProcessServerAuthTask(AuthSession *session, int32_t moduleType, CJson *in, CJson *out)
 {
     int32_t status = 0;
@@ -193,7 +167,6 @@ static int32_t StartServerAuthTask(AuthSession *session, const CJson *receivedDa
     }
     int32_t status = 0;
     int32_t res = CreateAndProcessTask(session, paramInSession, out, &status);
-    DeleteCachedData(paramInSession);
     if (res != HC_SUCCESS) {
         LOGE("Failed to process server auth task, res = %d!", res);
         if (InformAuthError(session, out, res) != HC_SUCCESS) {
@@ -209,8 +182,8 @@ static int32_t StartServerAuthTask(AuthSession *session, const CJson *receivedDa
 
 static int32_t CheckServerGroupAuthMsg(const CJson *in, const CJson *paramInSession, const DeviceAuthCallback *callback)
 {
-    int32_t GroupErrMsg = 0;
-    if (GetIntFromJson(in, FIELD_GROUP_ERROR_MSG, (int *)&GroupErrMsg) != HC_SUCCESS) {
+    int32_t groupErrMsg = 0;
+    if (GetIntFromJson(in, FIELD_GROUP_ERROR_MSG, (int *)&groupErrMsg) != HC_SUCCESS) {
         return HC_SUCCESS;
     }
     InformLocalAuthError(paramInSession, callback);
@@ -246,38 +219,45 @@ static int ProcessServerAuthSession(Session *session, CJson *in)
     res = ProcessServerAuthTask(realSession, moduleType, in, out);
     FreeJson(out);
     if (res == FINISH) {
-        LOGI("End process server authSession, auth completed successfully.");
+        LOGI("End process server authSession.");
     }
     return res;
 }
 
 static AuthSession *CreateServerAuthSessionInner(CJson *param, const DeviceAuthCallback *callback)
 {
-    bool isClient = true;
-    (void)GetBoolFromJson(param, FIELD_IS_CLIENT, &isClient);
-    if (!isClient) {
-        LOGI("Server invokes authDevice, return directly.");
+    ParamsVec authVec;
+    CreateAuthParamsVec(&authVec);
+    int32_t res = AddAuthParamByRequest(param, callback, &authVec);
+    DeleteCachedData(param);
+    if ((res != HC_SUCCESS) || (authVec.size(&authVec) == 0)) {
+        LOGE("Failed to add auth param for server, res = %d, candidate auth group = %u!", res, authVec.size(&authVec));
+        DestroyAuthParamsVec(&authVec);
+        InformPeerAuthError(param, callback);
+        InformLocalAuthError(param, callback);
         return NULL;
     }
-    ParamsVec authParamsVec;
-    CreateAuthParamsVec(&authParamsVec);
-    AuthSession *session = NULL;
-    int32_t res = AddAuthParamByRequest(param, callback, &authParamsVec);
-    DeleteCachedData(param);
-    if (res != HC_SUCCESS) {
-        LOGE("Failed to add auth param by request, res = %d!", res);
-        DestroyAuthParamsVec(&authParamsVec);
-        goto err;
-    }
-    if (authParamsVec.size(&authParamsVec) == 0) {
-        LOGE("No candidate auth group for server!");
-        DestroyAuthParamsVec(&authParamsVec);
-        goto err;
-    }
-    session = InitServerAuthSession(callback, &authParamsVec);
+
+    AuthSession *session = (AuthSession *)HcMalloc(sizeof(AuthSession), 0);
     if (session == NULL) {
-        LOGE("Failed to init auth session!");
-        goto err;
+        LOGE("Failed to malloc memory for session!");
+        DestroyAuthParamsVec(&authVec);
+        InformPeerAuthError(param, callback);
+        InformLocalAuthError(param, callback);
+        return NULL;
+    }
+    session->base.process = ProcessServerAuthSession;
+    session->base.destroy = DestroyAuthSession;
+    session->base.callback = callback;
+    session->currentIndex = 0;
+    session->paramsList = authVec;
+    res = GenerateSessionOrTaskId(&session->base.sessionId);
+    if (res != HC_SUCCESS) {
+        LOGE("Failed to generate session id!");
+        DestroyAuthSession((Session *)session);
+        InformPeerAuthError(param, callback);
+        InformLocalAuthError(param, callback);
+        return NULL;
     }
 
     res = StartServerAuthTask(session, param);
@@ -287,22 +267,11 @@ static AuthSession *CreateServerAuthSessionInner(CJson *param, const DeviceAuthC
         return NULL;
     }
     return (AuthSession *)session;
-err:
-    InformPeerAuthError(param, callback);
-    InformLocalAuthError(param, callback);
-    return NULL;
 }
 
 Session *CreateServerAuthSession(CJson *param, const DeviceAuthCallback *callback)
 {
-    AuthSession *session = NULL;
-    if (AddIntToJson(param, FIELD_OPERATION_CODE, AUTHENTICATE) != HC_SUCCESS) {
-        LOGE("Failed to add operation code to json!");
-        InformPeerAuthError(param, callback);
-        InformLocalAuthError(param, callback);
-        return NULL;
-    }
-    session = CreateServerAuthSessionInner(param, callback);
+    AuthSession *session = CreateServerAuthSessionInner(param, callback);
     if (session == NULL) {
         LOGE("Failed to create server auth session!");
         return NULL;
