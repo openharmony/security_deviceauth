@@ -339,9 +339,9 @@ static int32_t FillNonAccountAuthInfo(const GroupInfo *entry, const DeviceInfo *
     const char *peerUdid = GetStringFromJson(paramsData, FIELD_PEER_CONN_DEVICE_ID);
     const char *peeAuthId = GetStringFromJson(paramsData, FIELD_PEER_AUTH_ID);
     if (peerUdid != NULL) {
-        res = GetDeviceInfoForDevAuth(peerUdid, groupId, peerAuthInfo);
+        res = GetDeviceInfoById(peerUdid, true, groupId, peerAuthInfo);
     } else if (peeAuthId != NULL) {
-        res = GetDeviceInfoByAuthId(peeAuthId, groupId, peerAuthInfo);
+        res = GetDeviceInfoById(peeAuthId, false, groupId, peerAuthInfo);
     } else {
         LOGE("Invalid input, both peer udid and peer authId are null!");
         res = HC_ERR_NULL_PTR;

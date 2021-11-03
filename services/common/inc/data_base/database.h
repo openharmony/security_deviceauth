@@ -16,14 +16,15 @@
 #ifndef DATABASE_H
 #define DATABASE_H
 
+#include "common_defs.h"
 #include "hc_string.h"
 #include "hc_tlv_parser.h"
 #include "hc_vector.h"
 
+#define MAX_STRING_LEN 256
 #define MAX_EXPIRE_TIME 90
 
-DECLARE_HC_VECTOR(StringVector, HcString)
-DECLARE_HC_VECTOR(Int64Vector, int64_t)
+typedef int32_t (*GenGroupIdFunc)(const char *userIdHash, const char *sharedUserIdHash, char **returnGroupId);
 
 typedef struct {
     HcString name; /* group name */
@@ -31,22 +32,22 @@ typedef struct {
     int32_t type; /* including identical account group(1), peer to peer group(256), across account group(1282) */
     int32_t visibility; /* visibility of the group */
     int32_t expireTime; /* the time of group expired, unit day, user config */
-    int64_t userId; /* user account id */
-    Int64Vector sharedUserIdVec; /* shared user account id vector */
+    HcString userIdHash; /* hash result of the user account id */
+    StringVector sharedUserIdHashVec; /* vector of hash results for shared user account id */
     StringVector managers; /* group manager vector, group manager can add and delete members, index 0 is the owner */
     StringVector friends; /* group friend vector, group friend can query group information */
 } TrustedGroupEntry;
 DECLARE_HC_VECTOR(TrustedGroupTable, TrustedGroupEntry*)
 
 typedef struct {
-    TrustedGroupEntry* groupEntry;
+    TrustedGroupEntry *groupEntry;
     HcString udid; /* unique device id */
     HcString authId; /* id by service defined for authentication */
     HcString serviceType; /* compatible with previous versions, the value is the same as groupId */
     HcParcel ext; /* for caching extern data, user data */
     uint8_t credential; /* 1 - asymmetrical, 2 - symmetrical */
     uint8_t devType; /* 0 - accessory, 1 - controller, 2 - proxy */
-    int64_t userId; /* user account id */
+    HcString userIdHash; /* hash result of the user account id */
     uint64_t lastTm; /* accessed time of the device of the auth information, absolute time */
 } TrustedDeviceEntry;
 DECLARE_HC_VECTOR(TrustedDeviceTable, TrustedDeviceEntry)
@@ -58,8 +59,8 @@ typedef struct {
     TlvUint32 type;
     TlvInt32 visibility;
     TlvInt32 expireTime;
-    TlvInt64 userId;
-    TlvBuffer sharedUserIdVec;
+    TlvString userIdHash;
+    TlvBuffer sharedUserIdHashVec;
     TlvBuffer managers;
     TlvBuffer friends;
 } TlvGroupElement;
@@ -76,13 +77,14 @@ DECLARE_TLV_FIX_LENGTH_TYPE(TlvDevAuthFixedLenInfo, DevAuthFixedLenInfo)
 DECLEAR_INIT_FUNC(TlvDevAuthFixedLenInfo)
 
 typedef struct {
-    DECLARE_TLV_STRUCT(6)
+    DECLARE_TLV_STRUCT(7)
     TlvString groupId;
     TlvString udid;
     TlvString authId;
     TlvString serviceType;
     TlvBuffer ext;
     TlvDevAuthFixedLenInfo info;
+    TlvString userIdHash;
 } TlvDevAuthElement;
 DECLEAR_INIT_FUNC(TlvDevAuthElement)
 DECLARE_TLV_VECTOR(TlvDevAuthVec, TlvDevAuthElement)
@@ -91,7 +93,7 @@ typedef struct {
     DECLARE_TLV_STRUCT(3)
     TlvInt32 version;
     TlvGroupVec groups;
-    TlvDevAuthVec deviceAuthInfos;
+    TlvDevAuthVec devices;
 } HCDataBaseV1;
 DECLEAR_INIT_FUNC(HCDataBaseV1)
 
@@ -102,8 +104,8 @@ typedef struct {
     int32_t type; /* group type, 0 - invalid, 1 - the same account, 2 - different account, 3 - none account(p2p) */
     int32_t visibility; /* visibility of the group */
     int32_t expireTime; /* the time of group expired, unit day, user config */
-    int64_t userId; /* user account id */
-    int64_t sharedUserId; /* shared user account id */
+    HcString userIdHash; /* hash result of the user account id */
+    HcString sharedUserIdHash; /* shared user account id */
 } GroupInfo;
 DECLARE_HC_VECTOR(GroupInfoVec, void *)
 
@@ -112,7 +114,7 @@ typedef struct {
     HcString authId; /* id by service defined for authentication */
     uint8_t credential; /* 1 - asymmetrical, 2 - symmetrical */
     uint8_t devType; /* 0 - accessory, 1 - controller, 2 - proxy */
-    int64_t userId; /* user account id */
+    HcString userIdHash; /* hash result of the user account id */
     HcString groupId; /* map the device authentication data for group */
     HcString serviceType; /* compatible with previous versions, the value is the same as groupId */
 } DeviceInfo;

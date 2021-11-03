@@ -144,16 +144,15 @@ static int32_t AddGeneralParams(const char *groupId, int32_t groupType, const De
 static int32_t GetLocalDeviceInfoFromDatabase(const char *groupId, DeviceInfo *localAuthInfo)
 {
     int32_t res;
-    char *localUdidStr = NULL;
-    if (GetLocalDevUdid(&localUdidStr) != HC_SUCCESS) {
+    const char *localUdidStr = GetLocalDevUdid();
+    if (localUdidStr == NULL) {
         LOGE("Failed to get local udid!");
-        return HC_ERROR;
+        return HC_ERR_DB;
     }
-    res = GetDeviceInfoForDevAuth(localUdidStr, groupId, localAuthInfo);
+    res = GetDeviceInfoById(localUdidStr, true, groupId, localAuthInfo);
     if (res != HC_SUCCESS) {
         LOGE("Failed to get local device info from database!");
     }
-    DestroyUdid(&localUdidStr);
     return res;
 }
 
@@ -328,10 +327,10 @@ static void GetGroupInfoByGroupId(const char *groupId, const char *peerUdid, con
     }
     int32_t res = HC_SUCCESS;
     if (peerUdid != NULL) {
-        res = GetGroupEntry(groupId, peerUdid, entry);
+        res = GetGroupInfoIfDevExist(groupId, peerUdid, entry);
     } else {
-        if (IsTrustedDeviceInGroupByAuthId(groupId, peerAuthId)) {
-            res = GetGroupEntryByGroupId(groupId, entry);
+        if (IsTrustedDeviceInGroup(groupId, peerAuthId, false)) {
+            res = GetGroupInfoById(groupId, entry);
         }
     }
     if (res == HC_SUCCESS) {

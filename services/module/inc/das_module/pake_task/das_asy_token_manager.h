@@ -23,7 +23,8 @@ typedef struct TokenManagerT {
     int (*registerLocalIdentity)(const char *, const char *, Uint8Buff *, int);
     int (*unregisterLocalIdentity)(const char *, const char *, Uint8Buff *, int);
     int (*deletePeerAuthInfo)(const char *, const char *, Uint8Buff *, int);
-    int (*computeAndSavePsk)(const PakeParams *params);
+    int (*computeAndSavePsk)(const PakeParams *);
+    int (*getPublicKey)(const char *, const char *, Uint8Buff *, int, Uint8Buff *);
 } TokenManager;
 
 const TokenManager *GetAsyTokenManagerInstance(void);

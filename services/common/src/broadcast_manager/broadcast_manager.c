@@ -16,8 +16,10 @@
 #include "broadcast_manager.h"
 #include "common_defs.h"
 #include "device_auth_defines.h"
+#include "group_operation_common.h"
 #include "hc_log.h"
 #include "hc_mutex.h"
+#include "hc_vector.h"
 #include "securec.h"
 
 typedef struct {
@@ -30,51 +32,6 @@ IMPLEMENT_HC_VECTOR(ListenerEntryVec, ListenerEntry, 1)
 static ListenerEntryVec g_listenerEntryVec;
 static HcMutex *g_broadcastMutex = NULL;
 
-static int32_t AddGroupId(const GroupInfo *groupInfo, CJson *message)
-{
-    if (AddStringToJson(message, FIELD_GROUP_ID, StringGet(&groupInfo->id)) != HC_SUCCESS) {
-        LOGE("Failed to add groupId to message!");
-        return HC_ERR_JSON_FAIL;
-    }
-    return HC_SUCCESS;
-}
-
-static int32_t AddGroupType(const GroupInfo *groupInfo, CJson *message)
-{
-    if (AddIntToJson(message, FIELD_GROUP_TYPE, groupInfo->type) != HC_SUCCESS) {
-        LOGE("Failed to add groupType to message!");
-        return HC_ERR_JSON_FAIL;
-    }
-    return HC_SUCCESS;
-}
-
-static int32_t AddGroupName(const GroupInfo *groupInfo, CJson *message)
-{
-    if (AddStringToJson(message, FIELD_GROUP_NAME, StringGet(&groupInfo->name)) != HC_SUCCESS) {
-        LOGE("Failed to add groupName to message!");
-        return HC_ERR_JSON_FAIL;
-    }
-    return HC_SUCCESS;
-}
-
-static int32_t AddGroupOwner(const GroupInfo *groupInfo, CJson *message)
-{
-    if (AddStringToJson(message, FIELD_GROUP_OWNER, StringGet(&groupInfo->ownerName)) != HC_SUCCESS) {
-        LOGE("Failed to add groupOwner to message!");
-        return HC_ERR_JSON_FAIL;
-    }
-    return HC_SUCCESS;
-}
-
-static int32_t AddGroupVisibility(const GroupInfo *groupInfo, CJson *message)
-{
-    if (AddIntToJson(message, FIELD_GROUP_VISIBILITY, groupInfo->visibility) != HC_SUCCESS) {
-        LOGE("Failed to add groupVisibility to message!");
-        return HC_ERR_JSON_FAIL;
-    }
-    return HC_SUCCESS;
-}
-
 static int32_t GenerateMessage(const GroupInfo *groupInfo, char **returnGroupInfo)
 {
     CJson *message = CreateJson();
@@ -82,12 +39,8 @@ static int32_t GenerateMessage(const GroupInfo *groupInfo, char **returnGroupInf
         LOGE("Failed to allocate message memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    int32_t result;
-    if (((result = AddGroupId(groupInfo, message)) != HC_SUCCESS) ||
-        ((result = AddGroupType(groupInfo, message)) != HC_SUCCESS) ||
-        ((result = AddGroupName(groupInfo, message)) != HC_SUCCESS) ||
-        ((result = AddGroupOwner(groupInfo, message)) != HC_SUCCESS) ||
-        ((result = AddGroupVisibility(groupInfo, message)) != HC_SUCCESS)) {
+    int32_t result = GenerateReturnGroupInfo(groupInfo, message);
+    if (result != HC_SUCCESS) {
         FreeJson(message);
         return result;
     }
@@ -116,12 +69,12 @@ static void PostOnGroupCreated(const GroupInfo *groupInfo)
     g_broadcastMutex->lock(g_broadcastMutex);
     FOR_EACH_HC_VECTOR(g_listenerEntryVec, index, entry) {
         if ((entry != NULL) && (entry->listener != NULL) && (entry->listener->onGroupCreated != NULL)) {
-            LOGI("[Broadcaster]: Ready to broadcast the message to the listener! [AppId]: %s", entry->appId);
+            LOGI("[Broadcaster]: PostOnGroupCreated! [AppId]: %s", entry->appId);
             entry->listener->onGroupCreated(messageStr);
         }
     }
-    g_broadcastMutex->unlock(g_broadcastMutex);
     FreeJsonString(messageStr);
+    g_broadcastMutex->unlock(g_broadcastMutex);
 }
 
 static void PostOnGroupDeleted(const GroupInfo *groupInfo)
@@ -139,12 +92,12 @@ static void PostOnGroupDeleted(const GroupInfo *groupInfo)
     g_broadcastMutex->lock(g_broadcastMutex);
     FOR_EACH_HC_VECTOR(g_listenerEntryVec, index, entry) {
         if ((entry != NULL) && (entry->listener != NULL) && (entry->listener->onGroupDeleted != NULL)) {
-            LOGI("[Broadcaster]: Ready to broadcast the message to the listener! [AppId]: %s", entry->appId);
+            LOGI("[Broadcaster]: PostOnGroupDeleted! [AppId]: %s", entry->appId);
             entry->listener->onGroupDeleted(messageStr);
         }
     }
-    g_broadcastMutex->unlock(g_broadcastMutex);
     FreeJsonString(messageStr);
+    g_broadcastMutex->unlock(g_broadcastMutex);
 }
 
 static void PostOnDeviceBound(const char *peerUdid, const GroupInfo *groupInfo)
@@ -162,12 +115,12 @@ static void PostOnDeviceBound(const char *peerUdid, const GroupInfo *groupInfo)
     g_broadcastMutex->lock(g_broadcastMutex);
     FOR_EACH_HC_VECTOR(g_listenerEntryVec, index, entry) {
         if ((entry != NULL) && (entry->listener != NULL) && (entry->listener->onDeviceBound != NULL)) {
-            LOGI("[Broadcaster]: Ready to broadcast the message to the listener! [AppId]: %s", entry->appId);
+            LOGI("[Broadcaster]: PostOnDeviceBound! [AppId]: %s", entry->appId);
             entry->listener->onDeviceBound(peerUdid, messageStr);
         }
     }
-    g_broadcastMutex->unlock(g_broadcastMutex);
     FreeJsonString(messageStr);
+    g_broadcastMutex->unlock(g_broadcastMutex);
 }
 
 static void PostOnDeviceUnBound(const char *peerUdid, const GroupInfo *groupInfo)
@@ -185,12 +138,12 @@ static void PostOnDeviceUnBound(const char *peerUdid, const GroupInfo *groupInfo
     g_broadcastMutex->lock(g_broadcastMutex);
     FOR_EACH_HC_VECTOR(g_listenerEntryVec, index, entry) {
         if ((entry != NULL) && (entry->listener != NULL) && (entry->listener->onDeviceUnBound != NULL)) {
-            LOGI("[Broadcaster]: Ready to broadcast the message to the listener! [AppId]: %s", entry->appId);
+            LOGI("[Broadcaster]: PostOnDeviceUnBound! [AppId]: %s", entry->appId);
             entry->listener->onDeviceUnBound(peerUdid, messageStr);
         }
     }
-    g_broadcastMutex->unlock(g_broadcastMutex);
     FreeJsonString(messageStr);
+    g_broadcastMutex->unlock(g_broadcastMutex);
 }
 
 static void PostOnDeviceNotTrusted(const char *peerUdid)
@@ -204,7 +157,7 @@ static void PostOnDeviceNotTrusted(const char *peerUdid)
     g_broadcastMutex->lock(g_broadcastMutex);
     FOR_EACH_HC_VECTOR(g_listenerEntryVec, index, entry) {
         if ((entry != NULL) && (entry->listener != NULL) && (entry->listener->onDeviceNotTrusted != NULL)) {
-            LOGI("[Broadcaster]: Ready to broadcast the message to the listener! [AppId]: %s", entry->appId);
+            LOGI("[Broadcaster]: PostOnDeviceNotTrusted! [AppId]: %s", entry->appId);
             entry->listener->onDeviceNotTrusted(peerUdid);
         }
     }
@@ -222,8 +175,7 @@ static void PostOnLastGroupDeleted(const char *peerUdid, int groupType)
     g_broadcastMutex->lock(g_broadcastMutex);
     FOR_EACH_HC_VECTOR(g_listenerEntryVec, index, entry) {
         if ((entry != NULL) && (entry->listener != NULL) && (entry->listener->onLastGroupDeleted != NULL)) {
-            LOGI("[Broadcaster]: Ready to broadcast the message to the listener! [AppId]: %s, [GroupType]: %d",
-                entry->appId, groupType);
+            LOGI("[Broadcaster]: PostOnLastGroupDeleted! [AppId]: %s, [GroupType]: %d", entry->appId, groupType);
             entry->listener->onLastGroupDeleted(peerUdid, groupType);
         }
     }
@@ -237,7 +189,7 @@ static void PostOnTrustedDeviceNumChanged(int curTrustedDeviceNum)
     g_broadcastMutex->lock(g_broadcastMutex);
     FOR_EACH_HC_VECTOR(g_listenerEntryVec, index, entry) {
         if ((entry != NULL) && (entry->listener != NULL) && (entry->listener->onTrustedDeviceNumChanged != NULL)) {
-            LOGI("[Broadcaster]: Ready to broadcast the message to the listener! [AppId]: %s", entry->appId);
+            LOGI("[Broadcaster]: PostOnTrustedDeviceNumChanged! [AppId]: %s", entry->appId);
             entry->listener->onTrustedDeviceNumChanged(curTrustedDeviceNum);
         }
     }
@@ -340,6 +292,7 @@ void DestroyBroadcastManager()
 {
     uint32_t index;
     ListenerEntry *entry = NULL;
+    g_broadcastMutex->lock(g_broadcastMutex);
     FOR_EACH_HC_VECTOR(g_listenerEntryVec, index, entry) {
         if (entry != NULL) {
             HcFree(entry->appId);
@@ -347,6 +300,7 @@ void DestroyBroadcastManager()
         }
     }
     DESTROY_HC_VECTOR(ListenerEntryVec, &g_listenerEntryVec)
+    g_broadcastMutex->unlock(g_broadcastMutex);
     if (g_broadcastMutex != NULL) {
         DestroyHcMutex(g_broadcastMutex);
         HcFree(g_broadcastMutex);
@@ -366,7 +320,6 @@ int32_t AddListener(const char *appId, const DataChangeListener *listener)
         return HC_ERR_INVALID_PARAMS;
     }
     if (UpdateListenerIfExist(appId, listener) == HC_SUCCESS) {
-        LOGI("The listener associated with the appId already exists, so we choose to update the listener!");
         return HC_SUCCESS;
     }
     return AddListenerIfNotExist(appId, listener);
@@ -390,6 +343,6 @@ int32_t RemoveListener(const char *appId)
             return HC_SUCCESS;
         }
     }
-    LOGI("[End]: Although the listener does not exist, we still believe it is correct to deregister the listener!");
+    LOGI("[End]: The listener does not exist!");
     return HC_SUCCESS;
 }

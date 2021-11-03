@@ -19,6 +19,8 @@
 #define HC_GROUP_FRIEND_MAX_NUM 100 /* Visibility is 1, friend list is available, and max is 100 */
 #define HC_GROUP_MANAGER_MAX_NUM 10 /* manager max number is 10, it includes owner and other managers */
 
+#define PUBLIC_KEY_MAX_LENGTH 128
+
 enum {
     /* common error code, 0x00000000 ~ 0x00000FFF */
     HC_SUCCESS = 0x00000000,
@@ -103,7 +105,7 @@ enum {
     HC_ERR_DB = 0x00006001,
     HC_ERR_BEYOND_LIMIT = 0x00006002,
     HC_ERR_SAVE_DB_FAILED = 0x00006003,
-    HC_ERR_FRIEND_NOT_EXIST = 0x00006004,
+    HC_ERR_ROLE_NOT_EXIST = 0x00006004,
     HC_ERR_MANAGER_NOT_EXIST = 0x00006005,
     HC_ERR_GROUP_DUPLICATE = 0x00006006,
     HC_ERR_GROUP_NOT_EXIST = 0x00006007,

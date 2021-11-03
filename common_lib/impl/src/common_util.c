@@ -14,7 +14,6 @@
  */
 
 #include "common_util.h"
-#include <stdlib.h>
 #include <string.h>
 #include "hc_error.h"
 #include "hc_log.h"
@@ -22,7 +21,7 @@
 
 #define OUT_OF_HEX 16
 #define NUMBER_9_IN_DECIMAL 9
-#define ASCII_CASE_DIFFERENCE_VALUE 32
+#define ASCII_DIFFERENCE_NUM 32
 
 static char HexToChar(uint8_t hex)
 {
@@ -138,7 +137,7 @@ int32_t ToUpperCase(const char *oriStr, char **desStr)
     }
     for (uint32_t i = 0; i < HcStrlen(oriStr); i++) {
         if ((oriStr[i] >= 'a') && (oriStr[i] <= 'f')) {
-            (*desStr)[i] = oriStr[i] - ASCII_CASE_DIFFERENCE_VALUE;
+            (*desStr)[i] = oriStr[i] - ASCII_DIFFERENCE_NUM;
         } else {
             (*desStr)[i] = oriStr[i];
         }
