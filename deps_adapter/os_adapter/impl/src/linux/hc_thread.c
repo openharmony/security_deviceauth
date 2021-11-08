@@ -14,7 +14,7 @@
  */
 
 #include "hc_thread.h"
-#include "hc_error.h"
+#include "hal_error.h"
 #include "hc_log.h"
 
 #ifdef __cplusplus

@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef HC_ERROR_H
-#define HC_ERROR_H
+#ifndef HAL_ERROR_H
+#define HAL_ERROR_H
 
 enum {
     HAL_SUCCESS = 0,
@@ -24,16 +24,8 @@ enum {
     HAL_ERR_BAD_ALLOC = -4,
     HAL_ERR_NULL_PTR = -5,
     HAL_ERR_MEMORY_COPY = -6,
-
     HAL_ERR_FILE_NOT_EXIST = -7,
     HAL_ERR_FILE = -8,
-
-    HAL_ERR_JSON_FAILED = -9,
-    HAL_ERR_JSON_GET = -10,
-    HAL_ERR_JSON_ADD = -11,
-    HAL_ERR_JSON_REPLACE = -12,
-    HAL_ERR_JSON_DUPLICATE = -13,
-
     HAL_ERR_INIT_PARAM_SET_FAILED = -14,
     HAL_ERR_ADD_PARAM_FAILED = -15,
     HAL_ERR_GET_PARAM_FAILED = -16,
@@ -41,5 +33,4 @@ enum {
     HAL_ERR_FRESH_PARAM_SET_FAILED = -18,
     HAL_ERR_INIT_FAILED = -19,
 };
-
 #endif

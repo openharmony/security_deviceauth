@@ -17,6 +17,7 @@
 #define HC_CONDITION_H
 
 #include "pthread.h"
+#include "clib_types.h"
 #include "hc_mutex.h"
 #include "hc_types.h"
 

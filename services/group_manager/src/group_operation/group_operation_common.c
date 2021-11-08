@@ -20,6 +20,7 @@
 #include "database_manager.h"
 #include "dev_auth_module_manager.h"
 #include "group_operation.h"
+#include "hal_error.h"
 #include "hc_dev_info.h"
 #include "hc_log.h"
 

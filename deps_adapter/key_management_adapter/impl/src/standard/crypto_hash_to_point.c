@@ -17,7 +17,7 @@
 #include <openssl/bn.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
-#include "hc_error.h"
+#include "hal_error.h"
 #include "hc_log.h"
 #include "hc_types.h"
 #include "hks_type.h"

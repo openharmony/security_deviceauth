@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 
+#include <string.h>
 #include "hc_string.h"
 
 const uint32_t STRING_ALLOC_SIZE = 10;

@@ -18,7 +18,7 @@
 #include <fcntl.h>
 #include <securec.h>
 #include <stdio.h>
-#include "hc_error.h"
+#include "hal_error.h"
 #include "hc_log.h"
 #include "utils_file.h"
 

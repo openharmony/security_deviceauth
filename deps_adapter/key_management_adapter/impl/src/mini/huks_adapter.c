@@ -15,7 +15,7 @@
 
 #include "huks_adapter.h"
 #include "common_util.h"
-#include "hc_error.h"
+#include "hal_error.h"
 #include "hc_file.h"
 #include "hc_log.h"
 #include "hks_api.h"

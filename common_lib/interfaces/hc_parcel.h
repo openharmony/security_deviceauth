@@ -16,7 +16,8 @@
 #ifndef HC_PARCEL_H
 #define HC_PARCEL_H
 
-#include "hc_types.h"
+#include <stdint.h>
+#include "clib_types.h"
 
 #define PARCEL_DEFAULT_LENGTH 0
 #define PARCEL_DEFAULT_ALLOC_UNIT 0

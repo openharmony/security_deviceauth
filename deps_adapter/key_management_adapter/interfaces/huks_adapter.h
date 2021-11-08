@@ -17,7 +17,7 @@
 #define HUKS_ADAPTER_H
 
 #include "alg_defs.h"
-#include "hc_error.h"
+#include "hal_error.h"
 #include "hc_types.h"
 
 #define BITS_PER_BYTE 8

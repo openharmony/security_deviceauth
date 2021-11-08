@@ -18,6 +18,7 @@
 #include "device_auth_defines.h"
 #include "hc_log.h"
 #include "hc_mutex.h"
+#include "hc_types.h"
 #include "hc_vector.h"
 #include "securec.h"
 

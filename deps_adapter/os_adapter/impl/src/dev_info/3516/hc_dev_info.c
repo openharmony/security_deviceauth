@@ -14,7 +14,7 @@
  */
 
 #include "hc_dev_info.h"
-#include "hc_error.h"
+#include "hal_error.h"
 #include "hc_log.h"
 #include "parameter.h"
 #include "securec.h"
