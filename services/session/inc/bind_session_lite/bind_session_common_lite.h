@@ -16,27 +16,10 @@
 #ifndef BIND_SESSION_COMMON_LITE_H
 #define BIND_SESSION_COMMON_LITE_H
 
-#include "base_session.h"
-#include "common_defs.h"
-#include "hc_types.h"
+#include "bind_session_common_defines.h"
 
-typedef struct {
-    Session base;
-    void (*onChannelOpened)(Session *, int64_t channelId, int64_t requestId);
-    void (*onConfirmationReceived)(Session *, CJson *returnData);
-    int curTaskId;
-    int operationCode;
-    ChannelType channelType;
-    bool isWaiting;
-    int64_t requestId;
-    int64_t channelId;
-    CJson *params;
-} LiteBindSession;
-
-void InitLiteBindSession(int bindType, int operationCode, int64_t requestId, LiteBindSession *session,
-    const DeviceAuthCallback *callback);
-void DestroyLiteBindSession(Session *session);
-void LiteInformPeerErrorIfNeed(bool isNeedInform, int32_t errorCode, LiteBindSession *session);
-int32_t LiteSaveReceivedData(LiteBindSession *session, const CJson *jsonParams);
-int32_t LitePrepareAndSendData(LiteBindSession *session, bool *isNeedInform);
+void InitModuleType(const CJson *jsonParams, BindSession *session);
+int32_t ProcessLiteBindSession(Session *session, CJson *jsonParams);
+int32_t LiteSaveReceivedData(BindSession *session, const CJson *jsonParams);
+int32_t LitePrepareAndSendData(BindSession *session, bool *isNeedInform);
 #endif

@@ -16,11 +16,13 @@
 #ifndef BASE_GROUP_H
 #define BASE_GROUP_H
 
-#include "json_utils.h"
 #include "device_auth.h"
+#include "json_utils.h"
 
 typedef struct {
     int type;
+    int32_t (*createGroup)(CJson *jsonParams, char **returnJsonStr);
+    int32_t (*deleteGroup)(CJson *jsonParams, char **returnJsonStr);
 } BaseGroup;
 
 #endif

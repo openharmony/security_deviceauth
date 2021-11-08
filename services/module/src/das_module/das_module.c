@@ -41,6 +41,12 @@ static int32_t DeletePeerAuthInfo(const char *pkgName, const char *serviceType, 
     return DeletePeerAuthInfoInTask(pkgName, serviceType, authId, userType);
 }
 
+static int32_t GetPublicKey(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType,
+    Uint8Buff *returnPk)
+{
+    return GetPublicKeyInTask(pkgName, serviceType, authId, userType, returnPk);
+}
+
 static int CreateDasTask(int *taskId, const CJson *in, CJson *out)
 {
     if (taskId == NULL || in == NULL || out == NULL) {
@@ -119,6 +125,7 @@ AuthModuleBase *CreateDasModule()
     g_dasModule.registerLocalIdentity = RegisterLocalIdentity;
     g_dasModule.unregisterLocalIdentity = UnregisterLocalIdentity;
     g_dasModule.deletePeerAuthInfo = DeletePeerAuthInfo;
+    g_dasModule.getPublicKey = GetPublicKey;
     g_taskInModuleVec = CREATE_HC_VECTOR(TaskInModuleVec)
     if (InitDasProtocolType() != HC_SUCCESS) {
         LOGE("InitDasProtocolType failed.");

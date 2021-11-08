@@ -71,10 +71,11 @@ static int32_t DeletePeerAuthInfo(const char *pkgName, const char *serviceType, 
 }
 
 TokenManager g_symTokenManagerInstance = {
-    NULL,
-    UnregisterLocalIdentity,
-    DeletePeerAuthInfo,
-    NULL
+    .registerLocalIdentity = NULL,
+    .unregisterLocalIdentity = UnregisterLocalIdentity,
+    .deletePeerAuthInfo = DeletePeerAuthInfo,
+    .computeAndSavePsk = NULL,
+    .getPublicKey = NULL
 };
 
 bool IsIsoSupported(void)

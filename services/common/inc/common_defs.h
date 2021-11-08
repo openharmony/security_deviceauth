@@ -18,6 +18,8 @@
 
 #include "device_auth.h"
 #include "device_auth_defines.h"
+#include "hc_string.h"
+#include "hc_vector.h"
 #include "json_utils.h"
 
 #define FIELD_ADD_TYPE "addType"
@@ -121,7 +123,7 @@
 
 /* DefaultValue */
 #define DEFAULT_MEMORY_SIZE 64
-#define DEFAULT_USER_ID 0
+#define DEFAULT_USER_ID_HASH ""
 #define DEFAULT_REQUEST_ID 0
 #define DEFAULT_CHANNEL_ID -1
 #define DEFAULT_EXPIRE_TIME 90
@@ -131,14 +133,6 @@
 #define MAX_BUFFER_LEN 1024
 #define MAX_DATA_BUFFER_SIZE 4096
 #define MAX_AUTH_ID_LEN 256
-
-typedef enum {
-    ALL_GROUP = 0,
-    IDENTICAL_ACCOUNT_GROUP = 1,
-    PEER_TO_PEER_GROUP = 256,
-    COMPATIBLE_GROUP = 512,
-    ACROSS_ACCOUNT_AUTHORIZE_GROUP = 1282
-} GroupType;
 
 typedef enum {
     NO_CHANNEL = 1,
@@ -233,15 +227,6 @@ typedef enum {
     SECURE_CLONE = 8,
 } OperationCode;
 
-typedef struct {
-    int64_t requestId;
-    int32_t type;
-    int64_t sessionId;
-} RequestInfo;
-
-typedef struct {
-    char *appId;
-    DeviceAuthCallback *callback;
-} CallbackEntry;
+DECLARE_HC_VECTOR(StringVector, HcString)
 
 #endif

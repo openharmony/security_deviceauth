@@ -32,6 +32,12 @@
 #include "key_agree_session_client.h"
 #include "key_agree_session_server.h"
 
+typedef struct {
+    int64_t requestId;
+    int32_t type;
+    int64_t sessionId;
+} RequestInfo;
+
 DECLARE_HC_VECTOR(SessionManagerVec, void *)
 IMPLEMENT_HC_VECTOR(SessionManagerVec, void *, 1)
 
@@ -105,13 +111,13 @@ static void DestroyRequest(int64_t requestId)
     }
 }
 
-void InitSessionManager()
+void InitSessionManager(void)
 {
     g_sessionManagerVec = CREATE_HC_VECTOR(SessionManagerVec)
     g_requestVec = CREATE_HC_VECTOR(RequestInfoVec)
 }
 
-void DestroySessionManager()
+void DestroySessionManager(void)
 {
     uint32_t index;
     void **session = NULL;
@@ -283,18 +289,11 @@ void OnChannelOpened(int64_t requestId, int64_t channelId)
     FOR_EACH_HC_VECTOR(g_sessionManagerVec, index, session) {
         if (session != NULL && (*session != NULL)) {
             if (((Session *)(*session))->sessionId == sessionId) {
-                if (((Session *)(*session))->type == TYPE_CLIENT_BIND_SESSION) {
+                int sessionType = ((Session *)(*session))->type;
+                if ((sessionType == TYPE_CLIENT_BIND_SESSION) ||
+                    (sessionType == TYPE_CLIENT_BIND_SESSION_LITE) ||
+                    (sessionType == TYPE_CLIENT_KEY_AGREE_SESSION)) {
                     BindSession *realSession = (BindSession *)(*session);
-                    realSession->onChannelOpened(*session, channelId, requestId);
-                    return;
-                }
-                if (((Session *)(*session))->type == TYPE_CLIENT_BIND_SESSION_LITE) {
-                    LiteBindSession *realSession = (LiteBindSession *)(*session);
-                    realSession->onChannelOpened(*session, channelId, requestId);
-                    return;
-                }
-                if (((Session *)(*session))->type == TYPE_CLIENT_KEY_AGREE_SESSION) {
-                    KeyAgreeSession *realSession = (KeyAgreeSession *)(*session);
                     realSession->onChannelOpened(*session, channelId, requestId);
                     return;
                 }
@@ -305,7 +304,7 @@ void OnChannelOpened(int64_t requestId, int64_t channelId)
     }
 }
 
-void OnConfirmationReceived(int64_t requestId, CJson *returnData)
+void OnConfirmed(int64_t requestId, CJson *returnData)
 {
     int64_t sessionId = 0;
     if (GetSessionIdByType(requestId, BIND_TYPE, &sessionId) != HC_SUCCESS) {
@@ -318,31 +317,16 @@ void OnConfirmationReceived(int64_t requestId, CJson *returnData)
         if ((session == NULL) || (*session == NULL) || (((Session *)(*session))->sessionId != sessionId)) {
             continue;
         }
-        if (((Session *)(*session))->type == TYPE_SERVER_BIND_SESSION) {
+        int sessionType = ((Session *)(*session))->type;
+        if ((sessionType == TYPE_SERVER_BIND_SESSION) ||
+            (sessionType == TYPE_SERVER_BIND_SESSION_LITE) ||
+            (sessionType == TYPE_SERVER_KEY_AGREE_SESSION)) {
             BindSession *realSession = (BindSession *)(*session);
             if (!realSession->isWaiting) {
                 LOGE("The found session is not in the waiting state!");
                 return;
             }
-            realSession->onConfirmationReceived(*session, returnData);
-            return;
-        }
-        if (((Session *)(*session))->type == TYPE_SERVER_BIND_SESSION_LITE) {
-            LiteBindSession *realSession = (LiteBindSession *)(*session);
-            if (!realSession->isWaiting) {
-                LOGE("The found session is not in the waiting state!");
-                return;
-            }
-            realSession->onConfirmationReceived(*session, returnData);
-            return;
-        }
-        if (((Session *)(*session))->type == TYPE_SERVER_KEY_AGREE_SESSION) {
-            KeyAgreeSession *realSession = (KeyAgreeSession *)(*session);
-            if (!realSession->isWaiting) {
-                LOGE("The found session is not in the waiting state!");
-                return;
-            }
-            realSession->onConfirmationReceived(*session, returnData);
+            realSession->onConfirmed(*session, returnData);
             return;
         }
         LOGE("The type of the found session is not as expected!");

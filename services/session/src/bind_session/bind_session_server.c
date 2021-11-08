@@ -14,10 +14,11 @@
  */
 
 #include "bind_session_server.h"
+#include "bind_session_common_util.h"
 #include "callback_manager.h"
 #include "channel_manager.h"
 #include "das_module_defines.h"
-#include "group_common.h"
+#include "group_operation_common.h"
 #include "hc_log.h"
 #include "session_manager.h"
 
@@ -91,7 +92,7 @@ static int32_t GetServerModuleReturnData(BindSession *session, CJson *jsonParams
     FreeJson(moduleParams);
     if (result != HC_SUCCESS) {
         *isNeedInform = false;
-        InformPeerModuleErrorIfNeed(out, session);
+        InformPeerModuleError(out, session);
         return result;
     }
     return HC_SUCCESS;
@@ -118,7 +119,7 @@ static int32_t PrepareData(BindSession *session, CJson *jsonParams, CJson **send
         return HC_ERR_JSON_GET;
     }
 
-    result = AddInfoToSendData((session->operationCode == MEMBER_JOIN), session, *sendData);
+    result = AddInfoToSendData((session->opCode == MEMBER_JOIN), session, *sendData);
     if (result != HC_SUCCESS) {
         LOGE("Failed to add information to sendData!");
         FreeJson(*sendData);
@@ -153,11 +154,6 @@ static int32_t GenerateRequestParams(const CJson *jsonParams, CJson *requestPara
         LOGE("Failed to get peerAuthId from jsonParams!");
         return HC_ERR_JSON_GET;
     }
-    const char *appId = GetStringFromJson(jsonParams, FIELD_APP_ID);
-    if (appId == NULL) {
-        LOGE("Failed to get appId from jsonParams!");
-        return HC_ERR_JSON_GET;
-    }
     int32_t groupType = PEER_TO_PEER_GROUP;
     if (GetIntFromJson(jsonParams, FIELD_GROUP_TYPE, &groupType) != HC_SUCCESS) {
         LOGE("Failed to get groupType from jsonParams!");
@@ -173,10 +169,6 @@ static int32_t GenerateRequestParams(const CJson *jsonParams, CJson *requestPara
     }
     if (AddStringToJson(requestParams, FIELD_PEER_DEVICE_ID, peerAuthId) != HC_SUCCESS) {
         LOGE("Failed to add peerDeviceId to requestParams!");
-        return HC_ERR_JSON_FAIL;
-    }
-    if (AddStringToJson(requestParams, FIELD_APP_ID, appId) != HC_SUCCESS) {
-        LOGE("Failed to add appId to requestParams!");
         return HC_ERR_JSON_FAIL;
     }
     return HC_SUCCESS;
@@ -201,7 +193,7 @@ static int32_t RequestConfirmation(const CJson *jsonParams, const BindSession *s
         LOGE("An error occurred when converting JSON data to String data.!");
         return HC_ERR_JSON_FAIL;
     }
-    char *returnDataStr = ProcessRequestCallback(session->requestId, session->operationCode,
+    char *returnDataStr = ProcessRequestCallback(session->reqId, session->opCode,
         requestParamsStr, session->base.callback);
     FreeJsonString(requestParamsStr);
     if (returnDataStr == NULL) {
@@ -310,16 +302,6 @@ static int32_t CombineInputData(int operationCode, const CJson *returnData, CJso
     }
 }
 
-static bool IsAcceptRequest(const CJson *returnData)
-{
-    uint32_t confirmation = REQUEST_REJECTED;
-    if (GetUnsignedIntFromJson(returnData, FIELD_CONFIRMATION, &confirmation) != HC_SUCCESS) {
-        LOGE("Failed to get confirmation from returnData!");
-        return false;
-    }
-    return (confirmation == REQUEST_ACCEPTED);
-}
-
 static int32_t PrepareServer(BindSession *session, CJson *returnData, bool *isNeedInform)
 {
     if ((session->isWaiting) && (!IsAcceptRequest(returnData))) {
@@ -331,7 +313,7 @@ static int32_t PrepareServer(BindSession *session, CJson *returnData, bool *isNe
         LOGE("Received data before request confirmation are lost!");
         return HC_ERR_LOST_DATA;
     }
-    int32_t result = CombineInputData(session->operationCode, returnData, jsonParams);
+    int32_t result = CombineInputData(session->opCode, returnData, jsonParams);
     /* Release the memory in advance to reduce the memory usage. */
     DeleteAllItem(returnData);
     session->isWaiting = false;
@@ -348,7 +330,7 @@ static int32_t PrepareServer(BindSession *session, CJson *returnData, bool *isNe
      * If the service is invited to join the peer group,
      * the identity key pair of the corresponding group needs to be generated here.
      */
-    if (NeedCreateGroup(SERVER, session->operationCode)) {
+    if (NeedCreateGroup(SERVER, session->opCode)) {
         const char *groupId = GetStringFromJson(jsonParams, FIELD_GROUP_ID);
         if (groupId == NULL) {
             LOGE("Failed to get groupId from jsonParams!");
@@ -377,12 +359,10 @@ static void OnBindConfirmationReceived(Session *session, CJson *returnData)
     bool isNeedInform = true;
     int32_t result = PrepareServer(realSession, returnData, &isNeedInform);
     if (result != HC_SUCCESS) {
-        LOGI("An error occurs after the server receives the response to the request. We need to notify the service!");
-        InformPeerProcessErrorIfNeed(isNeedInform, result, realSession);
-        ProcessErrorCallback(realSession->requestId, realSession->operationCode, result, NULL,
-            realSession->base.callback);
+        InformPeerGroupErrorIfNeed(isNeedInform, result, realSession);
+        ProcessErrorCallback(realSession->reqId, realSession->opCode, result, NULL, realSession->base.callback);
         CloseChannel(realSession->channelType, realSession->channelId);
-        DestroySession(realSession->requestId);
+        DestroySession(realSession->reqId);
     }
 }
 
@@ -453,53 +433,31 @@ static int32_t HandleRequest(CJson *jsonParams, BindSession *session, bool *isNe
     return result;
 }
 
-static void InitServerChannel(const CJson *jsonParams, BindSession *session)
-{
-    int64_t channelId = DEFAULT_CHANNEL_ID;
-    if (GetByteFromJson(jsonParams, FIELD_CHANNEL_ID, (uint8_t *)&channelId, sizeof(int64_t)) == HC_SUCCESS) {
-        session->channelType = SOFT_BUS;
-        session->channelId = channelId;
-    } else {
-        session->channelType = SERVICE_CHANNEL;
-    }
-}
-
 Session *CreateServerBindSession(CJson *jsonParams, const DeviceAuthCallback *callback)
 {
-    int64_t requestId = DEFAULT_REQUEST_ID;
-    if (GetInt64FromJson(jsonParams, FIELD_REQUEST_ID, &requestId) != HC_SUCCESS) {
-        LOGE("Failed to get requestId from jsonParams!");
+    int opCode = MEMBER_INVITE;
+    if (GetIntFromJson(jsonParams, FIELD_GROUP_OP, &opCode) != HC_SUCCESS) {
+        LOGE("Failed to get opCode from jsonParams!");
         return NULL;
     }
-    int operationCode = MEMBER_INVITE;
-    if (GetIntFromJson(jsonParams, FIELD_GROUP_OP, &operationCode) != HC_SUCCESS) {
-        LOGE("Failed to get operationCode from jsonParams!");
-        return NULL;
-    }
-    LOGI("Start to create server bind session! [RequestId]: %" PRId64 ", [OperationCode]: %d",
-        requestId, operationCode);
 
-    BindSession *session = (BindSession *)HcMalloc(sizeof(BindSession), 0);
+    BindSession *session = CreateBaseBindSession(TYPE_SERVER_BIND_SESSION, opCode,
+        jsonParams, callback, ProcessBindSession);
     if (session == NULL) {
-        LOGE("Failed to allocate session memory!");
         return NULL;
     }
-    InitBindSession(TYPE_SERVER_BIND_SESSION, operationCode, requestId, callback, session);
     InitServerChannel(jsonParams, session);
     /* The server may receive the confirm request message. */
-    session->onConfirmationReceived = OnBindConfirmationReceived;
+    session->onConfirmed = OnBindConfirmationReceived;
 
     bool isNeedInform = true;
     int32_t result = HandleRequest(jsonParams, session, &isNeedInform);
     if (result != HC_SUCCESS) {
-        InformPeerProcessErrorIfNeed(isNeedInform, result, session);
-        ProcessErrorCallback(session->requestId, session->operationCode, result, NULL,
-            session->base.callback);
+        InformPeerGroupErrorIfNeed(isNeedInform, result, session);
+        ProcessErrorCallback(session->reqId, session->opCode, result, NULL, session->base.callback);
         CloseChannel(session->channelType, session->channelId);
         DestroyBindSession((Session *)session);
         return NULL;
     }
-    LOGI("Create server bind session successfully! [RequestId]: %" PRId64 ", [OperationCode]: %d",
-        requestId, operationCode);
     return (Session *)session;
 }

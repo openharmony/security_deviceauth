@@ -14,6 +14,7 @@
  */
 
 #include "bind_session_client_lite.h"
+#include "bind_session_common_util.h"
 #include "callback_manager.h"
 #include "channel_manager.h"
 #include "device_auth_defines.h"
@@ -37,11 +38,11 @@ static void OnLiteBindChannelOpened(Session *session, int64_t channelId, int64_t
         return;
     }
 
-    LiteBindSession *realSession = (LiteBindSession *)session;
+    BindSession *realSession = (BindSession *)session;
     /* Double check channelId. If the two channelIds are different, the channel fails to be established. */
     int32_t result = DoubleCheckChannelId(channelId, realSession->channelId);
     if (result != HC_SUCCESS) {
-        ProcessErrorCallback(requestId, realSession->operationCode, result, NULL, realSession->base.callback);
+        ProcessErrorCallback(requestId, realSession->opCode, result, NULL, realSession->base.callback);
         DestroySession(requestId);
         return;
     }
@@ -49,59 +50,44 @@ static void OnLiteBindChannelOpened(Session *session, int64_t channelId, int64_t
     bool isNeedInform = true;
     result = LitePrepareAndSendData(realSession, &isNeedInform);
     if (result != HC_SUCCESS) {
-        LOGI("An error occurs before the client send data to the server. We need to notify the service!");
-        ProcessErrorCallback(requestId, realSession->operationCode, result, NULL, realSession->base.callback);
+        ProcessErrorCallback(requestId, realSession->opCode, result, NULL, realSession->base.callback);
         CloseChannel(realSession->channelType, realSession->channelId);
         DestroySession(requestId);
     }
 }
 
-static int32_t LitePrepareClient(const CJson *jsonParams, LiteBindSession *session)
+static int32_t LitePrepareClient(const CJson *jsonParams, BindSession *session)
 {
     int32_t result = LiteSaveReceivedData(session, jsonParams);
     if (result != HC_SUCCESS) {
         return result;
     }
-    return OpenChannel(session->channelType, jsonParams, session->requestId, &session->channelId);
-}
-
-static void InitClientChannel(const DeviceAuthCallback *callback, const CJson *jsonParams, LiteBindSession *session)
-{
-    session->channelType = GetChannelType(callback, jsonParams);
+    return OpenChannel(session->channelType, jsonParams, session->reqId, &session->channelId);
 }
 
 Session *CreateLiteClientBindSession(CJson *jsonParams, const DeviceAuthCallback *callback)
 {
-    int64_t requestId = DEFAULT_REQUEST_ID;
-    if (GetInt64FromJson(jsonParams, FIELD_REQUEST_ID, &requestId) != HC_SUCCESS) {
-        LOGE("Failed to get requestId from jsonParams!");
+    int opCode = OP_BIND;
+    if (GetIntFromJson(jsonParams, FIELD_OPERATION_CODE, &opCode) != HC_SUCCESS) {
+        LOGE("Failed to get opCode from jsonParams!");
         return NULL;
     }
-    int operationCode = OP_BIND;
-    if (GetIntFromJson(jsonParams, FIELD_OPERATION_CODE, &operationCode) != HC_SUCCESS) {
-        LOGE("Failed to get operationCode from jsonParams!");
-        return NULL;
-    }
-    LOGI("Start to create lite client bind session! [RequestId]: %" PRId64 ", [OperationCode]: %d",
-        requestId, operationCode);
 
-    LiteBindSession *session = (LiteBindSession *)HcMalloc(sizeof(LiteBindSession), 0);
+    BindSession *session = CreateBaseBindSession(TYPE_CLIENT_BIND_SESSION_LITE, opCode,
+        jsonParams, callback, ProcessLiteBindSession);
     if (session == NULL) {
-        LOGE("Failed to allocate session memory!");
         return NULL;
     }
-    InitLiteBindSession(TYPE_CLIENT_BIND_SESSION_LITE, operationCode, requestId, session, callback);
     InitClientChannel(callback, jsonParams, session);
+    InitModuleType(jsonParams, session);
     /* The client bind session needs to receive a message indicating that the channel is open. */
     session->onChannelOpened = OnLiteBindChannelOpened;
 
     int32_t result = LitePrepareClient(jsonParams, session);
     if (result != HC_SUCCESS) {
-        LOGI("An error occurs before the client send data to the server. We need to notify the service!");
-        DestroyLiteBindSession((Session *)session);
+        ProcessErrorCallback(session->reqId, session->opCode, result, NULL, session->base.callback);
+        DestroyBindSession((Session *)session);
         return NULL;
     }
-    LOGI("Create lite client bind session successfully! [RequestId]: %" PRId64 ", [OperationCode]: %d",
-        requestId, operationCode);
     return (Session *)session;
 }
