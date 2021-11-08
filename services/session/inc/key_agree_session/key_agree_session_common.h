@@ -16,27 +16,9 @@
 #ifndef KEY_AGREE_SESSION_COMMON_H
 #define KEY_AGREE_SESSION_COMMON_H
 
-#include "base_session.h"
-#include "common_defs.h"
-#include "hc_types.h"
+#include "bind_session_common_defines.h"
 
-typedef struct {
-    Session base;
-    void (*onChannelOpened)(Session *, int64_t channelId, int64_t requestId);
-    void (*onConfirmationReceived)(Session *, CJson *returnData);
-    int curTaskId;
-    int operationCode;
-    ChannelType channelType;
-    bool isWaiting;
-    int64_t requestId;
-    int64_t channelId;
-    CJson *params;
-} KeyAgreeSession;
-
-void InitKeyAgreeSession(int bindType, int operationCode, int64_t requestId, KeyAgreeSession *session,
-    const DeviceAuthCallback *callback);
-void DestroyKeyAgreeSession(Session *session);
-void InformPeerKeyAgreeErrorIfNeed(bool isNeedInform, int32_t errorCode, KeyAgreeSession *session);
-int32_t SaveReceivedKeyAgreeData(KeyAgreeSession *session, const CJson *jsonParams);
-int32_t PrepareAndSendKeyAgreeData(KeyAgreeSession *session, bool *isNeedInform);
+int32_t ProcessKeyAgreeSession(Session *session, CJson *jsonParams);
+int32_t SaveReceivedKeyAgreeData(BindSession *session, const CJson *jsonParams);
+int32_t PrepareAndSendKeyAgreeData(BindSession *session, bool *isNeedInform);
 #endif

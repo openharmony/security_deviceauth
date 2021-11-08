@@ -77,6 +77,28 @@ int32_t CheckMsgRepeatability(const CJson *in, int moduleType)
     }
 }
 
+static bool IsParamsForDasTokenManagerValid(const char *pkgName, const char *serviceType, Uint8Buff *authId,
+    int userType, int moduleType)
+{
+    if (pkgName == NULL || serviceType == NULL || authId == NULL || authId->val == NULL) {
+        LOGE("Params is null.");
+        return false;
+    }
+    if (moduleType != DAS_MODULE) {
+        LOGE("Unsupported method in the module, moduleType: %d.", moduleType);
+        return false;
+    }
+    if (HcStrlen(pkgName) == 0 || HcStrlen(serviceType) == 0 || authId->length == 0) {
+        LOGE("The length of params is invalid!");
+        return false;
+    }
+    if (userType < DEVICE_TYPE_ACCESSORY || userType > DEVICE_TYPE_PROXY) {
+        LOGE("Invalid userType!");
+        return false;
+    }
+    return true;
+}
+
 int32_t RegisterLocalIdentity(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType,
     int moduleType)
 {
@@ -147,6 +169,27 @@ int32_t DeletePeerAuthInfo(const char *pkgName, const char *serviceType, Uint8Bu
     int32_t res = dasModule->deletePeerAuthInfo(pkgName, serviceType, authId, userType);
     if (res != HC_SUCCESS) {
         LOGE("An error occurs when the module processes task!");
+        return res;
+    }
+    return HC_SUCCESS;
+}
+
+int32_t GetPublicKey(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType,
+    int moduleType, Uint8Buff *returnPk)
+{
+    if (!IsParamsForDasTokenManagerValid(pkgName, serviceType, authId, userType, moduleType) || returnPk == NULL) {
+        LOGE("Params for GetPublicKey is invalid.");
+        return HC_ERR_INVALID_PARAMS;
+    }
+    AuthModuleBase *module = GetModule(moduleType);
+    if (module == NULL) {
+        LOGE("Failed to get module!");
+        return HC_ERR_MODULE_NOT_FOUNT;
+    }
+    DasAuthModule *dasModule = (DasAuthModule *)module;
+    int32_t res = dasModule->getPublicKey(pkgName, serviceType, authId, userType, returnPk);
+    if (res != HC_SUCCESS) {
+        LOGE("Get public key failed, res: %d", res);
         return res;
     }
     return HC_SUCCESS;

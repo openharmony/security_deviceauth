@@ -39,5 +39,7 @@ void DestroyDasProtocolType(void);
 int32_t RegisterLocalIdentityInTask(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType);
 int32_t UnregisterLocalIdentityInTask(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType);
 int32_t DeletePeerAuthInfoInTask(const char *pkgName, const char *serviceType, Uint8Buff *authIdPeer, int userTypePeer);
+int32_t GetPublicKeyInTask(const char *pkgName, const char *serviceType, Uint8Buff *authIdPeer, int userTypePeer,
+    Uint8Buff *returnPk);
 
 #endif

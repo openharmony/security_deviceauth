@@ -18,6 +18,10 @@
 
 #include "device_auth.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 bool ProcessTransmitCallback(int64_t requestId, const uint8_t *data, uint32_t dataLen,
     const DeviceAuthCallback *callback);
 char *ProcessRequestCallback(int64_t requestId, int operationCode, const char *reqParams,
@@ -28,4 +32,14 @@ void ProcessSessionKeyCallback(int64_t requestId, const uint8_t *sessionKey, uin
     const DeviceAuthCallback *callback);
 void ProcessErrorCallback(int64_t requestId, int operationCode, int errorCode, const char *errorReturn,
     const DeviceAuthCallback *callback);
+
+int32_t InitCallbackManager(void);
+void DestroyCallbackManager(void);
+int32_t RegGroupManagerCallback(const char *appId, const DeviceAuthCallback *callback);
+int32_t UnRegGroupManagerCallback(const char *appId);
+const DeviceAuthCallback *GetGMCallbackByAppId(const char *appId);
+
+#ifdef __cplusplus
+}
+#endif
 #endif

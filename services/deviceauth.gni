@@ -22,13 +22,12 @@ inc_path = [
   "${services_path}/common/inc/channel_manager",
   "${services_path}/common/inc/channel_manager/soft_bus_channel",
   "${services_path}/common/inc/data_base",
+  "${services_path}/common/inc/lcm_adapter",
   "${services_path}/common/inc/task_manager",
   "${services_path}/group_auth/inc",
   "${services_path}/group_auth/inc/account_unrelated_group_auth",
   "${services_path}/group_auth/inc/account_related_group_auth",
   "${services_path}/group_manager/inc",
-  "${services_path}/group_manager/inc/account_unrelated",
-  "${services_path}/group_manager/inc/account_related",
   "${services_path}/module/inc",
   "${services_path}/module/inc/tcis_module",
   "${services_path}/module/inc/tcis_module/tcis_auth_token_manager",
@@ -109,9 +108,9 @@ module_only_pake_files = [
   "${services_path}/module/src/protocol/new_pake_protocol/new_pake_protocol_dl_mock/new_pake_protocol_dl_mock.c",
 ]
 
-channel_with_soft_bus_files = ["${services_path}/common/src/channel_manager/soft_bus_channel/soft_bus_channel.c"]
+channel_with_soft_bus_files = [ "${services_path}/common/src/channel_manager/soft_bus_channel/soft_bus_channel.c" ]
 
-channel_without_soft_bus_files = ["${services_path}/common/src/channel_manager/soft_bus_channel_mock/soft_bus_channel_mock.c"]
+channel_without_soft_bus_files = [ "${services_path}/common/src/channel_manager/soft_bus_channel_mock/soft_bus_channel_mock.c" ]
 
 deviceauth_base_files = [
   "${services_path}/device_auth.c",
@@ -119,19 +118,23 @@ deviceauth_base_files = [
   "${services_path}/common/src/callback_manager/callback_manager.c",
   "${services_path}/common/src/channel_manager/channel_manager.c",
   "${services_path}/common/src/data_base/database_manager.c",
+  "${services_path}/common/src/data_base/database_util.c",
+  "${services_path}/common/src/lcm_adapter_mock/lcm_adapter_mock.c",
   "${services_path}/common/src/task_manager/task_manager.c",
 
   "${services_path}/group_auth/src/group_auth_manager/group_auth_manager.c",
   "${services_path}/group_auth/src/group_auth_manager/account_unrelated_group_auth/account_unrelated_group_auth.c",
   "${services_path}/group_auth/src/group_auth_manager/account_related_group_auth_mock/account_related_group_auth_mock.c",
 
-  "${services_path}/group_manager/src/group_manager/group_common.c",
-  "${services_path}/group_manager/src/group_manager/group_manager.c",
-  "${services_path}/group_manager/src/group_manager/account_unrelated/peer_to_peer_group/peer_to_peer_group.c",
-  "${services_path}/group_manager/src/group_manager/account_unrelated/account_unrelated_group_manager/account_unrelated_group_manager.c",
-  "${services_path}/group_manager/src/group_manager/account_related/across_account_group_mock/across_account_group_mock.c",
-  "${services_path}/group_manager/src/group_manager/account_related/identical_account_group_mock/identical_account_group_mock.c",
-  "${services_path}/group_manager/src/group_manager/account_related/account_related_group_manager_mock/account_related_group_manager_mock.c",
+  "${services_path}/group_manager/src/group_manager_common.c",
+  "${services_path}/group_manager/src/group_manager.c",
+  "${services_path}/group_manager/src/group_operation/group_operation.c",
+  "${services_path}/group_manager/src/group_operation/group_operation_common.c",
+  "${services_path}/group_manager/src/group_operation/peer_to_peer_group/peer_to_peer_group.c",
+  "${services_path}/group_manager/src/group_operation/across_account_group_mock/across_account_group_mock.c",
+  "${services_path}/group_manager/src/group_operation/identical_account_group_mock/identical_account_group_mock.c",
+  "${services_path}/group_manager/src/bind_peer_mock/bind_peer_mock.c",
+  "${services_path}/group_manager/src/key_agree_mock/key_agree_mock.c",
 
   "${services_path}/session/src/auth_session/auth_session_client.c",
   "${services_path}/session/src/auth_session/auth_session_common.c",
@@ -149,6 +152,7 @@ deviceauth_base_files = [
   "${services_path}/session/src/key_agree_session_mock/key_agree_session_client_mock.c",
   "${services_path}/session/src/key_agree_session_mock/key_agree_session_server_mock.c",
   "${services_path}/session/src/auth_session_common_util.c",
+  "${services_path}/session/src/bind_session_common_util.c",
   "${services_path}/session/src/session_common.c",
   "${services_path}/session/src/session_manager.c",
 
