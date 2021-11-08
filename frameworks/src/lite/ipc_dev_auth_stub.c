@@ -47,7 +47,7 @@ int32_t g_callMapElemNum = 0;
 #define BINDER_TYPE_ACQUIRE_AND_FREE 2
 #define BINDER_TYPE_RELEASE 3
 
-#define IPC_IO_BUFF_SZ 256
+#define IPC_IO_BUFF_SZ 1024
 
 static int32_t BinderLiteProcess(SvcIdentity **svc, int32_t procType)
 {
