@@ -19,6 +19,7 @@
 #include "group_operation_common.h"
 #include "hc_log.h"
 #include "hc_mutex.h"
+#include "hc_types.h"
 #include "hc_vector.h"
 #include "securec.h"
 

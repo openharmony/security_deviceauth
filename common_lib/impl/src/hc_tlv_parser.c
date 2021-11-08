@@ -15,7 +15,6 @@
 
 #include "hc_tlv_parser.h"
 #include <stddef.h>
-#include "hc_log.h"
 
 #define MAX_TLV_LENGTH (32 * 1024)
 
@@ -23,28 +22,23 @@ HcBool ParseTlvHead(TlvBase *tlv, HcParcel *parcel)
 {
 #ifdef IS_BIG_ENDIAN
     if (!ParcelReadUint16Revert(parcel, &tlv->tag)) {
-        LOGE(" ParseTlvHead failed, read tag failed!!!");
         return HC_FALSE;
     }
 #else
     if (!ParcelReadUint16(parcel, &tlv->tag)) {
-        LOGE(" ParseTlvHead failed, read tag failed!!!");
         return HC_FALSE;
     }
 #endif
 
     if (tlv->tag != tlv->checkTag) {
-        LOGE(" ParseTlvHead failed, tag is error, expect:%x, get:%x!!!", tlv->checkTag, tlv->tag);
         return HC_FALSE;
     }
 #ifdef IS_BIG_ENDIAN
     if (!ParcelReadUint16Revert(parcel, &tlv->length)) {
-        LOGE(" ParseTlvHead failed, read length failed!!!");
         return HC_FALSE;
     }
 #else
     if (!ParcelReadUint16(parcel, &tlv->length)) {
-        LOGE(" ParseTlvHead failed, read length failed!!!");
         return HC_FALSE;
     }
 #endif
@@ -60,8 +54,6 @@ int32_t ParseTlvNode(TlvBase *tlv, HcParcel *parcel, HcBool strict)
         return TLV_FAIL;
     } else {
         if (GetParcelDataSize(parcel) < tlv->length) {
-            LOGE("parcel buffer too short tlv->tag is:%x, parcel size is %x and tlv->length is %x",
-                tlv->tag, GetParcelDataSize(parcel), tlv->length);
             return TLV_FAIL;
         }
 
@@ -209,7 +201,6 @@ int32_t ParseTlvStruct(TlvBase *tlv, HcParcel *parcel, HcBool strict)
         TlvBase *tlvChild = GetEmptyStructNode(tlv, tag);
         if (tlvChild == NULL) {
             if (strict) {
-                LOGE("ParseTlvStruct error, unknown tag in strict mode:%x", tlv->tag);
                 return TLV_FAIL;
             }
 
@@ -224,7 +215,6 @@ int32_t ParseTlvStruct(TlvBase *tlv, HcParcel *parcel, HcBool strict)
         } else {
             int32_t childLength = ParseTlvNode(tlvChild, parcel, strict);
             if (childLength < 0 || childLength > MAX_TLV_LENGTH) {
-                LOGE("ParseTlvStruct parse member child length error:%x", tag);
                 return TLV_FAIL;
             }
             SetStructNodeHasValue(tlvChild);
@@ -236,12 +226,10 @@ int32_t ParseTlvStruct(TlvBase *tlv, HcParcel *parcel, HcBool strict)
     } while (childTotalLength < tlv->length);
 
     if (childTotalLength > tlv->length) {
-        LOGE("ParseTlvStruct failed, because child length is too big");
         return TLV_FAIL;
     }
 
     if (strict && CheckStructNodeAllHasValue(tlv) != 0) {
-        LOGE("ParseTlvStruct error, the tag's child value is empty, tag:%x", tlv->tag);
         return TLV_FAIL;
     }
 
@@ -348,7 +336,6 @@ int32_t ParseTlvBuffer(TlvBase *tlv, HcParcel *parcel, HcBool strict)
     if (tlv->length == 0 || ParcelReadParcel(parcel, &realTlv->data, tlv->length, HC_FALSE)) {
         return tlv->length;
     } else {
-        LOGE("ParseTlvBuffer error");
         return TLV_FAIL;
     }
 }
@@ -398,7 +385,6 @@ int32_t ParseTlvString(TlvBase *tlv, HcParcel *parcel, HcBool strict)
     if (tlv->length == 0 || ParcelReadParcel(parcel, &realTlv->data.parcel, tlv->length, HC_FALSE)) {
         return tlv->length;
     } else {
-        LOGE("ParseTlvBuffer error");
         return TLV_FAIL;
     }
 }

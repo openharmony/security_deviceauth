@@ -14,14 +14,15 @@
  */
 
 #include "common_util.h"
+#include <stdlib.h>
 #include <string.h>
-#include "hc_error.h"
-#include "hc_log.h"
-#include "hc_types.h"
+#include <securec.h>
+#include "clib_error.h"
+#include "clib_types.h"
 
 #define OUT_OF_HEX 16
 #define NUMBER_9_IN_DECIMAL 9
-#define ASCII_DIFFERENCE_NUM 32
+#define ASCII_CASE_DIFFERENCE_VALUE 32
 
 static char HexToChar(uint8_t hex)
 {
@@ -31,13 +32,11 @@ static char HexToChar(uint8_t hex)
 int32_t ByteToHexString(const uint8_t *byte, uint32_t byteLen, char *hexStr, uint32_t hexLen)
 {
     if (byte == NULL || hexStr == NULL) {
-        LOGE("Param is null ptr.");
-        return HAL_ERR_NULL_PTR;
+        return CLIB_ERR_NULL_PTR;
     }
     /* The terminator('\0') needs 1 bit */
     if (hexLen < byteLen * BYTE_TO_HEX_OPER_LENGTH + 1) {
-        LOGE("Invalid length");
-        return HAL_ERR_INVALID_LEN;
+        return CLIB_ERR_INVALID_LEN;
     }
 
     for (uint32_t i = 0; i < byteLen; i++) {
@@ -46,7 +45,7 @@ int32_t ByteToHexString(const uint8_t *byte, uint32_t byteLen, char *hexStr, uin
     }
     hexStr[byteLen * BYTE_TO_HEX_OPER_LENGTH] = '\0';
 
-    return HAL_SUCCESS;
+    return CLIB_SUCCESS;
 }
 
 static uint8_t CharToHex(char c)
@@ -65,25 +64,24 @@ static uint8_t CharToHex(char c)
 int32_t HexStringToByte(const char *hexStr, uint8_t *byte, uint32_t byteLen)
 {
     if (byte == NULL || hexStr == NULL) {
-        LOGE("Param is null ptr.");
-        return HAL_ERR_NULL_PTR;
+        return CLIB_ERR_NULL_PTR;
     }
     uint32_t realHexLen = strlen(hexStr);
     /* even number or not */
     if (realHexLen % BYTE_TO_HEX_OPER_LENGTH != 0 || byteLen < realHexLen / BYTE_TO_HEX_OPER_LENGTH) {
-        return HAL_ERR_INVALID_LEN;
+        return CLIB_ERR_INVALID_LEN;
     }
 
     for (uint32_t i = 0; i < realHexLen / BYTE_TO_HEX_OPER_LENGTH; i++) {
         uint8_t high = CharToHex(hexStr[i * BYTE_TO_HEX_OPER_LENGTH]);
         uint8_t low = CharToHex(hexStr[i * BYTE_TO_HEX_OPER_LENGTH + 1]);
         if (high == OUT_OF_HEX || low == OUT_OF_HEX) {
-            return HAL_ERR_INVALID_PARAM;
+            return CLIB_ERR_INVALID_PARAM;
         }
         byte[i] = high << 4; /* 4: Set the high nibble */
         byte[i] |= low; /* Set the low nibble */
     }
-    return HAL_SUCCESS;
+    return CLIB_SUCCESS;
 }
 
 int64_t StringToInt64(const char *cp)
@@ -100,25 +98,21 @@ void ConvertToAnonymousStr(const char *originalStr, char **anonymousStr)
         return;
     }
     uint32_t desensitizationLen = 4;
-    uint32_t len = HcStrlen(originalStr);
+    uint32_t len = strlen(originalStr);
     if (len <= desensitizationLen) {
-        LOGD("The input string length is too short!");
         return;
     }
-    *anonymousStr = (char *)HcMalloc(len + 1, 0);
+    *anonymousStr = (char *)ClibMalloc(len + 1, 0);
     if ((*anonymousStr) == NULL) {
-        LOGD("Failed to allocate anonymousStr memory!");
         return;
     }
     if (memset_s(*anonymousStr, len + 1, '*', len) != EOK) {
-        LOGD("Failed to memset string!");
-        HcFree(*anonymousStr);
+        ClibFree(*anonymousStr);
         *anonymousStr = NULL;
         return;
     }
     if (memcpy_s(*anonymousStr, len + 1, originalStr, len - desensitizationLen) != EOK) {
-        LOGD("Failed to copy string!");
-        HcFree(*anonymousStr);
+        ClibFree(*anonymousStr);
         *anonymousStr = NULL;
         return;
     }
@@ -127,20 +121,18 @@ void ConvertToAnonymousStr(const char *originalStr, char **anonymousStr)
 int32_t ToUpperCase(const char *oriStr, char **desStr)
 {
     if (oriStr == NULL || desStr == NULL) {
-        LOGE("Params is null.");
-        return HAL_ERR_INVALID_PARAM;
+        return CLIB_ERR_INVALID_PARAM;
     }
-    *desStr = HcMalloc(HcStrlen(oriStr) + 1, 0);
+    *desStr = ClibMalloc(strlen(oriStr) + 1, 0);
     if (*desStr == NULL) {
-        LOGE("Failed to allocate desStr memory!");
-        return HAL_ERR_BAD_ALLOC;
+        return CLIB_ERR_BAD_ALLOC;
     }
-    for (uint32_t i = 0; i < HcStrlen(oriStr); i++) {
+    for (uint32_t i = 0; i < strlen(oriStr); i++) {
         if ((oriStr[i] >= 'a') && (oriStr[i] <= 'f')) {
-            (*desStr)[i] = oriStr[i] - ASCII_DIFFERENCE_NUM;
+            (*desStr)[i] = oriStr[i] - ASCII_CASE_DIFFERENCE_VALUE;
         } else {
             (*desStr)[i] = oriStr[i];
         }
     }
-    return HAL_SUCCESS;
+    return CLIB_SUCCESS;
 }

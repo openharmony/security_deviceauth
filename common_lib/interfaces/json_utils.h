@@ -21,7 +21,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "cJSON.h"
-#include "hc_error.h"
 
 #ifdef __cplusplus
 extern "C" {

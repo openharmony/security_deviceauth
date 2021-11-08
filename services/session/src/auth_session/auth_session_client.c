@@ -18,6 +18,7 @@
 #include "auth_session_util.h"
 #include "dev_auth_module_manager.h"
 #include "hc_log.h"
+#include "hc_types.h"
 #include "json_utils.h"
 #include "session_common.h"
 

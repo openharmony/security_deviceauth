@@ -14,7 +14,7 @@
  */
 
 #include "hc_task_thread.h"
-#include "hc_error.h"
+#include "hal_error.h"
 #include "hc_log.h"
 
 #define TASK_ALLOC_UINT 5
