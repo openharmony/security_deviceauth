@@ -263,12 +263,12 @@ static Broadcaster g_broadcaster = {
     .postOnTrustedDeviceNumChanged = PostOnTrustedDeviceNumChanged
 };
 
-bool IsBroadcastSupported()
+bool IsBroadcastSupported(void)
 {
     return true;
 }
 
-int32_t InitBroadcastManager()
+int32_t InitBroadcastManager(void)
 {
     if (g_broadcastMutex == NULL) {
         g_broadcastMutex = (HcMutex *)HcMalloc(sizeof(HcMutex), 0);
@@ -288,7 +288,7 @@ int32_t InitBroadcastManager()
     return HC_SUCCESS;
 }
 
-void DestroyBroadcastManager()
+void DestroyBroadcastManager(void)
 {
     uint32_t index;
     ListenerEntry *entry = NULL;
@@ -308,7 +308,7 @@ void DestroyBroadcastManager()
     }
 }
 
-Broadcaster *GetBroadcaster()
+Broadcaster *GetBroadcaster(void)
 {
     return &g_broadcaster;
 }

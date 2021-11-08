@@ -709,7 +709,7 @@ void NotifyGroupCreated(const TrustedGroupEntry *groupEntry, const char *sharedU
     if (!IsBroadcastSupported()) {
         return;
     }
-    if ((groupEntry == NULL) || (sharedUserIdHash == NULL)) {
+    if (groupEntry == NULL) {
         return;
     }
     Broadcaster *broadcaster = GetBroadcaster();
@@ -735,7 +735,7 @@ void NotifyGroupDeleted(const TrustedGroupEntry *groupEntry, const char *sharedU
     if (!IsBroadcastSupported()) {
         return;
     }
-    if ((groupEntry == NULL) || (sharedUserIdHash == NULL)) {
+    if (groupEntry == NULL) {
         return;
     }
     Broadcaster *broadcaster = GetBroadcaster();
