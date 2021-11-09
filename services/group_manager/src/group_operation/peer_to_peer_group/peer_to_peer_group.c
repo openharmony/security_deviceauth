@@ -168,7 +168,7 @@ static int32_t GetPeerUserType(const char *groupId, const char *peerAuthId)
         LOGE("Failed to allocate devEntry memory!");
         return peerUserType;
     }
-    if (GetDeviceInfoById(peerAuthId, false, groupId, devAuthParams) != HC_SUCCESS) {
+    if (GetTrustedDevInfoById(peerAuthId, false, groupId, devAuthParams) != HC_SUCCESS) {
         LOGE("Failed to obtain the device information from the database!");
         DestroyDeviceInfoStruct(devAuthParams);
         return peerUserType;
@@ -227,7 +227,7 @@ static int32_t AddAuthIdAndUserTypeToParams(const char *groupId, CJson *jsonPara
         DestroyDeviceInfoStruct(deviceInfo);
         return HC_ERROR;
     }
-    if (GetDeviceInfoById(udid, true, groupId, deviceInfo) != HC_SUCCESS) {
+    if (GetTrustedDevInfoById(udid, true, groupId, deviceInfo) != HC_SUCCESS) {
         LOGE("Failed to obtain the device information from the database!");
         DestroyDeviceInfoStruct(deviceInfo);
         return HC_ERR_DB;
@@ -295,7 +295,7 @@ static int32_t CheckPeerDeviceStatus(const char *groupId, const CJson *jsonParam
         LOGE("Failed to allocate deviceInfo memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    int32_t result = GetDeviceInfoById(peerAuthId, false, groupId, deviceInfo);
+    int32_t result = GetTrustedDevInfoById(peerAuthId, false, groupId, deviceInfo);
     if (result != HC_SUCCESS) {
         LOGE("Failed to obtain the peer device information from the database!");
         DestroyDeviceInfoStruct(deviceInfo);

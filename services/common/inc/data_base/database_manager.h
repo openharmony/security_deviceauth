@@ -62,7 +62,7 @@ void DeregGenerateGroupIdFunc(void);
 int32_t GetTrustedDevNumber(void);
 int32_t GetGroupInfoById(const char *groupId, GroupInfo *returnGroupInfo);
 int32_t GetGroupInfoIfDevExist(const char *groupId, const char *udid, GroupInfo *returnGroupInfo);
-int32_t GetDeviceInfoById(const char *deviceId, bool isUdid, const char *groupId, DeviceInfo *deviceInfo);
+int32_t GetTrustedDevInfoById(const char *deviceId, bool isUdid, const char *groupId, DeviceInfo *deviceInfo);
 int32_t GetJoinedGroupInfoVecByDevId(const GroupQueryParams *params, GroupInfoVec *vec);
 int32_t GetGroupNumByOwner(const char *ownerName);
 int32_t GetCurDeviceNumByGroupId(const char *groupId);
