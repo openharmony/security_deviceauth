@@ -162,7 +162,7 @@ int32_t GetTrustedDevicesImpl(const char *appId, const char *groupId, char **ret
 bool IsDeviceInGroupImpl(const char *appId, const char *groupId, const char *deviceId)
 {
     return IsGroupSupport() ? GetGroupImplInstance()->isDeviceInAccessibleGroup(appId, groupId,
-        deviceId, false) : HC_ERR_NOT_SUPPORT;
+        deviceId, false) : false;
 }
 
 void DestroyInfoImpl(char **returnInfo)
