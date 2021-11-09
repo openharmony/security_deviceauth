@@ -1251,7 +1251,7 @@ bool IsGroupExistByGroupId(const char *groupId)
     return isExists;
 }
 
-int32_t GetDeviceInfoById(const char *deviceId, bool isUdid, const char *groupId, DeviceInfo *deviceInfo)
+int32_t GetTrustedDevInfoById(const char *deviceId, bool isUdid, const char *groupId, DeviceInfo *deviceInfo)
 {
     if ((deviceId == NULL) || (groupId == NULL) || (deviceInfo == NULL)) {
         LOGE("[DB]: The input parameters contains NULL value!");

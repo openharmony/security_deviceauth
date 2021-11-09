@@ -149,7 +149,7 @@ static int32_t GetLocalDeviceInfoFromDatabase(const char *groupId, DeviceInfo *l
         LOGE("Failed to get local udid!");
         return HC_ERR_DB;
     }
-    res = GetDeviceInfoById(localUdidStr, true, groupId, localAuthInfo);
+    res = GetTrustedDevInfoById(localUdidStr, true, groupId, localAuthInfo);
     if (res != HC_SUCCESS) {
         LOGE("Failed to get local device info from database!");
     }
