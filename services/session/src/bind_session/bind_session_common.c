@@ -343,7 +343,7 @@ static int32_t AddDevInfoByDatabase(const char *groupId, CJson *params)
         LOGE("Failed to allocate devEntry memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    if (GetDeviceInfoById(udid, true, groupId, devAuthParams) != HC_SUCCESS) {
+    if (GetTrustedDevInfoById(udid, true, groupId, devAuthParams) != HC_SUCCESS) {
         LOGE("Failed to obtain the device information from the database!");
         DestroyDeviceInfoStruct(devAuthParams);
         return HC_ERR_DB;
@@ -453,7 +453,7 @@ static int32_t CheckAuthIdAndUserTypeValid(int userType, const char *groupId, co
         LOGE("Failed to allocate deviceInfo memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    int32_t result = GetDeviceInfoById(udid, true, groupId, deviceInfo);
+    int32_t result = GetTrustedDevInfoById(udid, true, groupId, deviceInfo);
     if (result != HC_SUCCESS) {
         LOGE("Failed to obtain the local device information from the database!");
         DestroyDeviceInfoStruct(deviceInfo);
@@ -668,7 +668,7 @@ static int32_t AddPeerUserTypeIfDelete(BindSession *session)
         LOGE("Failed to allocate devEntry memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    if (GetDeviceInfoById(peerAuthId, false, groupId, devAuthParams) != HC_SUCCESS) {
+    if (GetTrustedDevInfoById(peerAuthId, false, groupId, devAuthParams) != HC_SUCCESS) {
         LOGE("Failed to obtain the device information from the database!");
         DestroyDeviceInfoStruct(devAuthParams);
         return HC_ERR_DB;

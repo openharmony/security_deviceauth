@@ -242,7 +242,7 @@ static int32_t GeneratePkInfo(const char *queryUdid, const char *groupId, CJson 
         LOGE("Failed to allocate deviceInfo memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    int32_t res = GetDeviceInfoById(queryUdid, true, groupId, deviceInfo);
+    int32_t res = GetTrustedDevInfoById(queryUdid, true, groupId, deviceInfo);
     if (res != HC_SUCCESS) {
         DestroyDeviceInfoStruct(deviceInfo);
         return res;
@@ -1019,7 +1019,7 @@ static int32_t GetAccessibleDeviceInfoById(const char *appId, const char *device
         LOGE("Failed to allocate devInfo memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    if (GetDeviceInfoById(deviceId, isUdid, groupId, devInfo) != HC_SUCCESS) {
+    if (GetTrustedDevInfoById(deviceId, isUdid, groupId, devInfo) != HC_SUCCESS) {
         LOGE("No device is found based on the query parameters!");
         DestroyDeviceInfoStruct(devInfo);
         return HC_ERR_DEVICE_NOT_EXIST;
