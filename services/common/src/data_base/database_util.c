@@ -19,6 +19,7 @@
 #include "device_auth.h"
 #include "hc_dev_info.h"
 #include "hc_log.h"
+#include "hc_types.h"
 #include "securec.h"
 
 IMPLEMENT_HC_VECTOR(StringVector, HcString, 1)

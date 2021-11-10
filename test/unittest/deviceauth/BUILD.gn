@@ -31,6 +31,7 @@ ohos_unittest("deviceauth_llt") {
   include_dirs += hals_inc_path
 
   sources = [
+    "${common_lib_path}/impl/src/clib_types.c",
     "${common_lib_path}/impl/src/common_util.c",
     "${common_lib_path}/impl/src/hc_parcel.c",
     "${common_lib_path}/impl/src/hc_string.c",

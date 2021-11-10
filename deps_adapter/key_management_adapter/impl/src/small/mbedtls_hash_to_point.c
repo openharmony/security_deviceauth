@@ -18,7 +18,7 @@
 #include <mbedtls/bignum.h>
 #include <securec.h>
 #include "alg_defs.h"
-#include "hc_error.h"
+#include "hal_error.h"
 #include "hc_log.h"
 
 #define LEN_HALF_DIVISOR 2

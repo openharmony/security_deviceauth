@@ -22,6 +22,7 @@
 #include "group_operation_common.h"
 #include "hc_dev_info.h"
 #include "hc_log.h"
+#include "hc_types.h"
 #include "session_common.h"
 
 static int32_t AddGroupInfoToSendData(const BindSession *session, CJson *data)

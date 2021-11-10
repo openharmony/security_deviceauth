@@ -22,6 +22,7 @@
 #include "dev_auth_module_manager.h"
 #include "device_auth_defines.h"
 #include "hc_log.h"
+#include "hc_types.h"
 #include "session_common.h"
 
 static int ProcessServerAuthSession(Session *session, CJson *in);

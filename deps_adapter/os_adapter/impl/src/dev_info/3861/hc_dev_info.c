@@ -16,7 +16,7 @@
 #include "hc_dev_info.h"
 #include "securec.h"
 #include "parameter.h"
-#include "hc_error.h"
+#include "hal_error.h"
 #include "hc_log.h"
 
 #ifdef __cplusplus
