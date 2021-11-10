@@ -21,6 +21,7 @@
 #include "hc_file.h"
 #include "hc_log.h"
 #include "hc_mutex.h"
+#include "hc_types.h"
 #include "securec.h"
 
 DEFINE_TLV_FIX_LENGTH_TYPE(TlvDevAuthFixedLenInfo, NO_REVERT)

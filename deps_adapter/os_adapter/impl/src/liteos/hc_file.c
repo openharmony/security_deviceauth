@@ -21,7 +21,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "common_defs.h"
-#include "hc_error.h"
+#include "hal_error.h"
 #include "hc_log.h"
 
 #define MAX_FILE_PATH_SIZE 256

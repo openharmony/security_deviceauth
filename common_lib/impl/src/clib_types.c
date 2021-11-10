@@ -13,25 +13,24 @@
  * limitations under the License.
  */
 
-#ifndef HC_TYPES_H
-#define HC_TYPES_H
+#include "clib_types.h"
+#include <securec.h>
 
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdbool.h>
-#include "securec.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void* HcMalloc(uint32_t size, char val);
-void HcFree(void* addr);
-uint32_t HcStrlen(const char *str);
-
-#ifdef __cplusplus
+void *ClibMalloc(uint32_t size, char val)
+{
+    if (size == 0 || size > CLIB_MAX_MALLOC_SIZE) {
+        return NULL;
+    }
+    void* addr = malloc(size);
+    if (addr != NULL) {
+        (void)memset_s(addr, size, val, size);
+    }
+    return addr;
 }
-#endif
 
-#endif
+void ClibFree(void *addr)
+{
+    if (addr != NULL) {
+        free(addr);
+    }
+}

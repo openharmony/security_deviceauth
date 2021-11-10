@@ -22,14 +22,6 @@
 #include <stdint.h>
 #include <securec.h>
 
-typedef uint32_t HcBool;
-#define HC_TRUE 1
-#define HC_FALSE 0
-
-#ifndef NULL
-#define NULL 0
-#endif
-
 void *HcMalloc(uint32_t size, char val);
 void HcFree(void *addr);
 uint32_t HcStrlen(const char *str);

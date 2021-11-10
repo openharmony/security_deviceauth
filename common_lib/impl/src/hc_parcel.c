@@ -14,8 +14,8 @@
  */
 
 #include "hc_parcel.h"
-#include "hc_log.h"
 #include "securec.h"
+#include "clib_types.h"
 
 const int PARCEL_DEFAULT_INCREASE_STEP = 16;
 const uint32_t PARCEL_UINT_MAX = 0xffffffffU;
@@ -29,7 +29,7 @@ HcParcel CreateParcel(uint32_t size, uint32_t allocUnit)
         parcel.allocUnit = PARCEL_DEFAULT_INCREASE_STEP;
     }
     if (size > 0) {
-        parcel.data = (char*)HcMalloc(size, 0);
+        parcel.data = (char*)ClibMalloc(size, 0);
         if (parcel.data != NULL) {
             parcel.length = size;
         }
@@ -44,7 +44,7 @@ void DeleteParcel(HcParcel *parcel)
     }
 
     if (parcel->data != NULL) {
-        HcFree(parcel->data);
+        ClibFree(parcel->data);
         parcel->data = 0;
     }
     parcel->length = 0;
@@ -113,21 +113,16 @@ HcBool ParcelRead(HcParcel *parcel, void *dst, uint32_t dataSize)
 {
     errno_t rc;
     if (parcel == NULL || dst == NULL || dataSize == 0) {
-        LOGE("%s: Bad Parameters!", __func__);
         return HC_FALSE;
     }
     if (parcel->beginPos > PARCEL_UINT_MAX - dataSize) {
-        LOGE("%s: Bad Parameters!", __func__);
         return HC_FALSE;
     }
     if (parcel->beginPos + dataSize > parcel->endPos) {
-        LOGI("%s: parcel size < dataSize you want to read: parcel size %d while dataSize %u!",
-            __func__, GetParcelDataSize(parcel), dataSize);
         return HC_FALSE;
     }
     rc = memmove_s(dst, dataSize, parcel->data + parcel->beginPos, dataSize);
     if (rc != EOK) {
-        LOGE("%s: get data failed:%d.\n", __func__, rc);
         return HC_FALSE;
     }
     parcel->beginPos += dataSize;
@@ -138,7 +133,6 @@ HcBool ParcelEraseBlock(HcParcel *parcel, uint32_t start, uint32_t dataSize, voi
 {
     errno_t rc;
     if (parcel == NULL || dst == NULL || dataSize == 0) {
-        LOGE("%s: Bad Parameters!", __func__);
         return HC_FALSE;
     }
     if (start > PARCEL_UINT_MAX - dataSize) {
@@ -153,13 +147,11 @@ HcBool ParcelEraseBlock(HcParcel *parcel, uint32_t start, uint32_t dataSize, voi
 
     rc = memmove_s(dst, dataSize, beginCopy, dataSize);
     if (rc != EOK) {
-        LOGE("%s: get data failed:%d.\n", __func__, rc);
         return HC_FALSE;
     }
     if (copySize != 0) {
         rc = memmove_s(beginCopy, copySize, beginCopy + dataSize, copySize);
         if (rc != EOK) {
-            LOGE("%s: copy data failed:%d.\n", __func__, rc);
             return HC_FALSE;
         }
     }
@@ -181,18 +173,18 @@ HcBool ParcelReadRevert(HcParcel *parcel, void *dst, uint32_t dataSize)
 HcBool ParcelWriteRevert(HcParcel *parcel, const void *src, uint32_t dataSize)
 {
     errno_t rc;
-    void *srcCopy = HcMalloc(dataSize, 0);
+    void *srcCopy = ClibMalloc(dataSize, 0);
     if (srcCopy == NULL) {
         return HC_FALSE;
     }
     rc = memmove_s(srcCopy, dataSize, src, dataSize);
     if (rc != EOK) {
-        HcFree(srcCopy);
+        ClibFree(srcCopy);
         return HC_FALSE;
     }
     DataRevert(srcCopy, dataSize);
     HcBool ret = ParcelWrite(parcel, srcCopy,  dataSize);
-    HcFree(srcCopy);
+    ClibFree(srcCopy);
     return ret;
 }
 
@@ -239,19 +231,17 @@ HcBool ParcelReadInt64(HcParcel *parcel, int64_t *dst)
 static HcBool ParcelRealloc(HcParcel *parcel, uint32_t size)
 {
     if (parcel->length >= size) {
-        LOGE("%s: ParcelRealloc failed, length is too big", __func__);
         return HC_FALSE;
     }
-    char *newData = (char*)HcMalloc(size, 0);
+    char *newData = (char*)ClibMalloc(size, 0);
     if (newData == NULL) {
-        LOGE("%s: ParcelRealloc failed, out of memory", __func__);
         return HC_FALSE;
     }
     if (memcpy_s(newData, size, parcel->data, parcel->length) != EOK) {
-        HcFree(newData);
+        ClibFree(newData);
         return HC_FALSE;
     }
-    HcFree(parcel->data);
+    ClibFree(parcel->data);
     parcel->data = newData;
     parcel->length = size;
     return HC_TRUE;
@@ -260,17 +250,14 @@ static HcBool ParcelRealloc(HcParcel *parcel, uint32_t size)
 static HcBool ParcelIncrease(HcParcel *parcel, uint32_t size)
 {
     if (parcel == NULL || size == 0) {
-        LOGE("%s: ParcelIncrease, invalid parameter", __func__);
         return HC_FALSE;
     }
     if (parcel->data == NULL) {
         if (parcel->length != 0) {
-            LOGE("%s: ParcelIncrease faile, invalid length", __func__);
             return HC_FALSE;
         }
         (*parcel) = CreateParcel(size, parcel->allocUnit);
         if (parcel->data == NULL) {
-            LOGE("%s: ParcelIncrease failed, create parcel failed", __func__);
             return HC_FALSE;
         } else {
             return HC_TRUE;
@@ -293,7 +280,6 @@ static void ParcelRecycle(HcParcel *parcel)
     if (contentSize > 0) {
         if (memmove_s(parcel->data, parcel->endPos - parcel->beginPos,
             parcel->data + parcel->beginPos, parcel->endPos - parcel->beginPos) != EOK) {
-            LOGE("Move parcel's data failed.");
         }
     }
     parcel->beginPos = 0;
@@ -316,11 +302,9 @@ HcBool ParcelWrite(HcParcel *parcel, const void *src, uint32_t dataSize)
 {
     errno_t rc;
     if (parcel == NULL || src == NULL || dataSize == 0) {
-        LOGE("%s: Bad Parameters!", __func__);
         return HC_FALSE;
     }
     if (parcel->endPos > PARCEL_UINT_MAX - dataSize) {
-        LOGE("%s: Bad Parameters overflow!", __func__);
         return HC_FALSE;
     }
     if (parcel->endPos + dataSize > parcel->length) {
@@ -328,14 +312,12 @@ HcBool ParcelWrite(HcParcel *parcel, const void *src, uint32_t dataSize)
         if (parcel->endPos + dataSize > parcel->length) {
             uint32_t newSize = GetParcelIncreaseSize(parcel, parcel->endPos + dataSize);
             if (!ParcelIncrease(parcel, newSize)) {
-                LOGE("%s: ParcelIncrease failed", __func__);
                 return HC_FALSE;
             }
         }
     }
     rc = memmove_s(parcel->data + parcel->endPos, dataSize, src, dataSize);
     if (rc != EOK) {
-        LOGE("%s: get data failed:%d.\n", __func__, rc);
         return HC_FALSE;
     }
     parcel->endPos += dataSize;

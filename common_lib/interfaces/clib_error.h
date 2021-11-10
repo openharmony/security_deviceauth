@@ -13,25 +13,19 @@
  * limitations under the License.
  */
 
-#ifndef HC_TYPES_H
-#define HC_TYPES_H
+#ifndef CLIB_ERROR_H
+#define CLIB_ERROR_H
 
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdbool.h>
-#include "securec.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void* HcMalloc(uint32_t size, char val);
-void HcFree(void* addr);
-uint32_t HcStrlen(const char *str);
-
-#ifdef __cplusplus
-}
-#endif
-
+enum {
+    CLIB_SUCCESS = 0,
+    CLIB_FAILED = -1,
+    CLIB_ERR_INVALID_PARAM = -2,
+    CLIB_ERR_INVALID_LEN = -3,
+    CLIB_ERR_BAD_ALLOC = -4,
+    CLIB_ERR_NULL_PTR = -5,
+    CLIB_ERR_JSON_GET = -6,
+    CLIB_ERR_JSON_ADD = -7,
+    CLIB_ERR_JSON_REPLACE = -8,
+    CLIB_ERR_JSON_DUPLICATE = -9,
+};
 #endif
