@@ -17,7 +17,7 @@
 #define DATABASE_MANAGER_H
 
 #include "common_defs.h"
-#include "common_util.h"
+#include "string_util.h"
 #include "database.h"
 
 #define HC_TRUST_DEV_ENTRY_MAX_NUM 101

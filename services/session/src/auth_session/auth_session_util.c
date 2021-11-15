@@ -19,9 +19,9 @@
 #include "alg_loader.h"
 #include "auth_session_common_defines.h"
 #include "common_defs.h"
-#include "common_util.h"
 #include "device_auth_defines.h"
 #include "hc_log.h"
+#include "string_util.h"
 
 static int32_t AuthFormToModuleType(int32_t authForm)
 {

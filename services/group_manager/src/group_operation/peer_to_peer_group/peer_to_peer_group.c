@@ -18,7 +18,7 @@
 #include "alg_defs.h"
 #include "callback_manager.h"
 #include "channel_manager.h"
-#include "common_util.h"
+#include "string_util.h"
 #include "database_manager.h"
 #include "group_operation_common.h"
 #include "hc_dev_info.h"

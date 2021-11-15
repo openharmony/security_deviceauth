@@ -16,7 +16,7 @@
 #ifndef GROUP_OPERATION_COMMON_H
 #define GROUP_OPERATION_COMMON_H
 
-#include "common_util.h"
+#include "string_util.h"
 #include "database.h"
 #include "json_utils.h"
 

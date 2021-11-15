@@ -17,7 +17,7 @@
 #define MBEDTLS_HASH_TO_POINT_H
 
 #include <stdint.h>
-#include "common_util.h"
+#include "string_util.h"
 
 #define HASH2POINT_PARA_PREPRO 0xc0
 #define BYTE_LENGTH_CURVE_25519 32

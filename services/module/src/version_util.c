@@ -14,11 +14,11 @@
  */
 
 #include "version_util.h"
-#include "common_util.h"
+#include "securec.h"
 #include "hc_log.h"
 #include "hc_types.h"
 #include "protocol_common.h"
-#include "securec.h"
+#include "string_util.h"
 
 static const char *Split(char *str, char delim, int *next)
 {

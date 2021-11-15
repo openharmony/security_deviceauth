@@ -14,7 +14,6 @@
  */
 
 #include "pake_task_common.h"
-#include "common_util.h"
 #include "das_asy_token_manager.h"
 #include "das_common.h"
 #include "das_module_defines.h"
@@ -23,6 +22,7 @@
 #include "module_common.h"
 #include "protocol_common.h"
 #include "standard_client_bind_exchange_task.h"
+#include "string_util.h"
 
 #define ASCII_CASE_DIFFERENCE_VALUE 32
 

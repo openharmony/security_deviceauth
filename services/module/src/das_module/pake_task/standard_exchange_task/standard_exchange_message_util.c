@@ -15,12 +15,12 @@
 
 #include "standard_exchange_message_util.h"
 #include "common_defs.h"
-#include "common_util.h"
 #include "hc_log.h"
 #include "hc_types.h"
 #include "json_utils.h"
 #include "module_common.h"
 #include "pake_base_cur_task.h"
+#include "string_util.h"
 
 int32_t PackageNonceAndCipherToJson(const Uint8Buff *nonce, const Uint8Buff *cipher, CJson *data, const char *key)
 {

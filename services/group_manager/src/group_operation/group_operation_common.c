@@ -16,7 +16,7 @@
 #include "group_operation_common.h"
 
 #include "alg_loader.h"
-#include "common_util.h"
+#include "string_util.h"
 #include "database_manager.h"
 #include "dev_auth_module_manager.h"
 #include "group_operation.h"

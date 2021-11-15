@@ -14,14 +14,14 @@
  */
 
 #include "common_standard_bind_exchange.h"
+#include "securec.h"
 #include "alg_defs.h"
-#include "common_util.h"
 #include "das_asy_token_manager.h"
 #include "das_common.h"
 #include "hc_log.h"
 #include "hc_types.h"
 #include "module_common.h"
-#include "securec.h"
+#include "string_util.h"
 
 int32_t InitStandardBindExchangeParams(StandardBindExchangeParams *params)
 {

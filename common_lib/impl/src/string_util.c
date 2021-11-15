@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include "common_util.h"
+#include "string_util.h"
 #include <stdlib.h>
 #include <string.h>
 #include <securec.h>
