@@ -18,8 +18,8 @@
 
 #include "alg_defs.h"
 #include "auth_common.h"
-#include "common_util.h"
 #include "pake_protocol_common.h"
+#include "string_util.h"
 
 typedef enum {
     TASK_TYPE_DEFAULT = 0,

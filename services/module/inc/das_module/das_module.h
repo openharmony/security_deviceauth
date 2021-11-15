@@ -17,7 +17,7 @@
 #define DAS_MODULE_H
 
 #include "common_defs.h"
-#include "common_util.h"
+#include "string_util.h"
 
 bool IsDasSupported(void);
 

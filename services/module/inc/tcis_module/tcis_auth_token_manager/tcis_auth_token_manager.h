@@ -21,7 +21,7 @@
 
 #include <stdint.h>
 #include "common_defs.h"
-#include "common_util.h"
+#include "string_util.h"
 #include "auth_common.h"
 
 #define FILE_VERSION 0x01

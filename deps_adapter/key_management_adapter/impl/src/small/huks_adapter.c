@@ -14,12 +14,12 @@
  */
 
 #include "huks_adapter.h"
-#include "common_util.h"
 #include "hc_log.h"
 #include "hks_api.h"
 #include "hks_param.h"
 #include "hks_type.h"
 #include "mbedtls_hash_to_point.h"
+#include "string_util.h"
 
 static enum HksKeyAlg g_algToHksAlgorithm[] = {
     HKS_ALG_ED25519,

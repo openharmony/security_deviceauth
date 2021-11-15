@@ -19,7 +19,7 @@
 #include <securec.h>
 #include "clib_error.h"
 #include "clib_types.h"
-#include "common_util.h"
+#include "string_util.h"
 
 #define RECURSE_FLAG_TRUE 1
 

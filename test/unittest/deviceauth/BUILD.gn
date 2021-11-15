@@ -32,21 +32,21 @@ ohos_unittest("deviceauth_llt") {
 
   sources = [
     "${common_lib_path}/impl/src/clib_types.c",
-    "${common_lib_path}/impl/src/common_util.c",
     "${common_lib_path}/impl/src/hc_parcel.c",
     "${common_lib_path}/impl/src/hc_string.c",
     "${common_lib_path}/impl/src/hc_tlv_parser.c",
     "${common_lib_path}/impl/src/json_utils.c",
+    "${common_lib_path}/impl/src/string_util.c",
     "${key_management_adapter_path}/impl/src/alg_loader.c",
     "${key_management_adapter_path}/impl/src/standard/crypto_hash_to_point.c",
     "${key_management_adapter_path}/impl/src/standard/huks_adapter.c",
+    "${os_adapter_path}/impl/src/hc_mutex.c",
     "${os_adapter_path}/impl/src/hc_task_thread.c",
+    "${os_adapter_path}/impl/src/hc_time.c",
     "${os_adapter_path}/impl/src/linux/hc_condition.c",
     "${os_adapter_path}/impl/src/linux/hc_file.c",
     "${os_adapter_path}/impl/src/linux/hc_init_protection.c",
-    "${os_adapter_path}/impl/src/linux/hc_mutex.c",
     "${os_adapter_path}/impl/src/linux/hc_thread.c",
-    "${os_adapter_path}/impl/src/linux/hc_time.c",
     "${os_adapter_path}/impl/src/linux/hc_types.c",
   ]
   sources += deviceauth_files
