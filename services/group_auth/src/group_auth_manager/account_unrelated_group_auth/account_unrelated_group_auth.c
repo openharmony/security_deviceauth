@@ -265,7 +265,7 @@ static int32_t AddNonAccountAuthInfo(const DeviceInfo *localAuthInfo, const Devi
         LOGE("Failed to add self devType to paramsData from db!");
         return HC_ERR_JSON_FAIL;
     }
-    const char *peerAuthId = GetStringFromJson(paramsData, FIELD_PEER_AUTH_ID);
+    const char *peerAuthId = GetStringFromJson(paramsData, FIELD_PEER_ID_FROM_REQUEST);
     if (peerAuthId == NULL) {
         if (AddStringToJson(paramsData, FIELD_PEER_AUTH_ID, StringGet(&peerAuthInfo->authId))
             != HC_SUCCESS) {
@@ -413,7 +413,7 @@ static int32_t CombineDasServerConfirmParams(const CJson *confirmationJson, CJso
     }
     const char *peerAuthId = GetStringFromJson(confirmationJson, FIELD_PEER_AUTH_ID);
     if (peerAuthId != NULL) {
-        if (AddStringToJson(dataFromClient, FIELD_PEER_AUTH_ID, peerAuthId) != HC_SUCCESS) {
+        if (AddStringToJson(dataFromClient, FIELD_PEER_ID_FROM_REQUEST, peerAuthId) != HC_SUCCESS) {
             LOGE("Failed to combine server param for peerAuthId!");
             return HC_ERR_JSON_FAIL;
         }

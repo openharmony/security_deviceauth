@@ -98,6 +98,7 @@
 #define FIELD_IS_UUID "uuIdAsDeviceId"
 #define FIELD_VERSION "version"
 #define FIELD_MK_AGREE_MSG "mkaMsg"
+#define FIELD_PEER_ID_FROM_REQUEST "peerIdFromRequest"
 
 #define AUTH_FORM_INVALID_TYPE -1
 #define AUTH_FORM_ACCOUNT_UNRELATED 0
