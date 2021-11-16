@@ -19,7 +19,7 @@
 #include "alg_defs.h"
 #include "auth_session_util.h"
 #include "common_defs.h"
-#include "common_util.h"
+#include "string_util.h"
 #include "database_manager.h"
 #include "dev_auth_module_manager.h"
 #include "hc_log.h"

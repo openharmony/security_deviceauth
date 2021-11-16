@@ -16,10 +16,10 @@
 #include "das_common.h"
 #include "alg_defs.h"
 #include "alg_loader.h"
-#include "common_util.h"
 #include "hc_log.h"
 #include "hc_types.h"
 #include "module_common.h"
+#include "string_util.h"
 
 #define KEY_TYPE_PAIR_LEN 2
 #define PACKAGE_NAME_MAX_LEN 256

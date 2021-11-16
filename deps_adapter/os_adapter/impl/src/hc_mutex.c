@@ -15,6 +15,10 @@
 
 #include "hc_mutex.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 static int HcMutexLock(HcMutex *mutex)
 {
     if (mutex == NULL) {
@@ -52,3 +56,7 @@ void DestroyHcMutex(struct HcMutexT *mutex)
     }
     pthread_mutex_destroy(&mutex->mutex);
 }
+
+#ifdef __cplusplus
+}
+#endif

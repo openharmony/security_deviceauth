@@ -16,8 +16,8 @@
 #ifndef ALG_DEFS_H
 #define ALG_DEFS_H
 
-#include "common_util.h"
 #include "hc_types.h"
+#include "string_util.h"
 
 #define SHA256_LEN 32
 #define HMAC_LEN 32

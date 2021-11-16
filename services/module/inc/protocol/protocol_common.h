@@ -16,7 +16,7 @@
 #ifndef PROTOCOL_COMMON_H
 #define PROTOCOL_COMMON_H
 
-#include "common_util.h"
+#include "string_util.h"
 
 typedef enum {
     UNSUPPORTED_ALG = 0x0000,
