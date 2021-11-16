@@ -14,11 +14,11 @@
  */
 
 #include "iso_server_unbind_exchange_task.h"
-#include "common_util.h"
 #include "das_module_defines.h"
 #include "hc_log.h"
 #include "hc_types.h"
 #include "iso_task_common.h"
+#include "string_util.h"
 
 enum {
     TASK_TYPE_BEGIN = 1,

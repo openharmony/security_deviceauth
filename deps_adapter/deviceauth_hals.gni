@@ -21,7 +21,6 @@ if (target_os == "liteos" ||
     "${key_management_adapter_path}/impl/inc",
     "${os_adapter_path}/interfaces",
     "${os_adapter_path}/interfaces/liteos",
-    "${os_adapter_path}/interfaces/dev_info/3861",
   ]
   hal_module_name = "deviceauth_hal_liteos"
 } else {
@@ -31,7 +30,6 @@ if (target_os == "liteos" ||
     "${key_management_adapter_path}/impl/inc",
     "${os_adapter_path}/interfaces",
     "${os_adapter_path}/interfaces/linux",
-    "${os_adapter_path}/interfaces/dev_info/3516",
   ]
   hal_module_name = "deviceauth_hal_linux"
 }
@@ -42,9 +40,11 @@ hal_common_files = [
   "${common_lib_path}/impl/src/hc_string.c",
   "${common_lib_path}/impl/src/hc_tlv_parser.c",
   "${common_lib_path}/impl/src/json_utils.c",
-  "${common_lib_path}/impl/src/common_util.c",
+  "${common_lib_path}/impl/src/string_util.c",
   "${key_management_adapter_path}/impl/src/alg_loader.c",
 
-  "${os_adapter_path}/impl/src/hc_task_thread.c",
   "${os_adapter_path}/impl/src/hc_log.c",
+  "${os_adapter_path}/impl/src/hc_mutex.c",
+  "${os_adapter_path}/impl/src/hc_task_thread.c",
+  "${os_adapter_path}/impl/src/hc_time.c",
 ]

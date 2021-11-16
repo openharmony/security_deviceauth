@@ -15,10 +15,10 @@
 
 #include "das_version_util.h"
 #include "common_defs.h"
-#include "common_util.h"
 #include "hc_log.h"
 #include "hc_types.h"
 #include "json_utils.h"
+#include "string_util.h"
 
 #define BIND_PRIORITY_LEN 5
 #define AUTH_PRIORITY_LEN 5

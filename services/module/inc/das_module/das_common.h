@@ -16,10 +16,10 @@
 #ifndef DAS_COMMON_H
 #define DAS_COMMON_H
 
-#include "common_util.h"
 #include "das_module_defines.h"
 #include "hc_types.h"
 #include "json_utils.h"
+#include "string_util.h"
 
 int32_t GenerateKeyAlias(const Uint8Buff *pkgName, const Uint8Buff *serviceType, const KeyAliasType keyType,
     const Uint8Buff *authId, Uint8Buff *outKeyAlias);

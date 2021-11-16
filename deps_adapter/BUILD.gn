@@ -34,11 +34,9 @@ if (defined(ohos_lite)) {
       sources = hal_common_files
       sources += [
         "${key_management_adapter_path}/impl/src/mini/huks_adapter.c",
-        "${os_adapter_path}/impl/src/dev_info/3861/hc_dev_info.c",
         "${os_adapter_path}/impl/src/liteos/hc_condition.c",
-        "${os_adapter_path}/impl/src/liteos/hc_mutex.c",
+        "${os_adapter_path}/impl/src/liteos/hc_dev_info.c",
         "${os_adapter_path}/impl/src/liteos/hc_thread.c",
-        "${os_adapter_path}/impl/src/liteos/hc_time.c",
         "${os_adapter_path}/impl/src/liteos/hc_types.c",
         "${os_adapter_path}/impl/src/liteos/mini/hc_file.c",
         "${os_adapter_path}/impl/src/liteos/mini/hc_init_protection.c",
@@ -70,13 +68,11 @@ if (defined(ohos_lite)) {
       sources += [
         "${key_management_adapter_path}/impl/src/small/huks_adapter.c",
         "${key_management_adapter_path}/impl/src/small/mbedtls_hash_to_point.c",
-        "${os_adapter_path}/impl/src/dev_info/3516/hc_dev_info.c",
         "${os_adapter_path}/impl/src/linux/hc_condition.c",
+        "${os_adapter_path}/impl/src/linux/hc_dev_info.c",
         "${os_adapter_path}/impl/src/linux/hc_file.c",
         "${os_adapter_path}/impl/src/linux/hc_init_protection.c",
-        "${os_adapter_path}/impl/src/linux/hc_mutex.c",
         "${os_adapter_path}/impl/src/linux/hc_thread.c",
-        "${os_adapter_path}/impl/src/linux/hc_time.c",
         "${os_adapter_path}/impl/src/linux/hc_types.c",
       ]
 
@@ -111,13 +107,11 @@ if (defined(ohos_lite)) {
     sources += [
       "${key_management_adapter_path}/impl/src/standard/crypto_hash_to_point.c",
       "${key_management_adapter_path}/impl/src/standard/huks_adapter.c",
-      "${os_adapter_path}/impl/src/dev_info/3516/hc_dev_info.c",
       "${os_adapter_path}/impl/src/linux/hc_condition.c",
+      "${os_adapter_path}/impl/src/linux/hc_dev_info.c",
       "${os_adapter_path}/impl/src/linux/hc_file.c",
       "${os_adapter_path}/impl/src/linux/hc_init_protection.c",
-      "${os_adapter_path}/impl/src/linux/hc_mutex.c",
       "${os_adapter_path}/impl/src/linux/hc_thread.c",
-      "${os_adapter_path}/impl/src/linux/hc_time.c",
       "${os_adapter_path}/impl/src/linux/hc_types.c",
     ]
     cflags = [ "-DHILOG_ENABLE" ]

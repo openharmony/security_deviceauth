@@ -16,7 +16,7 @@
 #ifndef MODULE_COMMON_H
 #define MODULE_COMMON_H
 
-#include "common_util.h"
+#include "string_util.h"
 
 int32_t InitSingleParam(Uint8Buff *param, uint32_t len);
 

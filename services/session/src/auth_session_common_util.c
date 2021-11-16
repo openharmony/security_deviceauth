@@ -15,7 +15,7 @@
 
 #include "auth_session_common_util.h"
 #include "common_defs.h"
-#include "common_util.h"
+#include "string_util.h"
 #include "device_auth_defines.h"
 #include "hc_log.h"
 #include "hc_types.h"

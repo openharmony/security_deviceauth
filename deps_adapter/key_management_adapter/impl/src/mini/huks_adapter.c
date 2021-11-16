@@ -14,13 +14,13 @@
  */
 
 #include "huks_adapter.h"
-#include "common_util.h"
 #include "hal_error.h"
 #include "hc_file.h"
 #include "hc_log.h"
 #include "hks_api.h"
 #include "hks_param.h"
 #include "hks_type.h"
+#include "string_util.h"
 
 static int32_t BaseCheckParams(const Uint8Buff **inParams, const char **paramTags, uint32_t len)
 {

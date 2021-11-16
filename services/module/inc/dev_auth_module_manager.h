@@ -16,8 +16,8 @@
 #ifndef DEV_AUTH_MODULE_MANAGER_H
 #define DEV_AUTH_MODULE_MANAGER_H
 
-#include "common_util.h"
 #include "json_utils.h"
+#include "string_util.h"
 
 #ifdef __cplusplus
 extern "C" {
