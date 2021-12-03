@@ -77,8 +77,8 @@ void CbProxySendRequest(SvcIdentity sid, int32_t callbackId, uintptr_t cbHook, I
         HcFree((void *)reqData);
         return;
     }
-    int32_t callFlag = ((reply != NULL) ? 0 : 1);
-    callFlag = 0;
+    /* callFlag: ipc mode is blocking or non blocking. */
+    int32_t callFlag = ((reply != NULL) ? LITEIPC_FLAG_DEFAULT : LITEIPC_FLAG_ONEWAY);
     ret = SendRequest(NULL, sid, DEV_AUTH_CALLBACK_REQUEST, reqData, &replyTmp, callFlag, &outMsg);
     LOGI("SendRequest(%d) done, return(%d)", callFlag, ret);
     HcFree((void *)reqData);
