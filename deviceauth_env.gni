@@ -18,8 +18,22 @@ key_management_adapter_path =
     "${deviceauth_path}/deps_adapter/key_management_adapter"
 os_adapter_path = "${deviceauth_path}/deps_adapter/os_adapter"
 
-hals_path = "${deviceauth_path}/hals"
-
 innerkits_path = "${deviceauth_path}/interfaces/innerkits"
 frameworks_path = "${deviceauth_path}/frameworks"
 services_path = "${deviceauth_path}/services"
+
+declare_args() {
+  deviceauth_feature_config = "//base/security/deviceauth/default_config"
+  enable_soft_bus_channel = true
+}
+
+if (defined(ohos_lite)) {
+  if (ohos_kernel_type == "liteos_m") {
+    enable_soft_bus_channel = false
+    import("${deviceauth_feature_config}/mini/config.gni")
+  } else {
+    import("${deviceauth_feature_config}/small/config.gni")
+  }
+} else {
+  import("${deviceauth_feature_config}/standard/config.gni")
+}

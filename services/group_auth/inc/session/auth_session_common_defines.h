@@ -13,19 +13,29 @@
  * limitations under the License.
  */
 
-#ifndef ALG_LOADER_H
-#define ALG_LOADER_H
+#ifndef AUTH_SESSION_COMMON_DEFINES_H
+#define AUTH_SESSION_COMMON_DEFINES_H
 
-#include "alg_defs.h"
+#include "base_session.h"
+#include "device_auth.h"
+#include "hc_vector.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+DECLARE_HC_VECTOR(ParamsVec, void*)
 
-const AlgLoader *GetLoaderInstance(void);
+typedef struct {
+    Session base;
+    int curTaskId;
+    ParamsVec paramsList;
+    uint32_t currentIndex;
+} AuthSession;
 
-#ifdef __cplusplus
-}
-#endif
+typedef enum {
+    INVALID_GROUP_AUTH_TYPE = -1,
+    ACCOUNT_UNRELATED_GROUP_AUTH_TYPE,
+    ACCOUNT_RELATED_GROUP_AUTH_TYPE,
+} GroupAuthType;
+
+#define MIN_KEY_LENGTH 16
+#define MAX_KEY_LENGTH 1024
 
 #endif
