@@ -18,6 +18,10 @@
 
 #include "hc_parcel.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct HcString {
     HcParcel parcel; // parcel data, used to storage the string data
 } HcString;
@@ -97,4 +101,7 @@ HcString CreateString(void);
  */
 void DeleteString(HcString *str);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

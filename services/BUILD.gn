@@ -27,37 +27,37 @@ if (defined(ohos_lite)) {
       "//third_party/cJSON",
       "//utils/native/lite/include",
       "//third_party/bounds_checking_function/include",
+      "//foundation/communication/dsoftbus/interfaces/kits/common",
+      "//foundation/communication/dsoftbus/interfaces/kits/transport",
+      "//foundation/communication/dsoftbus/interfaces/inner_kits/transport",
     ]
-
-    defines = [ "HILOG_ENABLE" ]
-    cflags = build_flags
-
-    if (ohos_kernel_type == "linux" || ohos_kernel_type == "liteos_a") {
-      include_dirs += [
-        "//base/hiviewdfx/hilog_lite/interfaces/native/innerkits/hilog",
-        "//foundation/communication/dsoftbus/interfaces/kits/common",
-        "//foundation/communication/dsoftbus/interfaces/kits/transport",
-        "//foundation/communication/dsoftbus/interfaces/inner_kits/transport",
-      ]
-      sources = deviceauth_files
-    } else {
-      include_dirs +=
-          [ "//base/hiviewdfx/hilog_lite/interfaces/native/kits/hilog_lite" ]
-      sources = deviceauth_lite0_files
-    }
-
+    sources = deviceauth_files
     deps = [
       "${deps_adapter_path}:${hal_module_name}",
       "//build/lite/config/component/cJSON:cjson_shared",
+      "//foundation/communication/dsoftbus/sdk:softbus_client",
       "//utils/native/lite:utils",
     ]
+
+    defines = [ "HILOG_ENABLE" ]
+    if (enable_p2p_pake_dl_prime_len_384 == true) {
+      defines += [ "P2P_PAKE_DL_PRIME_LEN_384" ]
+    }
+    if (enable_p2p_pake_dl_prime_len_256 == true) {
+      defines += [ "P2P_PAKE_DL_PRIME_LEN_256" ]
+    }
+    cflags = build_flags
+
     if (ohos_kernel_type == "linux" || ohos_kernel_type == "liteos_a") {
+      include_dirs +=
+          [ "//base/hiviewdfx/hilog_lite/interfaces/native/innerkits/hilog" ]
       deps += [
         "//base/hiviewdfx/hilog_lite/frameworks/featured:hilog_shared",
-        "//foundation/communication/dsoftbus/sdk:softbus_client",
         "//third_party/bounds_checking_function:libsec_shared",
       ]
     } else {
+      include_dirs +=
+          [ "//base/hiviewdfx/hilog_lite/interfaces/native/kits/hilog_lite" ]
       deps += [ "//base/hiviewdfx/hilog_lite/frameworks/mini:hilog_lite" ]
     }
   }
@@ -150,8 +150,14 @@ if (defined(ohos_lite)) {
     ]
 
     sources = deviceauth_files
-
     cflags = [ "-DHILOG_ENABLE" ]
+    defines = []
+    if (enable_p2p_pake_dl_prime_len_384 == true) {
+      defines += [ "P2P_PAKE_DL_PRIME_LEN_384" ]
+    }
+    if (enable_p2p_pake_dl_prime_len_256 == true) {
+      defines += [ "P2P_PAKE_DL_PRIME_LEN_256" ]
+    }
     cflags += build_flags
     if (target_cpu == "arm") {
       cflags += [ "-DBINDER_IPC_32BIT" ]

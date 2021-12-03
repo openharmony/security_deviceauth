@@ -19,6 +19,10 @@
 #include <stdint.h>
 #include "clib_types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define PARCEL_DEFAULT_LENGTH 0
 #define PARCEL_DEFAULT_ALLOC_UNIT 0
 
@@ -86,4 +90,7 @@ HcBool ParcelPopBack(HcParcel *parcel, uint32_t size);
 HcBool ParcelPopFront(HcParcel *parcel, uint32_t size);
 HcBool ParcelEraseBlock(HcParcel *parcel, uint32_t start, uint32_t data_size, void *dst);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

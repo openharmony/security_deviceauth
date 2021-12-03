@@ -28,7 +28,14 @@ typedef uint32_t HcBool;
 
 #define CLIB_MAX_MALLOC_SIZE 4096 /* 4K */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void *ClibMalloc(uint32_t size, char val);
 void ClibFree(void *addr);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

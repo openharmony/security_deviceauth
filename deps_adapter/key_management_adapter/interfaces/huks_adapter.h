@@ -76,6 +76,13 @@ union KeyRoleInfoUnion {
     uint32_t roleInfo;
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 const AlgLoader *GetRealLoaderInstance(void);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

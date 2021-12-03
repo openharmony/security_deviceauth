@@ -85,6 +85,13 @@ typedef enum {
 } GroupOperationCode;
 
 typedef enum {
+    AUTH_FORM_INVALID_TYPE = -1,
+    AUTH_FORM_ACCOUNT_UNRELATED = 0,
+    AUTH_FORM_IDENTICAL_ACCOUNT = 1,
+    AUTH_FORM_ACROSS_ACCOUNT = 2,
+} GroupAuthForm;
+
+typedef enum {
     CREDENTIAL_SAVE = 0,
     CREDENTIAL_CLEAR = 1,
     CREDENTIAL_UPDATE = 2,

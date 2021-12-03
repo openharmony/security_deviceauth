@@ -26,6 +26,10 @@ typedef struct {
     uint32_t length;
 } Uint8Buff;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Convert hex string to byte.
  * @param hexStr: hex string
@@ -67,4 +71,8 @@ void ConvertToAnonymousStr(const char *originalStr, char **anonymousStr);
  * @return success(0), otherwise, failure.
  */
 int32_t ToUpperCase(const char *oriStr, char **desStr);
+
+#ifdef __cplusplus
+}
+#endif
 #endif
