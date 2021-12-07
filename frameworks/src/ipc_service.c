@@ -562,6 +562,43 @@ static int32_t IpcServiceGmApplyRegisterInfo(const IpcDataInfo *ipcParams, int32
     return (ret == HC_SUCCESS) ? ret : HC_ERROR;
 }
 
+static int32_t IpcServiceGmGetPkInfoList(const IpcDataInfo *ipcParams, int32_t paramNum, uintptr_t outCache)
+{
+    int32_t callRet;
+    int32_t ret;
+    const char *appId = NULL;
+    const char *queryParams = NULL;
+    char *returnInfoList = NULL;
+    uint32_t returnInfoNum = 0;
+
+    LOGI("starting ...");
+    ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
+    if ((appId == NULL) || (ret != HC_SUCCESS)) {
+        LOGE("get param error, type %d", PARAM_TYPE_APPID);
+        return HC_ERR_IPC_BAD_PARAM;
+    }
+    ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_QUERY_PARAMS, (uint8_t *)&queryParams, NULL);
+    if ((queryParams == NULL) || (ret != HC_SUCCESS)) {
+        LOGE("get param error, type %d", PARAM_TYPE_QUERY_PARAMS);
+        return HC_ERR_IPC_BAD_PARAM;
+    }
+
+    callRet = g_devGroupMgrMethod.getPkInfoList(appId, queryParams, &returnInfoList, &returnInfoNum);
+    ret = IpcEncodeCallReplay(outCache, PARAM_TYPE_IPC_RESULT, (const uint8_t *)&callRet, sizeof(int32_t));
+    ret += IpcEncodeCallReplay(outCache, PARAM_TYPE_IPC_RESULT_NUM,
+                               (const uint8_t *)&g_ipcResultNum2, sizeof(int32_t));
+    if (returnInfoList != NULL) {
+        ret += IpcEncodeCallReplay(outCache, PARAM_TYPE_RETURN_DATA, (const uint8_t *)returnInfoList,
+            strlen(returnInfoList) + 1);
+    } else {
+        ret += IpcEncodeCallReplay(outCache, PARAM_TYPE_RETURN_DATA, NULL, 0);
+    }
+    ret += IpcEncodeCallReplay(outCache, PARAM_TYPE_DATA_NUM, (const uint8_t *)&returnInfoNum, sizeof(int32_t));
+    LOGI("process done, call ret %d, ipc ret %d", callRet, ret);
+    g_devGroupMgrMethod.destroyInfo(&returnInfoList);
+    return (ret == HC_SUCCESS) ? ret : HC_ERROR;
+}
+
 static int32_t IpcServiceGmAddGroupManager(const IpcDataInfo *ipcParams, int32_t paramNum, uintptr_t outCache)
 {
     int32_t callRet;
@@ -1239,6 +1276,7 @@ static int32_t AddMethodMap(uintptr_t ipcInstance)
     ret &= SetIpcCallMap(ipcInstance, IpcServiceGmGetDeviceInfoById, IPC_CALL_ID_GET_DEV_INFO_BY_ID);
     ret &= SetIpcCallMap(ipcInstance, IpcServiceGmGetTrustedDevices, IPC_CALL_ID_GET_TRUST_DEVICES);
     ret &= SetIpcCallMap(ipcInstance, IpcServiceGmIsDeviceInGroup, IPC_CALL_ID_IS_DEV_IN_GROUP);
+    ret &= SetIpcCallMap(ipcInstance, IpcServiceGmGetPkInfoList, IPC_CALL_ID_GET_PK_INFO_LIST);
     ret &= SetIpcCallMap(ipcInstance, IpcServiceGaProcessData, IPC_CALL_ID_GA_PROC_DATA);
     ret &= SetIpcCallMap(ipcInstance, IpcServiceGaQueryTrustedDeviceNum, IPC_CALL_ID_QUERY_TRUST_DEV_NUM);
     ret &= SetIpcCallMap(ipcInstance, IpcServiceGaIsTrustedDevice, IPC_CALL_ID_IS_TRUST_DEVICE);

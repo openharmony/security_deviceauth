@@ -97,6 +97,7 @@ static void DoOnChannelOpened(HcTaskBase *baseTask)
         LOGE("The input task is NULL!");
         return;
     }
+    LOGI("[Start]: DoOnChannelOpened!");
     SoftBusTask *task = (SoftBusTask *)baseTask;
     OnChannelOpened(task->requestId, task->channelId);
 }

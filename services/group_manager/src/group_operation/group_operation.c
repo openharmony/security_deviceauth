@@ -15,6 +15,7 @@
 
 #include "group_operation.h"
 
+#include "alg_defs.h"
 #include "broadcast_manager.h"
 #include "callback_manager.h"
 #include "database_manager.h"
@@ -187,13 +188,28 @@ static bool IsQueryParamsValid(int groupType, const char *groupId, const char *g
 
 static int32_t QueryRelatedGroupsForGetPk(const char *udid, GroupInfoVec *groupInfoVec)
 {
-    (void)udid;
     GroupQueryParams dbQueryParams = { 0 };
     dbQueryParams.visibility = GROUP_VISIBILITY_PUBLIC;
     dbQueryParams.type = PEER_TO_PEER_GROUP;
     dbQueryParams.udid = NULL;
     dbQueryParams.authId = NULL;
-    return GetJoinedGroupInfoVecByDevId(&dbQueryParams, groupInfoVec);
+    if (udid != NULL) {
+        uint32_t peerUdidLen = HcStrlen(udid) + 1;
+        dbQueryParams.udid = (char *)HcMalloc(peerUdidLen, 0);
+        if (dbQueryParams.udid == NULL) {
+            LOGE("Failed to allocate memory for queryParams of udid!");
+            return HC_ERR_ALLOC_MEMORY;
+        }
+        if (strcpy_s(dbQueryParams.udid, peerUdidLen, udid) != EOK) {
+            LOGE("Failed to copy udid for queryParams!");
+            HcFree(dbQueryParams.udid);
+            dbQueryParams.udid = NULL;
+            return HC_ERR_MEMORY_COPY;
+        }
+    }
+    int32_t result = GetJoinedGroupInfoVecByDevId(&dbQueryParams, groupInfoVec);
+    HcFree(dbQueryParams.udid);
+    return result;
 }
 
 static int32_t GetPkByParams(const char *groupId, const DeviceInfo *deviceInfo, char *returnPkHexStr,
@@ -228,9 +244,10 @@ static int32_t GetPkByParams(const char *groupId, const DeviceInfo *deviceInfo, 
     if (res != HC_SUCCESS) {
         return res;
     }
-    if (ByteToHexString(returnPkBuff.val, returnPkBuff.length, returnPkHexStr, returnPkHexStrLen) != HC_SUCCESS) {
-        LOGE("Failed to convert bytes to string!");
-        return HC_ERR_CONVERT_FAILED;
+    res = GetHashResult(returnPkBuff.val, returnPkBuff.length, returnPkHexStr, returnPkHexStrLen);
+    if (res != HC_SUCCESS) {
+        LOGE("Failed to get hash for pk!");
+        return HC_ERR_HASH_FAIL;
     }
     return HC_SUCCESS;
 }
@@ -247,7 +264,7 @@ static int32_t GeneratePkInfo(const char *queryUdid, const char *groupId, CJson 
         DestroyDeviceInfoStruct(deviceInfo);
         return res;
     }
-    char returnPkHexStr[BYTE_TO_HEX_OPER_LENGTH * PUBLIC_KEY_MAX_LENGTH + 1] = { 0 };
+    char returnPkHexStr[SHA256_LEN * BYTE_TO_HEX_OPER_LENGTH + 1] = { 0 };
     res = GetPkByParams(groupId, deviceInfo, returnPkHexStr, sizeof(returnPkHexStr));
     DestroyDeviceInfoStruct(deviceInfo);
     if (res != HC_SUCCESS) {
