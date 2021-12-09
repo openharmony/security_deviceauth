@@ -487,7 +487,7 @@ int32_t GetPublicKeyInTask(const char *pkgName, const char *serviceType, Uint8Bu
     FOR_EACH_HC_VECTOR(g_protocolTypeVec, index, ptr) {
         if (ptr != NULL && (*ptr) != NULL) {
             DasProtocolType *temp = (DasProtocolType *)(*ptr);
-            if ((temp->tokenManagerInstance == NULL) || (temp->tokenManagerInstance->deletePeerAuthInfo == NULL)) {
+            if ((temp->tokenManagerInstance == NULL) || (temp->tokenManagerInstance->getPublicKey == NULL)) {
                 LOGD("Protocol type: %d, unsupported method!", temp->type);
                 continue;
             }
