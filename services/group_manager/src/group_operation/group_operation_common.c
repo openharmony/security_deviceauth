@@ -715,21 +715,6 @@ int32_t ProcessKeyPair(int action, const CJson *jsonParams, const char *groupId)
     return result;
 }
 
-int32_t DeletePeerKeyIfForceUnbind(const char *groupId, const char *peerAuthId, int32_t peerUserType)
-{
-    if ((groupId == NULL) || (peerAuthId == NULL)) {
-        LOGE("The input parameters contains NULL value!");
-        return HC_ERR_INVALID_PARAMS;
-    }
-    /* Use the DeviceGroupManager package name. */
-    const char *appId = GROUP_MANAGER_PACKAGE_NAME;
-    Uint8Buff peerAuthIdBuff = {
-        .val = (uint8_t *)peerAuthId,
-        .length = HcStrlen(peerAuthId)
-    };
-    return DeletePeerAuthInfo(appId, groupId, &peerAuthIdBuff, peerUserType, DAS_MODULE);
-}
-
 int32_t GetGroupTypeFromDb(const char *groupId, int *returnGroupType)
 {
     if ((groupId == NULL) || (returnGroupType == NULL)) {

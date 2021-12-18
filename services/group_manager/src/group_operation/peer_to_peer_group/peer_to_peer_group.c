@@ -18,12 +18,13 @@
 #include "alg_defs.h"
 #include "callback_manager.h"
 #include "channel_manager.h"
-#include "string_util.h"
 #include "database_manager.h"
+#include "dev_auth_module_manager.h"
 #include "group_operation_common.h"
 #include "hc_dev_info.h"
 #include "hc_log.h"
 #include "session_manager.h"
+#include "string_util.h"
 
 static int32_t CheckGroupName(const char *appId, const CJson *jsonParams)
 {
@@ -160,7 +161,7 @@ static int32_t CreateGroupInner(const CJson *jsonParams, char **returnGroupId)
     return HC_SUCCESS;
 }
 
-static int32_t GetPeerUserType(const char *groupId, const char *peerAuthId)
+static int32_t GetPeerDevUserTypeFromDb(const char *groupId, const char *peerAuthId)
 {
     int peerUserType = DEVICE_TYPE_ACCESSORY;
     DeviceInfo *devAuthParams = CreateDeviceInfoStruct();
@@ -178,39 +179,64 @@ static int32_t GetPeerUserType(const char *groupId, const char *peerAuthId)
     return peerUserType;
 }
 
-static int32_t HandleLocalUnbind(int64_t requestId, const CJson *jsonParams, const DeviceAuthCallback *callback)
+static int32_t DelPeerDevAndKeyInfo(const char *groupId, const char *peerAuthId)
 {
-    const char *peerAuthId = GetStringFromJson(jsonParams, FIELD_DELETE_ID);
-    if (peerAuthId == NULL) {
-        LOGE("Failed to get peerAuthId from jsonParams!");
-        return HC_ERR_JSON_GET;
-    }
-    const char *groupId = GetStringFromJson(jsonParams, FIELD_GROUP_ID);
-    if (groupId == NULL) {
-        LOGE("Failed to get groupId from jsonParams!");
-        return HC_ERR_JSON_GET;
-    }
-    int32_t peerUserType = GetPeerUserType(groupId, peerAuthId);
+    int32_t peerUserType = GetPeerDevUserTypeFromDb(groupId, peerAuthId);
     int32_t result = DelTrustedDevice(peerAuthId, false, groupId);
     if (result != HC_SUCCESS) {
-        LOGE("Failed to delete trust device from database!");
+        LOGE("Failed to delete peer device from database!");
         return result;
     }
+    /* Use the DeviceGroupManager package name. */
+    const char *appId = GROUP_MANAGER_PACKAGE_NAME;
+    Uint8Buff peerAuthIdBuff = {
+        .val = (uint8_t *)peerAuthId,
+        .length = HcStrlen(peerAuthId)
+    };
     /*
      * If the trusted device has been deleted from the database but the peer key fails to be deleted,
      * the forcible unbinding is still considered successful. Only logs need to be printed.
      */
-    result = DeletePeerKeyIfForceUnbind(groupId, peerAuthId, peerUserType);
+    result = DeletePeerAuthInfo(appId, groupId, &peerAuthIdBuff, peerUserType, DAS_MODULE);
     if (result != HC_SUCCESS) {
-        LOGD("Failed to delete peer key!");
+        LOGD("delete peer key fail! res: %d", result);
+    } else {
+        LOGD("delete peer key success!");
     }
-    char *returnDataStr = NULL;
-    result = GenerateUnbindSuccessData(peerAuthId, groupId, &returnDataStr);
+    return HC_SUCCESS;
+}
+
+static bool IsLocalDevice(const char *udid)
+{
+    return (strcmp(GetLocalDevUdid(), udid) == 0);
+}
+
+static int32_t DelAllPeerDevAndKeyInfo(const char *groupId)
+{
+    DeviceInfoVec deviceInfoVec;
+    CreateDeviceInfoVecStruct(&deviceInfoVec);
+    int32_t result = GetTrustedDevices(groupId, &deviceInfoVec);
     if (result != HC_SUCCESS) {
+        DestroyDeviceInfoVecStruct(&deviceInfoVec);
         return result;
     }
-    ProcessFinishCallback(requestId, MEMBER_DELETE, returnDataStr, callback);
-    FreeJsonString(returnDataStr);
+    uint32_t index;
+    void **devInfoPtr = NULL;
+    FOR_EACH_HC_VECTOR(deviceInfoVec, index, devInfoPtr) {
+        if ((devInfoPtr == NULL) || ((*devInfoPtr) == NULL)) {
+            continue;
+        }
+        DeviceInfo *devInfo = (DeviceInfo*)(*devInfoPtr);
+        if (IsLocalDevice(StringGet(&devInfo->udid))) {
+            continue;
+        }
+        result = DelPeerDevAndKeyInfo(groupId, StringGet(&devInfo->authId));
+        if (result != HC_SUCCESS) {
+            DestroyDeviceInfoVecStruct(&deviceInfoVec);
+            return result;
+        }
+    }
+    DestroyDeviceInfoVecStruct(&deviceInfoVec);
     return HC_SUCCESS;
 }
 
@@ -243,6 +269,55 @@ static int32_t AddAuthIdAndUserTypeToParams(const char *groupId, CJson *jsonPara
         return HC_ERR_JSON_FAIL;
     }
     DestroyDeviceInfoStruct(deviceInfo);
+    return HC_SUCCESS;
+}
+
+static int32_t DelGroupAndSelfKeyInfo(const char *groupId, CJson *jsonParams)
+{
+    int32_t result = AddAuthIdAndUserTypeToParams(groupId, jsonParams);
+    if (result != HC_SUCCESS) {
+        return result;
+    }
+    result = DelGroupFromDatabase(groupId);
+    if (result != HC_SUCCESS) {
+        return result;
+    }
+    /*
+     * If the group has been disbanded from the database but the key pair fails to be deleted,
+     * we still believe we succeeded in disbanding the group. Only logs need to be printed.
+     */
+    result = ProcessKeyPair(DELETE_KEY_PAIR, jsonParams, groupId);
+    if (result != HC_SUCCESS) {
+        LOGD("delete self key fail! res: %d", result);
+    } else {
+        LOGD("delete self key success!");
+    }
+    return HC_SUCCESS;
+}
+
+static int32_t HandleLocalUnbind(int64_t requestId, const CJson *jsonParams, const DeviceAuthCallback *callback)
+{
+    const char *peerAuthId = GetStringFromJson(jsonParams, FIELD_DELETE_ID);
+    if (peerAuthId == NULL) {
+        LOGE("Failed to get peerAuthId from jsonParams!");
+        return HC_ERR_JSON_GET;
+    }
+    const char *groupId = GetStringFromJson(jsonParams, FIELD_GROUP_ID);
+    if (groupId == NULL) {
+        LOGE("Failed to get groupId from jsonParams!");
+        return HC_ERR_JSON_GET;
+    }
+    int32_t result = DelPeerDevAndKeyInfo(groupId, peerAuthId);
+    if (result != HC_SUCCESS) {
+        return result;
+    }
+    char *returnDataStr = NULL;
+    result = GenerateUnbindSuccessData(peerAuthId, groupId, &returnDataStr);
+    if (result != HC_SUCCESS) {
+        return result;
+    }
+    ProcessFinishCallback(requestId, MEMBER_DELETE, returnDataStr, callback);
+    FreeJsonString(returnDataStr);
     return HC_SUCCESS;
 }
 
@@ -547,18 +622,10 @@ static int32_t DeleteGroup(CJson *jsonParams, char **returnJsonStr)
     int32_t result;
     const char *groupId = NULL;
     if (((result = GetGroupIdFromJson(jsonParams, &groupId)) != HC_SUCCESS) ||
-        ((result = AddAuthIdAndUserTypeToParams(groupId, jsonParams)) != HC_SUCCESS) ||
-        ((result = DelGroupFromDatabase(groupId)) != HC_SUCCESS) ||
+        ((result = DelAllPeerDevAndKeyInfo(groupId)) != HC_SUCCESS) ||
+        ((result = DelGroupAndSelfKeyInfo(groupId, jsonParams)) != HC_SUCCESS) ||
         ((result = ConvertGroupIdToJsonStr(groupId, returnJsonStr)) != HC_SUCCESS)) {
         return result;
-    }
-    /*
-     * If the group has been disbanded from the database but the key pair fails to be deleted,
-     * we still believe we succeeded in disbanding the group. Only logs need to be printed.
-     */
-    result = ProcessKeyPair(DELETE_KEY_PAIR, jsonParams, groupId);
-    if (result != HC_SUCCESS) {
-        LOGD("Failed to delete peer key!");
     }
     LOGI("[End]: Delete a peer to peer group successfully!");
     return HC_SUCCESS;

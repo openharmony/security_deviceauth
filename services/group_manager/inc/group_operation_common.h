@@ -33,7 +33,6 @@ bool IsExpireTimeValid(int expireTime);
 bool IsGroupVisibilityValid(int groupVisibility);
 
 int32_t ProcessKeyPair(int action, const CJson *jsonParams, const char *groupId);
-int32_t DeletePeerKeyIfForceUnbind(const char *groupId, const char *peerAuthId, int32_t peerUserType);
 int32_t GetHashMessage(const Uint8Buff *first, const Uint8Buff *second, uint8_t **hashMessage, uint32_t *messageSize);
 
 int32_t AssertUserIdHashExist(const CJson *jsonParams);
