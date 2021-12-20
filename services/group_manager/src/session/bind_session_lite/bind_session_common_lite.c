@@ -62,7 +62,7 @@ static int32_t OnSessionFinish(const BindSession *session, CJson *out)
     ProcessFinishCallback(session->reqId, session->opCode, returnDataStr, session->base.callback);
     FreeJsonString(returnDataStr);
     LOGI("The session completed successfully! [ReqId]: %" PRId64, session->reqId);
-    SetAuthResult(session->channelType, session->channelId);
+    NotifyBindResult(session->channelType, session->channelId);
     CloseChannel(session->channelType, session->channelId);
     return HC_SUCCESS;
 }
