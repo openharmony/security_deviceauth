@@ -102,7 +102,7 @@ int32_t HcSendMsg(ChannelType channelType, int64_t requestId, int64_t channelId,
     }
 }
 
-void SetAuthResult(ChannelType channelType, int64_t channelId)
+void NotifyBindResult(ChannelType channelType, int64_t channelId)
 {
     if (channelType == SOFT_BUS) {
         GetSoftBusInstance()->notifyResult(channelId);
