@@ -1194,7 +1194,8 @@ bool IsSameNameGroupExist(const char *ownerName, const char *groupName)
     TrustedGroupEntry **entry = NULL;
     g_databaseMutex->lock(g_databaseMutex);
     FOR_EACH_HC_VECTOR(g_trustedGroupTable, index, entry) {
-        if (strcmp(StringGet(&(*entry)->name), groupName) != 0) {
+        if ((entry == NULL) || (*entry == NULL) ||
+            (strcmp(StringGet(&(*entry)->name), groupName) != 0)) {
             continue;
         }
         if (HC_VECTOR_SIZE(&(*entry)->managers) > 0) {
@@ -1216,7 +1217,7 @@ bool IsIdenticalGroupExist(void)
     TrustedGroupEntry **entry = NULL;
     g_databaseMutex->lock(g_databaseMutex);
     FOR_EACH_HC_VECTOR(g_trustedGroupTable, index, entry) {
-        if ((*entry)->type == IDENTICAL_ACCOUNT_GROUP) {
+        if ((entry != NULL) && (*entry != NULL) && ((*entry)->type == IDENTICAL_ACCOUNT_GROUP)) {
             g_databaseMutex->unlock(g_databaseMutex);
             return true;
         }
@@ -1231,7 +1232,7 @@ bool IsAcrossAccountGroupExist(void)
     TrustedGroupEntry **entry = NULL;
     g_databaseMutex->lock(g_databaseMutex);
     FOR_EACH_HC_VECTOR(g_trustedGroupTable, index, entry) {
-        if ((*entry)->type == ACROSS_ACCOUNT_AUTHORIZE_GROUP) {
+        if ((entry != NULL) && (*entry != NULL) && ((*entry)->type == ACROSS_ACCOUNT_AUTHORIZE_GROUP)) {
             g_databaseMutex->unlock(g_databaseMutex);
             return true;
         }
