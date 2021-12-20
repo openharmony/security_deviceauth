@@ -340,7 +340,7 @@ static int32_t CheckInputGroupTypeValid(const CJson *jsonParams)
     return AssertPeerToPeerGroupType(groupType);
 }
 
-static int32_t IsPeerDeviceIdNotSelf(const char *peerUdid)
+static int32_t IsPeerDeviceNotSelf(const char *peerUdid)
 {
     if (peerUdid == NULL) {
         LOGE("The input peerUdid is NULL!");
@@ -376,7 +376,7 @@ static int32_t CheckPeerDeviceStatus(const char *groupId, const CJson *jsonParam
         DestroyDeviceInfoStruct(deviceInfo);
         return result;
     }
-    result = IsPeerDeviceIdNotSelf(StringGet(&deviceInfo->udid));
+    result = IsPeerDeviceNotSelf(StringGet(&deviceInfo->udid));
     DestroyDeviceInfoStruct(deviceInfo);
     return result;
 }
