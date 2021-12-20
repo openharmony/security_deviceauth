@@ -41,6 +41,11 @@ const char *GetStoragePath(void)
     return "hcgroup.dat";
 }
 
+const char *GetStorageDirPath(void)
+{
+    return "";
+}
+
 #ifdef __cplusplus
 }
 #endif

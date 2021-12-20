@@ -35,7 +35,8 @@ typedef struct {
 } FileDefInfo;
 
 static FileDefInfo g_fileDefInfo[FILE_ID_LAST] = {
-    { FILE_ID_GROUP, "/data/hcgroup.dat" }
+    { FILE_ID_GROUP, "/data/hcgroup.dat" },
+    { FILE_ID_CRED_DATA, "" }
 };
 
 void SetFilePath(FileIdEnum fileId, const char *path)

@@ -17,7 +17,6 @@
 #include "hc_log.h"
 #include "hc_types.h"
 #include "iso_task_common.h"
-#include "securec.h"
 
 enum {
     TASK_TYPE_BEGIN = 1,
@@ -31,20 +30,19 @@ static CurTaskType GetTaskType(void)
 
 static void DestroyClientUnbindExchangeTask(struct SymBaseCurTaskT *task)
 {
-    IsoClientUnbindExchangeTask *realTask = (IsoClientUnbindExchangeTask *)task;
-    HcFree(realTask);
+    HcFree(task);
 }
 
 static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson *in, CJson *out, int *status)
 {
     IsoClientUnbindExchangeTask *realTask = (IsoClientUnbindExchangeTask *)task;
     if (realTask->taskBase.taskStatus < TASK_TYPE_BEGIN) {
-        LOGE("taskStatus err %d", realTask->taskBase.taskStatus);
+        LOGE("Invalid taskStatus: %d", realTask->taskBase.taskStatus);
         return HC_ERR_BAD_MESSAGE;
     }
 
     if (realTask->taskBase.taskStatus > TASK_TYPE_BEGIN) {
-        LOGI("The message is repeated, ignore it, status :%d", realTask->taskBase.taskStatus);
+        LOGI("The message is repeated, ignore it, status: %d", realTask->taskBase.taskStatus);
         *status = IGNORE_MSG;
         return HC_SUCCESS;
     }
@@ -63,25 +61,26 @@ static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson 
     keyAlias = (uint8_t *)HcMalloc(ISO_KEY_ALIAS_LEN, 0);
     if (keyAlias == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     res = GenerateKeyAliasInIso(params, keyAlias, ISO_KEY_ALIAS_LEN, true);
     if (res != 0) {
         LOGE("GenerateKeyAliasInIso failed, res:%d", res);
-        goto err;
+        goto ERR;
     }
+    LOGI("AuthCode alias: %x%x%x%x****.", keyAlias[0], keyAlias[1], keyAlias[2], keyAlias[3]);
     Uint8Buff outKeyAlias = { (uint8_t *)keyAlias, ISO_KEY_ALIAS_LEN };
     res = params->baseParams.loader->deleteKey(&outKeyAlias);
     if (res != 0) {
         LOGE("delete auth code failed, res:%d", res);
-        goto err;
+        goto ERR;
     }
     res = SendResultToFinalSelf(params, out, false);
     if (res == 0) {
         realTask->taskBase.taskStatus = TASK_TYPE_FINAL;
         *status = FINISH;
     }
-err:
+ERR:
     HcFree(keyAlias);
     return res;
 }
@@ -96,12 +95,12 @@ static int PackDataForStartUnbind(const IsoParams *params, const Uint8Buff *encD
     payload = CreateJson();
     if (payload == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     sendToPeer = CreateJson();
     if (sendToPeer == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     GOTO_ERR_AND_SET_RET(AddIntToJson(sendToPeer, FIELD_MESSAGE, ISO_CLIENT_UNBIND_EXCHANGE_CMD), res);
     GOTO_ERR_AND_SET_RET(AddIntToJson(payload, FIELD_OPERATION_CODE, params->opCode), res);
@@ -109,7 +108,7 @@ static int PackDataForStartUnbind(const IsoParams *params, const Uint8Buff *encD
     GOTO_ERR_AND_SET_RET(AddByteToJson(payload, FIELD_NONCE, nonceBuf->val, nonceBuf->length), res);
     GOTO_ERR_AND_SET_RET(AddObjToJson(sendToPeer, FIELD_PAYLOAD, payload), res);
     GOTO_ERR_AND_SET_RET(AddObjToJson(out, FIELD_SEND_TO_PEER, sendToPeer), res);
-err:
+ERR:
     FreeJson(payload);
     FreeJson(sendToPeer);
     return res;
@@ -132,7 +131,7 @@ static int GenerateEncRemoveInfo(const IsoParams *params, const Uint8Buff *nonce
     if (rmvInfoStr == NULL) {
         LOGE("rmvInfoStr PackJsonToString failed");
         res = HC_ERR_PACKAGE_JSON_TO_STRING_FAIL;
-        goto err;
+        goto ERR;
     }
 
     Uint8Buff removeInfoBuf = { (uint8_t *)rmvInfoStr, strlen(rmvInfoStr) };
@@ -141,7 +140,7 @@ static int GenerateEncRemoveInfo(const IsoParams *params, const Uint8Buff *nonce
     encData = (uint8_t *)HcMalloc(encDataLen, 0);
     if (encData == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     Uint8Buff encDataBuf = { encData, encDataLen };
     GcmParam gcmParam;
@@ -153,13 +152,13 @@ static int GenerateEncRemoveInfo(const IsoParams *params, const Uint8Buff *nonce
         &encDataBuf);
     if (res != 0) {
         LOGE("encrypt removeInfo failed, res:%d", res);
-        goto err;
+        goto ERR;
     }
     res = PackDataForStartUnbind(params, &encDataBuf, nonceBuf, out);
     if (res != HC_SUCCESS) {
         LOGE("PackDataForStartUnbind failed, res:%d", res);
     }
-err:
+ERR:
     FreeJson(rmvInfoJson);
     FreeJsonString(rmvInfoStr);
     HcFree(encData);
@@ -176,23 +175,23 @@ static int ClientUnbindExchangeStart(const IsoParams *params, IsoClientUnbindExc
     nonce = (uint8_t *)HcMalloc(NONCE_SIZE, 0);
     if (nonce == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     Uint8Buff nonceBuf = { nonce, NONCE_SIZE };
     res = params->baseParams.loader->generateRandom(&nonceBuf);
     if (res != 0) {
         LOGE("generate nonce failed, res:%d", res);
-        goto err;
+        goto ERR;
     }
 
     res = GenerateEncRemoveInfo(params, &nonceBuf, out);
     if (res != 0) {
         LOGE("GenerateEncRemoveInfo failed, res:%d", res);
-        goto err;
+        goto ERR;
     }
     task->taskBase.taskStatus = TASK_TYPE_BEGIN;
     *status = CONTINUE;
-err:
+ERR:
     HcFree(nonce);
     return res;
 }

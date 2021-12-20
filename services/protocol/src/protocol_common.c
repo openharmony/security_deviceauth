@@ -14,9 +14,10 @@
  */
 
 #include "protocol_common.h"
-#include "common_defs.h"
+#include "device_auth_defines.h"
+#include "hc_log.h"
 #include "hc_types.h"
-#include "securec.h"
+#include "string_util.h"
 
 void FreeAndCleanKey(Uint8Buff *key)
 {
@@ -27,4 +28,23 @@ void FreeAndCleanKey(Uint8Buff *key)
     HcFree(key->val);
     key->val = NULL;
     key->length = 0;
+}
+
+int32_t InitSingleParam(Uint8Buff *param, uint32_t len)
+{
+    if (param == NULL) {
+        LOGE("Param is null.");
+        return HC_ERR_NULL_PTR;
+    }
+    if (param->val != NULL) {
+        (void)memset_s(param->val, param->length, 0, param->length);
+        HcFree(param->val);
+    }
+    param->length = len;
+    param->val = (uint8_t *)HcMalloc(param->length, 0);
+    if (param->val == NULL) {
+        LOGE("Malloc for param failed.");
+        return HC_ERR_ALLOC_MEMORY;
+    }
+    return HC_SUCCESS;
 }

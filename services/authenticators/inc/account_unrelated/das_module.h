@@ -18,8 +18,7 @@
 
 #include "common_defs.h"
 #include "string_util.h"
-
-bool IsDasSupported(void);
+#include "dev_auth_module_manager.h"
 
 typedef struct DasAuthModuleT {
     AuthModuleBase moduleBase;
@@ -29,6 +28,8 @@ typedef struct DasAuthModuleT {
     int (*getPublicKey)(const char *, const char *, Uint8Buff *, int, Uint8Buff *);
 } DasAuthModule;
 
+bool IsDasSupported(void);
+bool IsDasMsgNeedIgnore(const CJson *in);
 AuthModuleBase *CreateDasModule(void);
 
 #endif

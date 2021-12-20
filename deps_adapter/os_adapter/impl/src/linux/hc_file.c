@@ -38,6 +38,7 @@ static char g_groupPath[MAX_FILE_PATH_SIZE] = { 0 };
 
 static FileDefInfo g_fileDefInfo[FILE_ID_LAST] = {
     { FILE_ID_GROUP, "/data/data/deviceauth/hcgroup.dat" },
+    { FILE_ID_CRED_DATA, "" }
 };
 
 void SetFilePath(FileIdEnum fileId, const char *path)

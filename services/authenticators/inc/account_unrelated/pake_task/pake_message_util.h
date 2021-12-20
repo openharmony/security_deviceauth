@@ -19,7 +19,6 @@
 #include "json_utils.h"
 #include "pake_base_cur_task.h"
 
-int32_t ParseStartJsonParams(PakeParams *params, const CJson *in);
 int32_t PackagePakeRequestData(const PakeParams *params, CJson *payload);
 int32_t ParsePakeRequestMessage(PakeParams *params, const CJson *in);
 int32_t PackagePakeResponseData(const PakeParams *params, CJson *payload);

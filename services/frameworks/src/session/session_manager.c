@@ -287,20 +287,19 @@ void OnChannelOpened(int64_t requestId, int64_t channelId)
     uint32_t index;
     void **session = NULL;
     FOR_EACH_HC_VECTOR(g_sessionManagerVec, index, session) {
-        if (session != NULL && (*session != NULL)) {
-            if (((Session *)(*session))->sessionId == sessionId) {
-                int sessionType = ((Session *)(*session))->type;
-                if ((sessionType == TYPE_CLIENT_BIND_SESSION) ||
-                    (sessionType == TYPE_CLIENT_BIND_SESSION_LITE) ||
-                    (sessionType == TYPE_CLIENT_KEY_AGREE_SESSION)) {
-                    BindSession *realSession = (BindSession *)(*session);
-                    realSession->onChannelOpened(*session, channelId, requestId);
-                    return;
-                }
-                LOGE("The type of the found session is not as expected!");
-                return;
-            }
+        if (session == NULL || (*session == NULL) || (((Session *)(*session))->sessionId != sessionId)) {
+            continue;
         }
+        int sessionType = ((Session *)(*session))->type;
+        if ((sessionType == TYPE_CLIENT_BIND_SESSION) ||
+            (sessionType == TYPE_CLIENT_BIND_SESSION_LITE) ||
+            (sessionType == TYPE_CLIENT_KEY_AGREE_SESSION)) {
+            BindSession *realSession = (BindSession *)(*session);
+            realSession->onChannelOpened(*session, channelId, requestId);
+            return;
+        }
+        LOGE("The type of the found session is not as expected!");
+        return;
     }
 }
 

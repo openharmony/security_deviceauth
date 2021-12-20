@@ -40,12 +40,7 @@ if (defined(ohos_lite)) {
     ]
 
     defines = [ "HILOG_ENABLE" ]
-    if (enable_p2p_pake_dl_prime_len_384 == true) {
-      defines += [ "P2P_PAKE_DL_PRIME_LEN_384" ]
-    }
-    if (enable_p2p_pake_dl_prime_len_256 == true) {
-      defines += [ "P2P_PAKE_DL_PRIME_LEN_256" ]
-    }
+    defines += deviceauth_defines
     cflags = build_flags
 
     if (ohos_kernel_type == "linux" || ohos_kernel_type == "liteos_a") {
@@ -151,13 +146,7 @@ if (defined(ohos_lite)) {
 
     sources = deviceauth_files
     cflags = [ "-DHILOG_ENABLE" ]
-    defines = []
-    if (enable_p2p_pake_dl_prime_len_384 == true) {
-      defines += [ "P2P_PAKE_DL_PRIME_LEN_384" ]
-    }
-    if (enable_p2p_pake_dl_prime_len_256 == true) {
-      defines += [ "P2P_PAKE_DL_PRIME_LEN_256" ]
-    }
+    defines = deviceauth_defines
     cflags += build_flags
     if (target_cpu == "arm") {
       cflags += [ "-DBINDER_IPC_32BIT" ]

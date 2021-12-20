@@ -33,7 +33,7 @@ int32_t OpenChannel(ChannelType channelType, const CJson *jsonParams, int64_t re
 void CloseChannel(ChannelType channelType, int64_t channelId);
 int32_t HcSendMsg(ChannelType channelType, int64_t requestId, int64_t channelId,
     const DeviceAuthCallback *callback, const char *data);
-void SetAuthResult(ChannelType channelType, int64_t channelId);
+void NotifyBindResult(ChannelType channelType, int64_t channelId);
 int32_t GetLocalConnectInfo(char *jsonAddrInfo, int32_t bufLen);
 
 #ifdef __cplusplus

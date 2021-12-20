@@ -25,6 +25,6 @@ typedef struct {
     SymBaseCurTask *curTask;
 } IsoServerTask;
 
-SubTaskBase *CreateIsoServerTask(const CJson *in, CJson *out);
+SubTaskBase *CreateIsoServerTask(const CJson *in);
 
 #endif

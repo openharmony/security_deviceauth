@@ -30,15 +30,15 @@ typedef struct PriorityMapT {
 
 VersionStruct g_defaultVersion = { 1, 0, 0 };
 PriorityMap g_bindPriorityList[BIND_PRIORITY_LEN] = {
-    { NEW_EC_SPEKE, NEW_PAKE },
-    { NEW_DL_SPEKE, NEW_PAKE },
-    { EC_SPEKE, PAKE },
-    { DL_SPEKE, PAKE },
+    { EC_PAKE_V2, PAKE_V2 },
+    { DL_PAKE_V2, PAKE_V2 },
+    { EC_PAKE_V1, PAKE_V1 },
+    { DL_PAKE_V1, PAKE_V1 },
     { ISO_ALG, ISO }
 };
 PriorityMap g_authPriorityList[AUTH_PRIORITY_LEN] = {
-    { PSK_SPEKE | NEW_EC_SPEKE, NEW_PAKE },
-    { PSK_SPEKE | EC_SPEKE, PAKE },
+    { PSK_SPEKE | EC_PAKE_V2, PAKE_V2 },
+    { PSK_SPEKE | EC_PAKE_V1, PAKE_V1 },
     { ISO_ALG, ISO }
 };
 
@@ -53,9 +53,10 @@ int32_t GetVersionFromJson(const CJson* jsonObj, VersionStruct *minVer, VersionS
     const char *maxStr = GetStringFromJson(jsonObj, FIELD_CURRENT_VERSION);
     CHECK_PTR_RETURN_ERROR_CODE(maxStr, "maxStr");
 
-    int32_t minRet = StringToVersion(minStr, strlen(minStr), minVer);
-    int32_t maxRet = StringToVersion(maxStr, strlen(maxStr), maxVer);
+    int32_t minRet = StringToVersion(minStr, minVer);
+    int32_t maxRet = StringToVersion(maxStr, maxVer);
     if (minRet != HC_SUCCESS || maxRet != HC_SUCCESS) {
+        LOGE("Convert version string to struct failed.");
         return HC_ERROR;
     }
     return HC_SUCCESS;
@@ -127,50 +128,61 @@ int32_t NegotiateVersion(VersionStruct *minVersionPeer, VersionStruct *curVersio
 static ProtocolType GetBindPrototolType(VersionStruct *curVersion)
 {
     if (IsVersionEqual(curVersion, &g_defaultVersion)) {
-        return PAKE;
-    } else {
-        for (int i = 0; i < BIND_PRIORITY_LEN; i++) {
-            if ((curVersion->third & g_bindPriorityList[i].alg) == g_bindPriorityList[i].alg) {
-                return g_bindPriorityList[i].type;
-            }
+        return PAKE_V1;
+    }
+    for (int i = 0; i < BIND_PRIORITY_LEN; i++) {
+        if ((curVersion->third & g_bindPriorityList[i].alg) == g_bindPriorityList[i].alg) {
+            return g_bindPriorityList[i].type;
         }
     }
-    return UNSUPPORTED;
+    return PROTOCOL_TYPE_NONE;
 }
 
 static ProtocolType GetAuthPrototolType(VersionStruct *curVersion)
 {
     if (IsVersionEqual(curVersion, &g_defaultVersion)) {
         LOGE("Not support STS.");
-        return UNSUPPORTED;
-    } else {
-        for (int i = 0; i < AUTH_PRIORITY_LEN; i++) {
-            if ((curVersion->third & g_authPriorityList[i].alg) == g_authPriorityList[i].alg) {
-                return g_authPriorityList[i].type;
-            }
+        return PROTOCOL_TYPE_NONE;
+    }
+    for (int i = 0; i < AUTH_PRIORITY_LEN; i++) {
+        if ((curVersion->third & g_authPriorityList[i].alg) == g_authPriorityList[i].alg) {
+            return g_authPriorityList[i].type;
         }
     }
-    return UNSUPPORTED;
+    return PROTOCOL_TYPE_NONE;
 }
 
 ProtocolType GetPrototolType(VersionStruct *curVersion, OperationCode opCode)
 {
-    if (opCode == OP_BIND) {
-        return GetBindPrototolType(curVersion);
-    } else {
-        return GetAuthPrototolType(curVersion);
+    switch (opCode) {
+        case OP_BIND:
+        case AUTH_KEY_AGREEMENT:
+            return GetBindPrototolType(curVersion);
+        case AUTHENTICATE:
+        case OP_UNBIND:
+            return GetAuthPrototolType(curVersion);
+        default:
+            LOGE("Unsupported opCode: %d.", opCode);
     }
+    return PROTOCOL_TYPE_NONE;
 }
 
-AlgType GetSupportedPakeAlg(VersionStruct *curVersion)
+PakeAlgType GetSupportedPakeAlg(VersionStruct *curVersion, ProtocolType protocolType)
 {
-    return curVersion->third & (DL_SPEKE | EC_SPEKE | PSK_SPEKE | NEW_DL_SPEKE | NEW_EC_SPEKE);
+    PakeAlgType pakeAlgType = PAKE_ALG_NONE;
+    if (protocolType == PAKE_V2) {
+        pakeAlgType = ((curVersion->third & EC_PAKE_V2) >> ALG_OFFSET_FOR_PAKE_V2) |
+            ((curVersion->third & DL_PAKE_V2) >> ALG_OFFSET_FOR_PAKE_V2);
+    } else if (protocolType == PAKE_V1) {
+        pakeAlgType = ((curVersion->third & EC_PAKE_V1) >> ALG_OFFSET_FOR_PAKE_V1) |
+            ((curVersion->third & DL_PAKE_V1) >> ALG_OFFSET_FOR_PAKE_V1);
+    } else {
+        LOGE("Invalid protocolType: %d.", protocolType);
+    }
+    return pakeAlgType;
 }
 
 bool IsSupportedPsk(VersionStruct *curVersion)
 {
-    if (curVersion->third & PSK_SPEKE) {
-        return true;
-    }
-    return false;
+    return ((curVersion->third & PSK_SPEKE) != 0);
 }

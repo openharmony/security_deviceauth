@@ -37,7 +37,8 @@ typedef struct {
 } FileDefInfo;
 
 static FileDefInfo g_fileDefInfo[FILE_ID_LAST] = {
-    { FILE_ID_GROUP, "user/Hichain/hcgroup.dat" }
+    { FILE_ID_GROUP, "user/Hichain/hcgroup.dat" },
+    { FILE_ID_CRED_DATA, "" }
 };
 
 static char g_groupPath[MAX_FILE_PATH_SIZE] = { 0 };

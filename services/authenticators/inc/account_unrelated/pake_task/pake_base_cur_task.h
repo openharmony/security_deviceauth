@@ -16,17 +16,23 @@
 #ifndef PAKE_BASE_CUR_TASK_H
 #define PAKE_BASE_CUR_TASK_H
 
-#include <stdint.h>
-#include "json_utils.h"
 #include "das_module_defines.h"
+#include "hc_types.h"
+#include "json_utils.h"
 #include "pake_defs.h"
+
+#define HICHAIN_RETURN_KEY "hichain_return_key"
+#define TMP_AUTH_KEY_FACTOR "hichain_tmp_auth_enc_key"
 
 #define PAKE_KEY_ALIAS_LEN 64
 #define PAKE_ED25519_KEY_PAIR_LEN 32
+#define PAKE_NONCE_LEN 32
+#define PAKE_PSK_LEN 32
 
 typedef struct PakeParamsT {
     PakeBaseParams baseParams;
 
+    bool isPskSupported;
     Uint8Buff returnKey;
     Uint8Buff nonce;
     int opCode;

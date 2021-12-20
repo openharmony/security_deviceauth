@@ -20,7 +20,7 @@
 #include "common_defs.h"
 #include "protocol_common.h"
 
-#define VERSION_FIRST_BIT 2
+#define MAJOR_VERSION_NO 2
 #define TMP_VERSION_STR_LEN 15
 
 typedef struct {
@@ -30,7 +30,7 @@ typedef struct {
 } VersionStruct;
 
 int32_t VersionToString(const VersionStruct *version, char *verStr, uint32_t len);
-int32_t StringToVersion(const char* verStr, uint32_t len, VersionStruct* version);
+int32_t StringToVersion(const char* verStr, VersionStruct* version);
 
 int32_t AddSingleVersionToJson(CJson *jsonObj, const VersionStruct *version);
 int32_t GetSingleVersionFromJson(const CJson* jsonObj, VersionStruct *version);

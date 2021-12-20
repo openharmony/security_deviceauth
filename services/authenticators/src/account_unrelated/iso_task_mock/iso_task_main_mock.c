@@ -14,21 +14,20 @@
  */
 
 #include "iso_task_main.h"
-#include "das_asy_token_manager.h"
+#include "das_lite_token_manager.h"
 
 bool IsIsoSupported(void)
 {
     return false;
 }
 
-SubTaskBase *CreateIsoSubTask(const CJson *in, CJson *out)
+SubTaskBase *CreateIsoSubTask(const CJson *in)
 {
     (void)in;
-    (void)out;
     return NULL;
 }
 
-const TokenManager *GetSymTokenManagerInstance(void)
+const TokenManager *GetLiteTokenManagerInstance(void)
 {
     return NULL;
 }
