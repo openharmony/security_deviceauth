@@ -15,7 +15,7 @@
 
 #include "iso_client_bind_exchange_task.h"
 #include "alg_defs.h"
-#include "das_common.h"
+#include "das_task_common.h"
 #include "das_module_defines.h"
 #include "hc_log.h"
 #include "hc_types.h"
@@ -35,8 +35,7 @@ static CurTaskType GetTaskType(void)
 
 static void DestroyCreateClientBindExchangeTask(struct SymBaseCurTaskT *task)
 {
-    IsoClientBindExchangeTask *realTask = (IsoClientBindExchangeTask *)task;
-    HcFree(realTask);
+    HcFree(task);
 }
 
 static int DecAndImportInner(IsoClientBindExchangeTask *realTask, const IsoParams *params,
@@ -46,7 +45,7 @@ static int DecAndImportInner(IsoClientBindExchangeTask *realTask, const IsoParam
     uint8_t *keyAlias = (uint8_t *)HcMalloc(ISO_KEY_ALIAS_LEN, 0);
     if (keyAlias == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     Uint8Buff keyAliasBuf = { keyAlias, ISO_KEY_ALIAS_LEN };
     GcmParam gcmParam;
@@ -58,22 +57,23 @@ static int DecAndImportInner(IsoClientBindExchangeTask *realTask, const IsoParam
         &gcmParam, false, authCodeBuf);
     if (res != 0) {
         LOGE("gcm decrypt failed, res:%d", res);
-        goto err;
+        goto ERR;
     }
     res = GenerateKeyAliasInIso(params, keyAlias, ISO_KEY_ALIAS_LEN, true);
     if (res != 0) {
         LOGE("GenerateKeyAliasInIso failed, res:%d", res);
-        goto err;
+        goto ERR;
     }
 
+    LOGI("AuthCode alias: %x%x%x%x****.", keyAlias[0], keyAlias[1], keyAlias[2], keyAlias[3]);
     ExtraInfo exInfo = { { params->baseParams.authIdPeer.val, params->baseParams.authIdPeer.length },
         params->peerUserType, PAIR_TYPE_BIND };
-    res = params->baseParams.loader->importAsymmetricKey(&keyAliasBuf, authCodeBuf, &exInfo);
+    res = params->baseParams.loader->importSymmetricKey(&keyAliasBuf, authCodeBuf, KEY_PURPOSE_MAC, &exInfo);
     if (res != 0) {
-        LOGE("import token failed, res:%d", res);
-        goto err;
+        LOGE("ImportSymmetricKey failed, res: %x.", res);
+        goto ERR;
     }
-err:
+ERR:
     HcFree(keyAlias);
     return res;
 }
@@ -88,12 +88,12 @@ static int DecAndImportAuthCode(IsoClientBindExchangeTask *realTask, const IsoPa
     nonce = (uint8_t *)HcMalloc(NONCE_SIZE, 0);
     if (nonce == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     encData = (uint8_t *)HcMalloc(encDataLen, 0);
     if (encData == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     GOTO_ERR_AND_SET_RET(GetByteFromJson(in, FIELD_NONCE, nonce, NONCE_SIZE), res);
     GOTO_ERR_AND_SET_RET(GetByteFromJson(in, FIELD_ENC_AUTH_TOKEN, encData, encDataLen), res);
@@ -102,7 +102,7 @@ static int DecAndImportAuthCode(IsoClientBindExchangeTask *realTask, const IsoPa
     authCode = (uint8_t *)HcMalloc(AUTH_CODE_LEN, 0);
     if (authCode == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     Uint8Buff authCodeBuf = { authCode, AUTH_CODE_LEN };
     Uint8Buff nonceBuf = { nonce, NONCE_SIZE };
@@ -111,7 +111,7 @@ static int DecAndImportAuthCode(IsoClientBindExchangeTask *realTask, const IsoPa
     if (res != 0) {
         LOGE("DecAndImportInner failed, res:%d", res);
     }
-err:
+ERR:
     HcFree(nonce);
     HcFree(encData);
     if (authCode != NULL) {
@@ -125,12 +125,12 @@ static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson 
 {
     IsoClientBindExchangeTask *realTask = (IsoClientBindExchangeTask *)task;
     if (realTask->taskBase.taskStatus < TASK_TYPE_BEGIN) {
-        LOGE("taskStatus err %d", realTask->taskBase.taskStatus);
+        LOGE("Invalid taskStatus: %d", realTask->taskBase.taskStatus);
         return HC_ERR_BAD_MESSAGE;
     }
 
     if (realTask->taskBase.taskStatus > TASK_TYPE_BEGIN) {
-        LOGI("The message is repeated, ignore it, status :%d", realTask->taskBase.taskStatus);
+        LOGI("The message is repeated, ignore it, status: %d", realTask->taskBase.taskStatus);
         *status = IGNORE_MSG;
         return HC_SUCCESS;
     }
@@ -202,19 +202,19 @@ static int ClientBindExchangeStart(const IsoParams *params, IsoClientBindExchang
     // execute
     int res = ClientBindAesEncrypt(task, params, &encData, &nonce);
     if (res != 0) {
-        goto err;
+        goto ERR;
     }
 
     // package message
     sendToPeer = CreateJson();
     if (sendToPeer == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     payload = CreateJson();
     if (payload == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     GOTO_ERR_AND_SET_RET(AddIntToJson(sendToPeer, FIELD_MESSAGE, ISO_CLIENT_BIND_EXCHANGE_CMD), res);
     GOTO_ERR_AND_SET_RET(AddByteToJson(payload, FIELD_NONCE, nonce, NONCE_SIZE), res);
@@ -224,7 +224,7 @@ static int ClientBindExchangeStart(const IsoParams *params, IsoClientBindExchang
 
     task->taskBase.taskStatus = TASK_TYPE_BEGIN;
     *status = CONTINUE;
-err:
+ERR:
     FreeJson(payload);
     FreeJson(sendToPeer);
     HcFree(nonce);
@@ -237,7 +237,7 @@ SymBaseCurTask *CreateClientBindExchangeTask(IsoParams *params, const CJson *in,
     (void)in;
     IsoClientBindExchangeTask *task = (IsoClientBindExchangeTask *)HcMalloc(sizeof(IsoClientBindExchangeTask), 0);
     if (task == NULL) {
-        LOGE("Failed to create client bind exchange task.");
+        LOGE("Failed to malloc client bind exchange task.");
         return NULL;
     }
     task->taskBase.destroyTask = DestroyCreateClientBindExchangeTask;

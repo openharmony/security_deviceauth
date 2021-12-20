@@ -13,71 +13,71 @@
  * limitations under the License.
  */
 
-#include "das_common.h"
+#include "pake_message_util.h"
+#include "das_task_common.h"
 #include "hc_log.h"
 #include "json_utils.h"
-#include "module_common.h"
 #include "pake_base_cur_task.h"
 #include "protocol_common.h"
 #include "string_util.h"
 
-int32_t ParseStartJsonParams(PakeParams *params, const CJson *in)
+int32_t PackagePakeRequestData(const PakeParams *params, CJson *payload)
 {
-    if (GetBoolFromJson(in, FIELD_SUPPORT_256_MOD, &(params->baseParams.is256ModSupported)) != HC_SUCCESS) {
-        LOGD("Use default DL mod length: 384.");
+    // The value of is256ModSupported is true, when only 256 mode is supported
+    bool is256ModSupported =
+        (((uint32_t)params->baseParams.supportedDlPrimeMod | DL_PRIME_MOD_256) == DL_PRIME_MOD_256);
+    if (AddBoolToJson(payload, FIELD_SUPPORT_256_MOD, is256ModSupported) != HC_SUCCESS) {
+        LOGE("Add is256ModSupported failed.");
+        return HC_ERR_JSON_ADD;
+    }
+    if (AddIntToJson(payload, FIELD_OPERATION_CODE, params->opCode) != HC_SUCCESS) {
+        LOGE("Add opCode failed.");
+        return HC_ERR_JSON_ADD;
+    }
+    if (params->opCode == AUTHENTICATE || params->opCode == OP_UNBIND) {
+        if (AddStringToJson(payload, FIELD_PKG_NAME, params->packageName) != HC_SUCCESS) {
+            LOGE("Add packageName failed.");
+            return HC_ERR_JSON_ADD;
+        }
+        if (AddStringToJson(payload, FIELD_SERVICE_TYPE, params->serviceType) != HC_SUCCESS) {
+            LOGE("Add serviceType failed.");
+            return HC_ERR_JSON_ADD;
+        }
+        if (AddIntToJson(payload, FIELD_PEER_USER_TYPE, params->userType) != HC_SUCCESS) {
+            LOGE("Add userType failed.");
+            return HC_ERR_JSON_ADD;
+        }
     }
     return HC_SUCCESS;
 }
 
-int32_t PackagePakeRequestData(const PakeParams *params, CJson *payload)
-{
-    int32_t res = AddBoolToJson(payload, FIELD_SUPPORT_256_MOD, params->baseParams.is256ModSupported);
-    if (res != HC_SUCCESS) {
-        LOGE("Add is256ModSupported failed, res: %d.", res);
-        return res;
-    }
-    res = AddIntToJson(payload, FIELD_OPERATION_CODE, params->opCode);
-    if (res != HC_SUCCESS) {
-        LOGE("Add opCode failed, res: %d.", res);
-        return res;
-    }
-    if (params->opCode == AUTHENTICATE || params->opCode == OP_UNBIND) {
-        res = AddStringToJson(payload, FIELD_PKG_NAME, params->packageName);
-        if (res != HC_SUCCESS) {
-            LOGE("Add packageName failed, res: %d.", res);
-            return res;
-        }
-        res = AddStringToJson(payload, FIELD_SERVICE_TYPE, params->serviceType);
-        if (res != HC_SUCCESS) {
-            LOGE("Add serviceType failed, res: %d.", res);
-            return res;
-        }
-        res = AddIntToJson(payload, FIELD_PEER_USER_TYPE, params->userType);
-        if (res != HC_SUCCESS) {
-            LOGE("Add userType failed, res: %d.", res);
-            return res;
-        }
-    }
-    return res;
-}
-
 int32_t ParsePakeRequestMessage(PakeParams *params, const CJson *in)
 {
-    int32_t res = GetBoolFromJson(in, FIELD_SUPPORT_256_MOD, &(params->baseParams.is256ModSupported));
-    if (res != HC_SUCCESS) {
-        LOGE("Get is256ModSupported failed, res: %d.", res);
-        return res;
+    bool is256ModSupported = true;
+    if (GetBoolFromJson(in, FIELD_SUPPORT_256_MOD, &is256ModSupported) != HC_SUCCESS) {
+        LOGE("Get is256ModSupported failed.");
+        return HC_ERR_JSON_GET;
     }
+    params->baseParams.supportedDlPrimeMod = is256ModSupported ?
+        (params->baseParams.supportedDlPrimeMod & DL_PRIME_MOD_256) :
+        (params->baseParams.supportedDlPrimeMod & DL_PRIME_MOD_384);
 
-    if (params->opCode == AUTHENTICATE) {
-        res = GetAndCheckKeyLenOnServer(in, &(params->returnKey.length));
+    /*
+     * opCode: OP_UNBIND, pake v1: don't need returnKey, use default 0 length
+     * opCode: OP_UNBIND, pake v2: don't need returnKey, use default 0 length
+     * opCode: OP_BIND, pake v1: use default 32 length
+     * opCode: OP_BIND, pake v2: don't need returnKey, use default 0 length
+     * Therefore, only params->opCode == AUTHENTICATE or AUTH_KEY_AGREEMENT, need to get keyLen from message
+     */
+    if (params->opCode == AUTHENTICATE || params->opCode == AUTH_KEY_AGREEMENT) {
+        int32_t res = GetAndCheckKeyLenOnServer(in, &(params->returnKey.length));
         if (res != HC_SUCCESS) {
             LOGE("GetAndCheckKeyLenOnServer failed, res: %d.", res);
             return res;
         }
     }
 
-    return res;
+    return HC_SUCCESS;
 }
 
 int32_t PackagePakeResponseData(const PakeParams *params, CJson *payload)

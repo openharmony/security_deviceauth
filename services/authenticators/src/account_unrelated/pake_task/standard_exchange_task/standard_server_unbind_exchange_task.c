@@ -14,8 +14,9 @@
  */
 
 #include "standard_server_unbind_exchange_task.h"
-#include "das_common.h"
 #include "hc_log.h"
+#include "hc_types.h"
+#include "protocol_common.h"
 #include "standard_exchange_message_util.h"
 
 enum {
@@ -29,11 +30,11 @@ static CurTaskType GetTaskType(void)
     return TASK_TYPE_UNBIND_STANDARD_EXCHANGE;
 }
 
-static int ExchangeStart(AsyBaseCurTask *task, PakeParams *params, const CJson *in, CJson *out, int *status)
+static int ExchangeStart(AsyBaseCurTask *task, PakeParams *params, CJson *out, int *status)
 {
     int res = HC_SUCCESS;
     if (task->taskStatus != TASK_STATUS_SERVER_UNBIND_EXCHANGE_BEGIN) {
-        LOGI("The message is repeated, ignore it, status :%d", task->taskStatus);
+        LOGI("The message is repeated, ignore it, status: %d", task->taskStatus);
         *status = IGNORE_MSG;
         return HC_SUCCESS;
     }
@@ -68,7 +69,7 @@ static int ExchangeResponse(AsyBaseCurTask *task, PakeParams *params, const CJso
         return HC_ERR_BAD_MESSAGE;
     }
     if (task->taskStatus > TASK_STATUS_SERVER_UNBIND_EXCHANGE_START) {
-        LOGI("The message is repeated, ignore it, status :%d", task->taskStatus);
+        LOGI("The message is repeated, ignore it, status: %d", task->taskStatus);
         *status = IGNORE_MSG;
         return HC_SUCCESS;
     }
@@ -91,13 +92,13 @@ static int ExchangeResponse(AsyBaseCurTask *task, PakeParams *params, const CJso
     sendToPeer = CreateJson();
     if (sendToPeer == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     GOTO_ERR_AND_SET_RET(AddIntToJson(sendToPeer, FIELD_MESSAGE, PAKE_UNBIND_EXCHANGE_RESPONSE), res);
     data = CreateJson();
     if (data == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     GOTO_ERR_AND_SET_RET(PackageNonceAndCipherToJson(&(realTask->params.nonce), &(realTask->params.resultCipher),
         data, FIELD_RMV_RETURN), res);
@@ -106,7 +107,7 @@ static int ExchangeResponse(AsyBaseCurTask *task, PakeParams *params, const CJso
 
     task->taskStatus = TASK_STATUS_SERVER_UNBIND_EXCHANGE_RESPONSE;
     *status = FINISH;
-err:
+ERR:
     FreeJson(data);
     FreeJson(sendToPeer);
     return res;
@@ -120,9 +121,9 @@ static int Process(struct AsyBaseCurTaskT *task, PakeParams *params, const CJson
     }
 
     if (task->taskStatus == TASK_STATUS_SERVER_UNBIND_EXCHANGE_BEGIN) {
-        res = ExchangeStart(task, params, in, out, status);
+        res = ExchangeStart(task, params, out, status);
         if (res != HC_SUCCESS) {
-            goto err;
+            goto ERR;
         }
         return res;
     }
@@ -130,7 +131,7 @@ static int Process(struct AsyBaseCurTaskT *task, PakeParams *params, const CJson
     int message = 0;
     res = GetIntFromJson(in, "message", &message);
     if (res != HC_SUCCESS) {
-        goto err;
+        goto ERR;
     }
 
     switch (message) {
@@ -143,12 +144,11 @@ static int Process(struct AsyBaseCurTaskT *task, PakeParams *params, const CJson
     }
 
     if (res != HC_SUCCESS) {
-        goto err;
+        goto ERR;
     }
     return res;
-err:
+ERR:
     FreeAndCleanKey(&(params->baseParams.sessionKey));
-    SendErrorToOut(out, params->opCode, res);
     return res;
 }
 

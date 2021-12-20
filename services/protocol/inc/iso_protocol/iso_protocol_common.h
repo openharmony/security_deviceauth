@@ -16,8 +16,8 @@
 #ifndef ISO_PROTOCOL_COMMON_H
 #define ISO_PROTOCOL_COMMON_H
 
-#include "common_defs.h"
 #include "alg_defs.h"
+#include "string_util.h"
 
 #define GENERATE_SESSION_KEY_STR "hichain_iso_session_key"
 
@@ -28,15 +28,18 @@
 typedef struct IsoBaseParamsT {
     Uint8Buff randSelf;
     Uint8Buff randPeer;
-    Uint8Buff authIdSelf;
-    Uint8Buff authIdPeer;
+    Uint8Buff authIdSelf; // need malloc by caller
+    Uint8Buff authIdPeer; // need malloc by caller
     Uint8Buff sessionKey;
     uint8_t psk[PSK_LEN];
     const AlgLoader *loader;
 } IsoBaseParams;
 
+int32_t InitIsoBaseParams(IsoBaseParams *params);
+void DestroyIsoBaseParams(IsoBaseParams *params);
+
 int IsoClientGenRandom(IsoBaseParams *params);
-int IsoClientCheckAndGenToken(const IsoBaseParams *params, const Uint8Buff *perrToken, Uint8Buff *selfToken);
+int IsoClientCheckAndGenToken(IsoBaseParams *params, const Uint8Buff *perrToken, Uint8Buff *selfToken);
 int IsoClientGenSessionKey(IsoBaseParams *params, int returnResult, const uint8_t *hmac, uint32_t hmacLen);
 
 int IsoServerGenRandomAndToken(IsoBaseParams *params, Uint8Buff *selfTokenBuf);

@@ -19,6 +19,8 @@
 #include <stdint.h>
 
 #define BYTE_TO_HEX_OPER_LENGTH 2
+#define BYTE_TO_BASE64_DIVISOR 3
+#define BYTE_TO_BASE64_MULTIPLIER 4
 #define DEC 10
 
 typedef struct {
@@ -34,7 +36,7 @@ extern "C" {
  * Convert hex string to byte.
  * @param hexStr: hex string
  * @param byte: the converted result, need malloc by caller
- * @param byteLen: the length of byte
+ * @param byteLen: the length of byte, must be not shorter than strlen(hexStr) / 2
  * @result success(0), otherwise, failure.
  */
 int32_t HexStringToByte(const char *hexStr, uint8_t *byte, uint32_t byteLen);
@@ -44,11 +46,10 @@ int32_t HexStringToByte(const char *hexStr, uint8_t *byte, uint32_t byteLen);
  * @param byte: byte to be converted
  * @param byteLen: the length of byte
  * @param hexStr: the converted result, need malloc by caller, and need malloc for '\0'
- * @param hexLen: strlen(hexStr) + 1, for '\0'
+ * @param hexLen: length of hexStr, must be not shorter than byteLen * 2 + 1, for '\0'
  * @result success(0), otherwise, failure.
  */
 int32_t ByteToHexString(const uint8_t *byte, uint32_t byteLen, char *hexStr, uint32_t hexLen);
-
 
 /*
  * Convert string to int64_t.
@@ -63,6 +64,26 @@ int64_t StringToInt64(const char *cp);
  * @param anonymousStr: the converted result
  */
 void ConvertToAnonymousStr(const char *originalStr, char **anonymousStr);
+
+/*
+ * Convert base64 string to byte.
+ * @param base64Str: base64 string
+ * @param byte: the converted result, need malloc by caller
+ * @param byteLen: the length of byte, must be not shorter than strlen(base64Str) / 4 * 3,
+ *                 and update it to the real length of the result written
+ * @result success(0), otherwise, failure.
+ */
+int32_t Base64StringToByte(const char *base64Str, uint8_t *byte, uint32_t *byteLen);
+
+/*
+ * Convert byte to base64 string.
+ * @param byte: byte to be converted
+ * @param byteLen: the length of byte
+ * @param base64Str: the converted result, need malloc by caller, and need malloc for '\0'
+ * @param strLen: length of base64Str, must be not shorter than (byteLen / 3 + (byteLen % 3 != 0)) * 4 + 1, with '\0'
+ * @result success(0), otherwise, failure.
+ */
+int32_t ByteToBase64String(const uint8_t *byte, uint32_t byteLen, char *base64Str, uint32_t strLen);
 
 /*
  * Convert string to upper case.

@@ -29,7 +29,7 @@ static int32_t AuthFormToModuleType(int32_t authForm)
     if (authForm == AUTH_FORM_ACCOUNT_UNRELATED) {
         moduleType = DAS_MODULE;
     } else if ((authForm == AUTH_FORM_IDENTICAL_ACCOUNT) || (authForm == AUTH_FORM_ACROSS_ACCOUNT)) {
-        moduleType = TCIS_MODULE;
+        moduleType = ACCOUNT_MODULE;
     } else {
         LOGE("Invalid auth form!");
     }
@@ -67,7 +67,7 @@ bool IsBleAuthForAcrossAccount(const CJson *authParam)
     if (GetIntFromJson(authParam, FIELD_CREDENTIAL_TYPE, &credentialType) != HC_SUCCESS) {
         return false;
     }
-    bool isBle = ((uint32_t)credentialType & CREDENTIAL_TYPE_BLE);
+    bool isBle = ((uint32_t)credentialType & CREDENTIAL_TYPE_TEMP);
     return isBle;
 }
 

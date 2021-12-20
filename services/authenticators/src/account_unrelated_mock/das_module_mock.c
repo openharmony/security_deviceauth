@@ -15,6 +15,13 @@
 
 #include "das_module.h"
 
+bool IsDasMsgNeedIgnore(const CJson *in)
+{
+    (void)in;
+    LOGE("Das module is not supported.");
+    return false;
+}
+
 bool IsDasSupported()
 {
     return false;
@@ -22,5 +29,6 @@ bool IsDasSupported()
 
 AuthModuleBase *CreateDasModule()
 {
+    LOGE("Das module is not supported.");
     return NULL;
 }

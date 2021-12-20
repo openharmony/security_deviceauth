@@ -14,10 +14,10 @@
  */
 
 #include "common_standard_unbind_exchange.h"
-#include "das_common.h"
+#include "das_task_common.h"
 #include "hc_log.h"
 #include "hc_types.h"
-#include "module_common.h"
+#include "protocol_common.h"
 #include "securec.h"
 
 int32_t InitStandardUnbindExchangeParams(StandardUnbindExchangeParams *params)
@@ -32,7 +32,7 @@ int32_t InitStandardUnbindExchangeParams(StandardUnbindExchangeParams *params)
     params->nonce.val = (uint8_t *)HcMalloc(params->nonce.length, 0);
     if (params->nonce.val == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
 
     params->rmvInfo.length = 0;
@@ -43,7 +43,7 @@ int32_t InitStandardUnbindExchangeParams(StandardUnbindExchangeParams *params)
     params->resultCipher.val = NULL;
 
     return HC_SUCCESS;
-err:
+ERR:
     DestroyStandardUnbindExchangeParams(params);
     return res;
 }
@@ -83,21 +83,21 @@ static int32_t PackageRmvInfo(const PakeParams *pakeParams, StandardUnbindExchan
     if (rmvInfoStr == NULL) {
         LOGE("rmvInfoStr PackJsonToString failed");
         res = HC_ERR_PACKAGE_JSON_TO_STRING_FAIL;
-        goto err;
+        goto ERR;
     }
 
     res = InitSingleParam(&exchangeParams->rmvInfo, strlen(rmvInfoStr));
     if (res != HC_SUCCESS) {
         LOGE("InitSingleParam rmvInfo failed.");
-        goto err;
+        goto ERR;
     }
 
     if (memcpy_s(exchangeParams->rmvInfo.val, exchangeParams->rmvInfo.length, rmvInfoStr, strlen(rmvInfoStr)) != EOK) {
         LOGE("Memcpy rmvInfo failed.");
         res = HC_ERR_MEMORY_COPY;
-        goto err;
+        goto ERR;
     }
-err:
+ERR:
     FreeJson(rmvInfoJson);
     FreeJsonString(rmvInfoStr);
     return res;
@@ -168,12 +168,12 @@ static int32_t ParseRmvInfo(PakeParams *pakeParams, StandardUnbindExchangeParams
         return HC_ERR_JSON_CREATE;
     }
     GOTO_ERR_AND_SET_RET(GetIntFromJson(rmvInfoJson, FIELD_RMV_TYPE, &(pakeParams->userTypePeer)), res);
-    res = GetIdPeerForParams(rmvInfoJson, FIELD_RMV_ID, &pakeParams->baseParams.idSelf, &pakeParams->baseParams.idPeer);
+    res = GetIdPeer(rmvInfoJson, FIELD_RMV_ID, &pakeParams->baseParams.idSelf, &pakeParams->baseParams.idPeer);
     if (res != HC_SUCCESS) {
-        LOGE("GetIdPeerForParams failed, res: %d.", res);
-        goto err;
+        LOGE("GetIdPeer failed, res: %d.", res);
+        goto ERR;
     }
-err:
+ERR:
     FreeJson(rmvInfoJson);
     return res;
 }
@@ -190,19 +190,20 @@ static int32_t DeleteAuthInfo(PakeParams *pakeParams)
         LOGE("generate pubKey alias failed");
         return res;
     }
+    LOGI("PubKey alias: %x%x%x%x****.", keyAliasVal[0], keyAliasVal[1], keyAliasVal[2], keyAliasVal[3]);
     res = pakeParams->baseParams.loader->deleteKey(&keyAlias);
     if (res != HC_SUCCESS) {
         LOGE("deleteKey failed");
         return res;
     }
     LOGI("delete peer pubKey success.");
-    (void)memset_s(keyAlias.val, keyAlias.length, 0, keyAlias.length);
     res = GenerateKeyAlias(&packageName, &serviceType, KEY_ALIAS_PSK, &(pakeParams->baseParams.idPeer),
         &keyAlias);
     if (res != HC_SUCCESS) {
         LOGE("generate pskKey alias failed");
         return res;
     }
+    LOGI("Psk alias: %x%x%x%x****.", keyAliasVal[0], keyAliasVal[1], keyAliasVal[2], keyAliasVal[3]);
     res = pakeParams->baseParams.loader->deleteKey(&keyAlias);
     if (res != HC_SUCCESS) {
         LOGE("delete pskKey failed");

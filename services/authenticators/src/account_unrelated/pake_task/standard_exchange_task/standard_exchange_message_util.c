@@ -18,7 +18,7 @@
 #include "hc_log.h"
 #include "hc_types.h"
 #include "json_utils.h"
-#include "module_common.h"
+#include "protocol_common.h"
 #include "pake_base_cur_task.h"
 #include "string_util.h"
 
@@ -30,21 +30,21 @@ int32_t PackageNonceAndCipherToJson(const Uint8Buff *nonce, const Uint8Buff *cip
     if (exAuthInfoVal == NULL) {
         LOGE("malloc exAuthInfoVal failed.");
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     if (memcpy_s(exAuthInfoVal, exAuthInfoLen, nonce->val, nonce->length) != EOK) {
         LOGE("memcpy nonce failed");
         res = HC_ERR_MEMORY_COPY;
-        goto err;
+        goto ERR;
     }
     if (memcpy_s(exAuthInfoVal + nonce->length, exAuthInfoLen - nonce->length,
         cipher->val, cipher->length) != EOK) {
         LOGE("memcpy exInfoCipher failed");
         res = HC_ERR_MEMORY_COPY;
-        goto err;
+        goto ERR;
     }
     GOTO_ERR_AND_SET_RET(AddByteToJson(data, key, exAuthInfoVal, exAuthInfoLen), res);
-err:
+ERR:
     HcFree(exAuthInfoVal);
     return res;
 }
@@ -57,38 +57,38 @@ int32_t ParseNonceAndCipherFromJson(Uint8Buff *nonce, Uint8Buff *cipher, const C
     if (exAuthInfoStr == NULL) {
         LOGE("get exAuthInfoStr failed.");
         res = HC_ERR_JSON_GET;
-        goto err;
+        goto ERR;
     }
     int32_t exAuthInfoLen = strlen(exAuthInfoStr) / BYTE_TO_HEX_OPER_LENGTH;
     exAuthInfoVal = (uint8_t *)HcMalloc(exAuthInfoLen, 0);
     if (exAuthInfoVal == NULL) {
         LOGE("Malloc exAuthInfoVal failed.");
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     res = HexStringToByte(exAuthInfoStr, exAuthInfoVal, exAuthInfoLen);
     if (res != HC_SUCCESS) {
         LOGE("Convert exAuthInfo from hex string to byte failed.");
-        goto err;
+        goto ERR;
     }
     if (memcpy_s(nonce->val, nonce->length, exAuthInfoVal, nonce->length) != EOK) {
         LOGE("copy nonce failed!");
         res = HC_ERR_MEMORY_COPY;
-        goto err;
+        goto ERR;
     }
 
     res = InitSingleParam(cipher, exAuthInfoLen - nonce->length);
     if (res != HC_SUCCESS) {
         LOGE("init exInfoCipher failed");
-        goto err;
+        goto ERR;
     }
     if (memcpy_s(cipher->val, cipher->length, exAuthInfoVal + nonce->length,
         exAuthInfoLen - nonce->length) != EOK) {
         LOGE("copy exInfoCipher failed!");
         res = HC_ERR_MEMORY_COPY;
-        goto err;
+        goto ERR;
     }
-err:
+ERR:
     HcFree(exAuthInfoVal);
     return res;
 }

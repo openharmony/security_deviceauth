@@ -19,24 +19,14 @@
 #include "string_util.h"
 
 typedef enum {
-    UNSUPPORTED_ALG = 0x0000,
-    DL_SPEKE = 0x0001,
-    EC_SPEKE = 0x0002,
-    STS_ALG = 0x0004,
-    PSK_SPEKE = 0x0008,
-    ISO_ALG = 0x0010,
-    NEW_DL_SPEKE = 0x0020,
-    NEW_EC_SPEKE = 0x0040,
-} AlgType;
-
-typedef enum {
-    UNSUPPORTED,
+    PROTOCOL_TYPE_NONE,
     ISO,
-    PAKE,
-    NEW_PAKE,
+    PAKE_V1,
+    PAKE_V2,
     STS,
 } ProtocolType;
 
 void FreeAndCleanKey(Uint8Buff *key);
+int32_t InitSingleParam(Uint8Buff *param, uint32_t len);
 
 #endif

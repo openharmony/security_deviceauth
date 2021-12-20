@@ -18,7 +18,10 @@
 #include "hc_log.h"
 #include "hc_types.h"
 #include "hc_vector.h"
-#include "task_main.h"
+#include "das_task_main.h"
+
+#define DAS_CLIENT_STEP_MASK 0xF00F
+#define DAS_CLIENT_FIRST_MESSAGE 0x0001
 
 DECLARE_HC_VECTOR(TaskInModuleVec, void *)
 IMPLEMENT_HC_VECTOR(TaskInModuleVec, void *, 1)
@@ -26,35 +29,54 @@ IMPLEMENT_HC_VECTOR(TaskInModuleVec, void *, 1)
 TaskInModuleVec g_taskInModuleVec;
 DasAuthModule g_dasModule = {0};
 
-static int32_t RegisterLocalIdentity(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType)
+static int32_t RegisterDasLocalIdentity(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType)
 {
     return RegisterLocalIdentityInTask(pkgName, serviceType, authId, userType);
 }
 
-static int32_t UnregisterLocalIdentity(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType)
+static int32_t UnregisterDasLocalIdentity(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType)
 {
     return UnregisterLocalIdentityInTask(pkgName, serviceType, authId, userType);
 }
 
-static int32_t DeletePeerAuthInfo(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType)
+static int32_t DeleteDasPeerAuthInfo(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType)
 {
     return DeletePeerAuthInfoInTask(pkgName, serviceType, authId, userType);
 }
 
-static int32_t GetPublicKey(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType,
+static int32_t GetDasPublicKey(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType,
     Uint8Buff *returnPk)
 {
     return GetPublicKeyInTask(pkgName, serviceType, authId, userType, returnPk);
 }
 
+bool IsDasMsgNeedIgnore(const CJson *in)
+{
+    uint32_t message = 0;
+    if (GetIntFromJson(in, FIELD_MESSAGE, (int *)&message) != HC_SUCCESS) {
+        LOGD("There is no message code."); // There is no message code in the client's createTask request params
+        return false;
+    }
+    if ((message & DAS_CLIENT_STEP_MASK) == DAS_CLIENT_FIRST_MESSAGE) {
+        return false;
+    }
+
+    LOGI("The message needs to ignore, message: %u.", message);
+    return true;
+}
+
 static int CreateDasTask(int *taskId, const CJson *in, CJson *out)
 {
     if (taskId == NULL || in == NULL || out == NULL) {
-        return HC_ERR_INVALID_PARAMS;
+        LOGE("Params is null.");
+        return HC_ERR_NULL_PTR;
+    }
+    if (IsDasMsgNeedIgnore(in)) {
+        return HC_ERR_IGNORE_MSG;
     }
     Task *task = CreateTaskT(taskId, in, out);
     if (task == NULL) {
-        LOGE("CreateTaskT failed");
+        LOGE("Create das task failed.");
         return HC_ERR_ALLOC_MEMORY;
     }
 
@@ -72,14 +94,18 @@ static void DestroyDasModule(AuthModuleBase *module)
         }
     }
     DESTROY_HC_VECTOR(TaskInModuleVec, &g_taskInModuleVec)
-    DestroyDasProtocolType();
+    DestroyDasProtocolEntities();
     if (module != NULL) {
-        (void)memset_s(module, sizeof(AuthModuleBase), 0, sizeof(AuthModuleBase));
+        (void)memset_s(module, sizeof(DasAuthModule), 0, sizeof(DasAuthModule));
     }
 }
 
 static int ProcessDasTask(int taskId, const CJson* in, CJson* out, int *status)
 {
+    if (status == NULL || in == NULL || out == NULL) {
+        LOGE("Params is null.");
+        return HC_ERR_NULL_PTR;
+    }
     uint32_t index;
     void **ptr = NULL;
     FOR_EACH_HC_VECTOR(g_taskInModuleVec, index, ptr) {
@@ -90,7 +116,9 @@ static int ProcessDasTask(int taskId, const CJson* in, CJson* out, int *status)
             }
         }
     }
-    return HC_ERR_TASK_IS_NULL;
+
+    LOGE("Task doesn't exist, taskId: %d.", taskId);
+    return HC_ERR_TASK_ID_IS_NOT_MATCH;
 }
 
 static void DestroyDasTask(int taskId)
@@ -110,25 +138,25 @@ static void DestroyDasTask(int taskId)
     }
 }
 
-bool IsDasSupported()
+bool IsDasSupported(void)
 {
     return true;
 }
 
-AuthModuleBase *CreateDasModule()
+AuthModuleBase *CreateDasModule(void)
 {
     g_dasModule.moduleBase.moduleType = DAS_MODULE;
     g_dasModule.moduleBase.createTask = CreateDasTask;
     g_dasModule.moduleBase.processTask = ProcessDasTask;
     g_dasModule.moduleBase.destroyTask = DestroyDasTask;
     g_dasModule.moduleBase.destroyModule = DestroyDasModule;
-    g_dasModule.registerLocalIdentity = RegisterLocalIdentity;
-    g_dasModule.unregisterLocalIdentity = UnregisterLocalIdentity;
-    g_dasModule.deletePeerAuthInfo = DeletePeerAuthInfo;
-    g_dasModule.getPublicKey = GetPublicKey;
+    g_dasModule.registerLocalIdentity = RegisterDasLocalIdentity;
+    g_dasModule.unregisterLocalIdentity = UnregisterDasLocalIdentity;
+    g_dasModule.deletePeerAuthInfo = DeleteDasPeerAuthInfo;
+    g_dasModule.getPublicKey = GetDasPublicKey;
     g_taskInModuleVec = CREATE_HC_VECTOR(TaskInModuleVec)
-    if (InitDasProtocolType() != HC_SUCCESS) {
-        LOGE("InitDasProtocolType failed.");
+    if (InitDasProtocolEntities() != HC_SUCCESS) {
+        LOGE("Init das protocol entities failed.");
         DestroyDasModule((AuthModuleBase *)&g_dasModule);
         return NULL;
     }

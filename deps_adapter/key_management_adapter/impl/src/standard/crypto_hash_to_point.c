@@ -285,7 +285,7 @@ static int32_t CurveHashToPoint(const struct HksBlob *hash, struct HksBlob *poin
     BN_CTX *ctx = BN_CTX_new();
     if (ctx == NULL) {
         ret = HAL_ERR_BAD_ALLOC;
-        goto err;
+        goto ERR;
     }
     do {
         ret = CurveSetConstPara(&curvePara);
@@ -311,7 +311,7 @@ static int32_t CurveHashToPoint(const struct HksBlob *hash, struct HksBlob *poin
             ret = HAL_FAILED;
         }
     } while (0);
-err:
+ERR:
     CurveFreeConstPara(&curvePara);
     BN_free(a);
     BN_free(b);

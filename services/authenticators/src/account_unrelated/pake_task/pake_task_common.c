@@ -14,17 +14,10 @@
  */
 
 #include "pake_task_common.h"
-#include "das_asy_token_manager.h"
-#include "das_common.h"
 #include "das_module_defines.h"
 #include "hc_log.h"
 #include "hc_types.h"
-#include "module_common.h"
 #include "protocol_common.h"
-#include "standard_client_bind_exchange_task.h"
-#include "string_util.h"
-
-#define ASCII_CASE_DIFFERENCE_VALUE 32
 
 int32_t ConstructOutJson(const PakeParams *params, CJson *out)
 {
@@ -36,34 +29,34 @@ int32_t ConstructOutJson(const PakeParams *params, CJson *out)
     if (payload == NULL) {
         LOGE("Create payload json failed.");
         res =  HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     sendToPeer = CreateJson();
     if (sendToPeer == NULL) {
         LOGE("Create sendToPeer json failed.");
         res =  HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
 
     if (params->opCode == AUTHENTICATE) {
         res = AddIntToJson(sendToPeer, FIELD_AUTH_FORM, AUTH_FORM_ACCOUNT_UNRELATED);
         if (res != HC_SUCCESS) {
             LOGE("Add authForm failed, res: %d.", res);
-            goto err;
+            goto ERR;
         }
     }
     res = AddObjToJson(sendToPeer, FIELD_PAYLOAD, payload);
     if (res != HC_SUCCESS) {
         LOGE("Add payload to sendToPeer failed, res: %d.", res);
-        goto err;
+        goto ERR;
     }
 
     res = AddObjToJson(out, FIELD_SEND_TO_PEER, sendToPeer);
     if (res != HC_SUCCESS) {
         LOGE("Add sendToPeer to out failed, res: %d.", res);
-        goto err;
+        goto ERR;
     }
-err:
+ERR:
     FreeJson(payload);
     FreeJson(sendToPeer);
     return res;
@@ -75,38 +68,39 @@ static int32_t GenerateOutputKey(PakeParams *params)
     int32_t res = params->baseParams.loader->computeHkdf(&(params->baseParams.sessionKey), &(params->baseParams.salt),
         &keyInfo, &(params->returnKey), false);
     if (res != HC_SUCCESS) {
-        LOGE("generate returnKey failed");
-        FreeAndCleanKey(&(params->baseParams.sessionKey));
+        LOGE("Generate returnKey failed.");
         FreeAndCleanKey(&(params->returnKey));
-        return res;
     }
+    FreeAndCleanKey(&(params->baseParams.sessionKey));
     return res;
 }
 
 int32_t SendResultToSelf(PakeParams *params, CJson *out)
 {
-    int res = HC_SUCCESS;
+    int res;
     CJson *sendToSelf = CreateJson();
     if (sendToSelf == NULL) {
-        return HC_ERR_ALLOC_MEMORY;
+        LOGE("Create sendToSelf json failed.");
+        res = HC_ERR_JSON_CREATE;
+        goto ERR;
     }
-    GOTO_ERR_AND_SET_RET(AddIntToJson(sendToSelf, FIELD_OPERATION_CODE, OP_BIND), res);
+    GOTO_ERR_AND_SET_RET(AddIntToJson(sendToSelf, FIELD_OPERATION_CODE, params->opCode), res);
     GOTO_ERR_AND_SET_RET(AddIntToJson(sendToSelf, FIELD_AUTH_FORM, AUTH_FORM_ACCOUNT_UNRELATED), res);
 
-    if (params->returnKey.length != 0) { /* keyLen == 0 means unbind, needn't to generate returnKey */
+    if (params->returnKey.length != 0) { /* keyLen == 0 means that returnKey needn't to be generated. */
         res = GenerateOutputKey(params);
         if (res != HC_SUCCESS) {
-            LOGE("GenerateOutputKey failed, res:%d", res);
-            goto err;
+            LOGE("GenerateOutputKey failed, res: %x.", res);
+            goto ERR;
         }
         GOTO_ERR_AND_SET_RET(AddByteToJson(sendToSelf, FIELD_SESSION_KEY, params->returnKey.val,
             params->returnKey.length), res);
     }
 
     GOTO_ERR_AND_SET_RET(AddObjToJson(out, FIELD_SEND_TO_SELF, sendToSelf), res);
-err:
-    FreeAndCleanKey(&(params->baseParams.sessionKey));
+ERR:
     FreeAndCleanKey(&(params->returnKey));
+    ClearSensitiveStringInJson(sendToSelf, FIELD_SESSION_KEY);
     FreeJson(sendToSelf);
     return res;
 }
@@ -119,7 +113,7 @@ static int32_t FillPskWithPin(PakeParams *params, const CJson *in)
         return HC_ERR_JSON_GET;
     }
     if (strlen(pinString) < MIN_PIN_LEN || strlen(pinString) > MAX_PIN_LEN) {
-        LOGE("Pin code is too short.");
+        LOGE("Pin code len is invalid.");
         return HC_ERR_INVALID_LEN;
     }
 
@@ -138,89 +132,6 @@ static int32_t FillPskWithPin(PakeParams *params, const CJson *in)
     return HC_SUCCESS;
 }
 
-static void UpperToLowercase(Uint8Buff *hex)
-{
-    for (uint32_t i = 0; i < hex->length; i++) {
-        if (hex->val[i] >= 'A' && hex->val[i] <= 'F') {
-            hex->val[i] += ASCII_CASE_DIFFERENCE_VALUE;
-        }
-    }
-}
-
-static int32_t ConvertPsk(const Uint8Buff *srcPsk, PakeParams *params)
-{
-    int res;
-    res = InitSingleParam(&(params->baseParams.psk), PAKE_PSK_LEN * BYTE_TO_HEX_OPER_LENGTH + 1);
-    if (res != HC_SUCCESS) {
-        LOGE("InitSingleParam for psk failed, res: %d.", res);
-        return res;
-    }
-    /* For compatibility, to be same with HiChain 2.0 */
-    res = ByteToHexString(srcPsk->val, srcPsk->length, (char *)params->baseParams.psk.val,
-        params->baseParams.psk.length);
-    if (res != HC_SUCCESS) {
-        LOGE("Convert psk from byte to hex string failed, res: %d.", res);
-        return res;
-    }
-    params->baseParams.psk.length = params->baseParams.psk.length - 1; // do not need include '\0' when using psk
-    (void)UpperToLowercase(&(params->baseParams.psk));
-    return res;
-}
-
-int32_t FillPskWithDerivedKey(PakeParams *params)
-{
-    int32_t res;
-    if (!(params->baseParams.isClient)) {
-        res = params->baseParams.loader->generateRandom(&(params->nonce));
-        if (res != HC_SUCCESS) {
-            LOGE("Generate nonce failed, res: %d.", res);
-            return res;
-        }
-    }
-    uint8_t pskKeyAliasVal[PAKE_KEY_ALIAS_LEN] = { 0 };
-    Uint8Buff pskKeyAlias = { pskKeyAliasVal, PAKE_KEY_ALIAS_LEN };
-    Uint8Buff packageName = { (uint8_t *)params->packageName, strlen(params->packageName) };
-    Uint8Buff serviceType = { (uint8_t *)params->serviceType, strlen(params->serviceType) };
-    res = GenerateKeyAlias(&packageName, &serviceType, KEY_ALIAS_PSK, &(params->baseParams.idPeer), &pskKeyAlias);
-    if (res != HC_SUCCESS) {
-        LOGE("GenerateKeyAlias for psk failed, res: %d.", res);
-        return res;
-    }
-
-    if (params->baseParams.loader->checkKeyExist(&pskKeyAlias) != HC_SUCCESS) {
-        res = GetAsyTokenManagerInstance()->computeAndSavePsk(params);
-        if (res != HC_SUCCESS) {
-            LOGE("ComputeAndSavePsk failed, res: %d.", res);
-            return res;
-        }
-    }
-
-    Uint8Buff pskByte = { NULL, PAKE_PSK_LEN };
-    pskByte.val = (uint8_t *)HcMalloc(PAKE_PSK_LEN, 0);
-    if (pskByte.val == NULL) {
-        LOGE("Malloc for pskByte failed.");
-        return HC_ERR_ALLOC_MEMORY;
-    }
-    Uint8Buff keyInfo = { (uint8_t *)TMP_AUTH_KEY_FACTOR, strlen(TMP_AUTH_KEY_FACTOR) };
-    res = params->baseParams.loader->computeHkdf(&pskKeyAlias, &(params->nonce), &keyInfo, &pskByte, true);
-    if (res != HC_SUCCESS) {
-        LOGE("ComputeHkdf for psk failed, res: %d.", res);
-        goto err;
-    }
-
-    res = ConvertPsk(&pskByte, params);
-    if (res != HC_SUCCESS) {
-        LOGE("ConvertPsk failed, res: %d.", res);
-        goto err;
-    }
-    goto out;
-err:
-    FreeAndCleanKey(&(params->baseParams.psk));
-out:
-    FreeAndCleanKey(&pskByte);
-    return res;
-}
-
 static int32_t FillAuthId(PakeParams *params, const CJson *in)
 {
     const char *authId = GetStringFromJson(in, FIELD_SELF_AUTH_ID);
@@ -230,7 +141,7 @@ static int32_t FillAuthId(PakeParams *params, const CJson *in)
     }
     uint32_t authIdLen = strlen(authId);
     if (authIdLen == 0 || authIdLen > MAX_AUTH_ID_LEN) {
-        LOGE("Invalid self authId length.");
+        LOGE("Invalid self authId length: %d.", authIdLen);
         return HC_ERR_INVALID_LEN;
     }
     params->baseParams.idSelf.length = authIdLen;
@@ -252,7 +163,7 @@ static int32_t FillAuthId(PakeParams *params, const CJson *in)
         }
         authIdLen = strlen(authId);
         if (authIdLen == 0 || authIdLen > MAX_AUTH_ID_LEN) {
-            LOGE("Invalid peer authId length.");
+            LOGE("Invalid peer authId length: %d.", authIdLen);
             return HC_ERR_INVALID_LEN;
         }
         params->baseParams.idPeer.length = authIdLen;
@@ -272,15 +183,13 @@ static int32_t FillAuthId(PakeParams *params, const CJson *in)
 
 static int32_t FillUserType(PakeParams *params, const CJson *in)
 {
-    int32_t res = GetIntFromJson(in, FIELD_SELF_TYPE, &(params->userType));
-    if (res != HC_SUCCESS) {
-        LOGE("Get userType failed: %d", res);
-        return res;
+    if (GetIntFromJson(in, FIELD_SELF_TYPE, &(params->userType)) != HC_SUCCESS) {
+        LOGE("Get self userType failed");
+        return HC_ERR_JSON_GET;
     }
 
-    res = GetIntFromJson(in, FIELD_PEER_USER_TYPE, &(params->userTypePeer));
-    if (res != HC_SUCCESS) {
-        LOGD("Get peer userType failed, use default, res: %d", res);
+    if (GetIntFromJson(in, FIELD_PEER_USER_TYPE, &(params->userTypePeer)) != HC_SUCCESS) {
+        LOGD("Get peer userType failed, use default.");
         params->userTypePeer = DEVICE_TYPE_ACCESSORY;
     }
     return HC_SUCCESS;
@@ -321,9 +230,8 @@ static int32_t FillPkgNameAndServiceType(PakeParams *params, const CJson *in)
     return HC_SUCCESS;
 }
 
-static int32_t FillNonce(PakeParams *params, const CJson *in)
+static int32_t FillNonce(PakeParams *params)
 {
-    (void)in;
     if (params->opCode == AUTHENTICATE || params->opCode == OP_UNBIND) {
         params->nonce.length = PAKE_NONCE_LEN;
         params->nonce.val = (uint8_t *)HcMalloc(params->nonce.length, 0);
@@ -340,31 +248,36 @@ static int32_t FillNonce(PakeParams *params, const CJson *in)
 
 int32_t FillDasPakeParams(PakeParams *params, const CJson *in)
 {
-    int32_t res = GetIntFromJson(in, FIELD_OPERATION_CODE, &(params->opCode));
-    if (res != HC_SUCCESS) {
-        LOGD("Get opCode failed, use default, res: %d", res);
+    if (GetIntFromJson(in, FIELD_OPERATION_CODE, &(params->opCode)) != HC_SUCCESS) {
+        LOGD("Get opCode failed, use default.");
         params->opCode = AUTHENTICATE;
     }
+    if (params->opCode != OP_BIND && params->opCode != OP_UNBIND &&
+        params->opCode != AUTHENTICATE && params->opCode != AUTH_KEY_AGREEMENT) {
+        LOGE("Unsupported opCode: %d.", params->opCode);
+        return HC_ERR_NOT_SUPPORT;
+    }
 
-    res = GetBoolFromJson(in, FIELD_IS_CLIENT, &(params->baseParams.isClient));
+    if (GetBoolFromJson(in, FIELD_IS_CLIENT, &(params->baseParams.isClient)) != HC_SUCCESS) {
+        LOGE("Get isClient failed.");
+        return HC_ERR_JSON_GET;
+    }
+
+    int res = FillNonce(params);
     if (res != HC_SUCCESS) {
-        LOGE("Get isClient failed, res: %d.", res);
         return res;
     }
 
-    res = FillNonce(params, in);
-    if (res != HC_SUCCESS) {
-        return res;
-    }
+    if (params->opCode != AUTH_KEY_AGREEMENT) {
+        res = FillUserType(params, in);
+        if (res != HC_SUCCESS) {
+            return res;
+        }
 
-    res = FillUserType(params, in);
-    if (res != HC_SUCCESS) {
-        return res;
-    }
-
-    res = FillPkgNameAndServiceType(params, in);
-    if (res != HC_SUCCESS) {
-        return res;
+        res = FillPkgNameAndServiceType(params, in);
+        if (res != HC_SUCCESS) {
+            return res;
+        }
     }
 
     res = FillAuthId(params, in);
@@ -372,7 +285,7 @@ int32_t FillDasPakeParams(PakeParams *params, const CJson *in)
         return res;
     }
 
-    if (params->opCode == OP_BIND) {
+    if (params->opCode == OP_BIND || params->opCode == AUTH_KEY_AGREEMENT) {
         res = FillPskWithPin(params, in);
         if (res != HC_SUCCESS) {
             return res;
@@ -380,5 +293,11 @@ int32_t FillDasPakeParams(PakeParams *params, const CJson *in)
     }
 
     params->baseParams.curveType = CURVE_25519;
+#ifdef P2P_PAKE_DL_PRIME_LEN_384
+    params->baseParams.supportedDlPrimeMod = (uint32_t)params->baseParams.supportedDlPrimeMod | DL_PRIME_MOD_384;
+#endif
+#ifdef P2P_PAKE_DL_PRIME_LEN_256
+    params->baseParams.supportedDlPrimeMod = (uint32_t)params->baseParams.supportedDlPrimeMod | DL_PRIME_MOD_256;
+#endif
     return HC_SUCCESS;
 }

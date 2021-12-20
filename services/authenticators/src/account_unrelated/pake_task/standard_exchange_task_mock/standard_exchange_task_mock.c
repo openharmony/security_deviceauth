@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include "das_asy_token_manager.h"
+#include "das_standard_token_manager.h"
 #include "standard_client_bind_exchange_task.h"
 #include "standard_client_unbind_exchange_task.h"
 #include "standard_server_bind_exchange_task.h"
@@ -39,7 +39,7 @@ AsyBaseCurTask *CreateStandardUnbindExchangeServerTask()
     return NULL;
 }
 
-const TokenManager *GetAsyTokenManagerInstance()
+const TokenManager *GetStandardTokenManagerInstance()
 {
     return NULL;
 }

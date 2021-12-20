@@ -17,10 +17,19 @@
 #include "hal_error.h"
 #include "hc_file.h"
 #include "hc_log.h"
+#include "hc_types.h"
 #include "hks_api.h"
 #include "hks_param.h"
 #include "hks_type.h"
 #include "string_util.h"
+
+#define BASE_IMPORT_PARAMS_LEN 7
+#define EXT_IMPORT_PARAMS_LEN 2
+
+static enum HksKeyPurpose g_purposeToHksKeyPurpose[] = {
+    HKS_KEY_PURPOSE_MAC,
+    HKS_KEY_PURPOSE_DERIVE
+};
 
 static int32_t BaseCheckParams(const Uint8Buff **inParams, const char **paramTags, uint32_t len)
 {
@@ -60,7 +69,7 @@ static int32_t ConstructParamSet(struct HksParamSet **out, const struct HksParam
     return HAL_SUCCESS;
 }
 
-static int32_t InitHks()
+static int32_t InitHks(void)
 {
     int32_t res = HksInitialize();
     if (res == HKS_SUCCESS) {
@@ -429,90 +438,89 @@ static int32_t AesGcmDecrypt(const Uint8Buff *key, const Uint8Buff *cipher,
     return HAL_SUCCESS;
 }
 
-static int32_t CheckImportAsymmetricKeyParam(const Uint8Buff *keyAlias, const Uint8Buff *authToken,
-    const Uint8Buff *authId, const int32_t userType, const int32_t pairType)
+static int32_t CheckImportSymmetricKeyParam(const Uint8Buff *keyAlias, const Uint8Buff *authToken)
 {
-    const Uint8Buff *inParams[] = { keyAlias, authToken, authId };
-    const char *paramTags[] = { "keyAlias", "authToken", "authId" };
-    int32_t ret = BaseCheckParams(inParams, paramTags, CAL_ARRAY_SIZE(inParams));
-    if (ret != HAL_SUCCESS) {
-        return ret;
-    }
-
-    CHECK_LEN_HIGHER_RETURN(pairType, PAIR_TYPE_END - 1, "pairType");
-
-    return HAL_SUCCESS;
+    const Uint8Buff *inParams[] = { keyAlias, authToken };
+    const char *paramTags[] = { "keyAlias", "authToken" };
+    return BaseCheckParams(inParams, paramTags, CAL_ARRAY_SIZE(inParams));
 }
 
-static int32_t ConstructImportAsymmetricKeyParam(struct HksParamSet **paramSet, uint32_t keyLen, uint32_t roleInfo,
-    const struct HksBlob *authIdBlob)
+static int32_t ConstructImportSymmetricKeyParam(struct HksParamSet **paramSet, uint32_t keyLen, KeyPurpose purpose,
+    const ExtraInfo *exInfo)
 {
-    struct HksParam importParam[] = {
-        {
-            .tag = HKS_TAG_ALGORITHM,
-            .uint32Param = HKS_ALG_AES
-        }, {
-            .tag = HKS_TAG_KEY_SIZE,
-            .uint32Param = keyLen * BITS_PER_BYTE
-        }, {
-            .tag = HKS_TAG_PADDING,
-            .uint32Param = HKS_PADDING_NONE
-        }, {
-            .tag = HKS_TAG_KEY_AUTH_ID,
-            .blob = *authIdBlob
-        }, {
-            .tag = HKS_TAG_IS_ALLOWED_WRAP,
-            .boolParam = false
-        }, {
-            .tag = HKS_TAG_PURPOSE,
-            .uint32Param = HKS_KEY_PURPOSE_MAC
-        }, {
-            .tag = HKS_TAG_KEY_ROLE,
-            .uint32Param = roleInfo
-        }, {
-            .tag = HKS_TAG_BLOCK_MODE,
-            .uint32Param = HKS_MODE_GCM
-        }, {
-            .tag = HKS_TAG_DIGEST,
-            .uint32Param = HKS_DIGEST_SHA256
+    struct HksParam *importParam = NULL;
+    struct HksBlob authIdBlob = { 0, NULL };
+    union KeyRoleInfoUnion roleInfoUnion;
+    (void)memset_s(&roleInfoUnion, sizeof(roleInfoUnion), 0, sizeof(roleInfoUnion));
+    uint32_t idx = 0;
+    if (exInfo != NULL) {
+        CHECK_PTR_RETURN_HAL_ERROR_CODE(exInfo->authId.val, "authId");
+        CHECK_LEN_ZERO_RETURN_ERROR_CODE(exInfo->authId.length, "authId");
+        CHECK_LEN_HIGHER_RETURN(exInfo->pairType, PAIR_TYPE_END - 1, "pairType");
+        importParam = (struct HksParam *)HcMalloc(sizeof(struct HksParam) *
+            (BASE_IMPORT_PARAMS_LEN + EXT_IMPORT_PARAMS_LEN), 0);
+        if (importParam == NULL) {
+            LOGE("Malloc for importParam failed.");
+            return HAL_ERR_BAD_ALLOC;
         }
-    };
-
-    int ret = ConstructParamSet(paramSet, importParam, CAL_ARRAY_SIZE(importParam));
-    if (ret != HAL_SUCCESS) {
-        LOGE("construct decrypt param set failed, ret = %d", ret);
-        return ret;
+        authIdBlob.size = exInfo->authId.length;
+        authIdBlob.data = exInfo->authId.val;
+        roleInfoUnion.roleInfoStruct.userType = (uint8_t)exInfo->userType;
+        roleInfoUnion.roleInfoStruct.pairType = (uint8_t)exInfo->pairType;
+        importParam[idx].tag = HKS_TAG_KEY_AUTH_ID;
+        importParam[idx++].blob = authIdBlob;
+        importParam[idx].tag = HKS_TAG_KEY_ROLE;
+        importParam[idx++].uint32Param = roleInfoUnion.roleInfo;
+    } else {
+        importParam = (struct HksParam *)HcMalloc(sizeof(struct HksParam) * BASE_IMPORT_PARAMS_LEN, 0);
+        if (importParam == NULL) {
+            LOGE("Malloc for importParam failed.");
+            return HAL_ERR_BAD_ALLOC;
+        }
     }
 
+    importParam[idx].tag = HKS_TAG_ALGORITHM;
+    importParam[idx++].uint32Param = HKS_ALG_AES;
+    importParam[idx].tag = HKS_TAG_KEY_SIZE;
+    importParam[idx++].uint32Param = keyLen * BITS_PER_BYTE;
+    importParam[idx].tag = HKS_TAG_PADDING;
+    importParam[idx++].uint32Param = HKS_PADDING_NONE;
+    importParam[idx].tag = HKS_TAG_IS_ALLOWED_WRAP;
+    importParam[idx++].boolParam = false;
+    importParam[idx].tag = HKS_TAG_PURPOSE;
+    importParam[idx++].uint32Param = g_purposeToHksKeyPurpose[purpose];
+    importParam[idx].tag = HKS_TAG_BLOCK_MODE;
+    importParam[idx++].uint32Param = HKS_MODE_GCM;
+    importParam[idx].tag = HKS_TAG_DIGEST;
+    importParam[idx++].uint32Param = HKS_DIGEST_SHA256;
+
+    int ret = ConstructParamSet(paramSet, importParam, idx);
+    if (ret != HAL_SUCCESS) {
+        LOGE("Construct decrypt param set failed, ret = %d.", ret);
+    }
+
+    HcFree(importParam);
     return ret;
 }
 
-static int32_t ImportAsymmetricKey(const Uint8Buff *keyAlias, const Uint8Buff *authToken, const ExtraInfo *exInfo)
+static int32_t ImportSymmetricKey(const Uint8Buff *keyAlias, const Uint8Buff *authToken, KeyPurpose purpose,
+    const ExtraInfo *exInfo)
 {
-    int32_t ret = CheckImportAsymmetricKeyParam(keyAlias, authToken, &exInfo->authId, exInfo->userType,
-        exInfo->pairType);
+    int32_t ret = CheckImportSymmetricKeyParam(keyAlias, authToken);
     if (ret != HAL_SUCCESS) {
         return ret;
     }
 
     struct HksBlob keyAliasBlob = { keyAlias->length, keyAlias->val };
-    struct HksBlob pubKeyBlob = { authToken->length, authToken->val };
-
-    struct HksBlob authIdBlob = { exInfo->authId.length, exInfo->authId.val };
-    union KeyRoleInfoUnion roleInfoUnion;
-    roleInfoUnion.roleInfoStruct.userType = (uint8_t)exInfo->userType;
-    roleInfoUnion.roleInfoStruct.pairType = (uint8_t)exInfo->pairType;
-    roleInfoUnion.roleInfoStruct.reserved1 = (uint8_t)0;
-    roleInfoUnion.roleInfoStruct.reserved2 = (uint8_t)0;
-
+    struct HksBlob symKeyBlob = { authToken->length, authToken->val };
     struct HksParamSet *paramSet = NULL;
-    ret = ConstructImportAsymmetricKeyParam(&paramSet, authToken->length, roleInfoUnion.roleInfo, &authIdBlob);
+    ret = ConstructImportSymmetricKeyParam(&paramSet, authToken->length, purpose, exInfo);
     if (ret != HAL_SUCCESS) {
         LOGE("construct param set failed, ret = %d", ret);
         return ret;
     }
 
-    ret = HksImportKey(&keyAliasBlob, paramSet, &pubKeyBlob);
+    ret = HksImportKey(&keyAliasBlob, paramSet, &symKeyBlob);
     if (ret != HKS_SUCCESS) {
         LOGE("HksImportKey failed, ret: %d", ret);
         HksFreeParamSet(&paramSet);
@@ -523,29 +531,180 @@ static int32_t ImportAsymmetricKey(const Uint8Buff *keyAlias, const Uint8Buff *a
     return HAL_SUCCESS;
 }
 
+static int32_t BigNumExpMod(const Uint8Buff *base, const Uint8Buff *exp, const char *bigNumHex, Uint8Buff *outNum)
+{
+    const Uint8Buff *inParams[] = { base, exp, outNum };
+    const char *paramTags[] = { "base", "exp", "outNum" };
+    int32_t ret = BaseCheckParams(inParams, paramTags, CAL_ARRAY_SIZE(inParams));
+    if (ret != HAL_SUCCESS) {
+        return ret;
+    }
+
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(bigNumHex, "bigNumHex");
+    uint32_t primeLen = strlen(bigNumHex) / BYTE_TO_HEX_OPER_LENGTH;
+    if ((primeLen != BIG_PRIME_LEN_384) && (primeLen != BIG_PRIME_LEN_256)) {
+        LOGE("Not support big number len %d", outNum->length);
+        return HAL_FAILED;
+    }
+    CHECK_LEN_EQUAL_RETURN(outNum->length, primeLen, "outNum->length");
+
+    struct HksBlob baseBlob = { base->length, base->val };
+    struct HksBlob expBlob = { exp->length, exp->val };
+    struct HksBlob outNumBlob = { outNum->length, outNum->val };
+    struct HksBlob bigNumBlob = { 0, NULL };
+    bigNumBlob.size = outNum->length;
+    bigNumBlob.data = (uint8_t *)HcMalloc(bigNumBlob.size, 0);
+    if (bigNumBlob.data == NULL) {
+        LOGE("malloc bigNumBlob.data failed.");
+        return HAL_ERR_BAD_ALLOC;
+    }
+    ret = HexStringToByte(bigNumHex, bigNumBlob.data, bigNumBlob.size);
+    if (ret != HAL_SUCCESS) {
+        LOGE("HexStringToByte for bigNumHex failed.");
+        HcFree(bigNumBlob.data);
+        return ret;
+    }
+
+    ret = HksBnExpMod(&outNumBlob, &baseBlob, &expBlob, &bigNumBlob);
+    if (ret != HKS_SUCCESS) {
+        LOGE("Huks calculate big number exp mod failed, ret = %d", ret);
+        HcFree(bigNumBlob.data);
+        return HAL_FAILED;
+    }
+    outNum->length = outNumBlob.size;
+
+    HcFree(bigNumBlob.data);
+    return HAL_SUCCESS;
+}
+
+static bool CheckBigNumCompareParams(const Uint8Buff *a, const Uint8Buff *b, int *res)
+{
+    if ((a == NULL || a->val == NULL) && (b == NULL || b->val == NULL)) {
+        *res = 0; // a = b
+        return false;
+    }
+    if ((a == NULL || a->val == NULL) && (b != NULL && b->val != NULL)) {
+        *res = 1; // a < b
+        return false;
+    }
+    if ((a != NULL && a->val != NULL) && (b == NULL || b->val == NULL)) {
+        *res = -1; // a > b
+        return false;
+    }
+    return true;
+}
+
+static int32_t BigNumCompare(const Uint8Buff *a, const Uint8Buff *b)
+{
+    int res = 0;
+    if (!CheckBigNumCompareParams(a, b, &res)) {
+        return res;
+    }
+    const uint8_t *tmpA = a->val;
+    const uint8_t *tmpB = b->val;
+    uint32_t len = a->length;
+    if (a->length < b->length) {
+        for (uint32_t i = 0; i < b->length - a->length; i++) {
+            if (b->val[i] > 0) {
+                return 1; // a < b
+            }
+        }
+        tmpA = a->val;
+        tmpB = b->val + b->length - a->length;
+        len = a->length;
+    }
+    if (a->length > b->length) {
+        for (uint32_t i = 0; i < a->length - b->length; i++) {
+            if (a->val[i] > 0) {
+                return -1; // a > b
+            }
+        }
+        tmpA = a->val + a->length - b->length;
+        tmpB = b->val;
+        len = b->length;
+    }
+    for (uint32_t i = 0; i < len; i++) {
+        if (*(tmpA + i) > *(tmpB + i)) {
+            return -1; // a > b
+        }
+        if (*(tmpA + i) < *(tmpB + i)) {
+            return 1; // a < b
+        }
+    }
+    return 0; // a == b
+}
+
+static bool CheckDlPublicKey(const Uint8Buff *key, const char *primeHex)
+{
+    if (key == NULL || key->val == NULL || primeHex == NULL) {
+        LOGE("Params is null.");
+        return false;
+    }
+    uint8_t min = 1;
+
+    uint32_t innerKeyLen = HcStrlen(primeHex) / BYTE_TO_HEX_OPER_LENGTH;
+    if (key->length > innerKeyLen) {
+        LOGE("Key length > prime number length.");
+        return false;
+    }
+    uint8_t *primeByte = (uint8_t *)HcMalloc(innerKeyLen, 0);
+    if (primeByte == NULL) {
+        LOGE("Malloc for primeByte failed.");
+        return false;
+    }
+    if (HexStringToByte(primeHex, primeByte, innerKeyLen) != HAL_SUCCESS) {
+        LOGE("Convert prime number from hex string to byte failed.");
+        HcFree(primeByte);
+        return false;
+    }
+    /*
+     * P - 1, since the last byte of large prime number must be greater than 1,
+     * needn't to think about borrowing forward
+     */
+    primeByte[innerKeyLen - 1] -= 1;
+
+    Uint8Buff minBuff = { &min, sizeof(uint8_t) };
+    if (BigNumCompare(key, &minBuff) >= 0) {
+        LOGE("Pubkey is invalid, key <= 1.");
+        HcFree(primeByte);
+        return false;
+    }
+
+    Uint8Buff primeBuff = { primeByte, innerKeyLen };
+    if (BigNumCompare(key, &primeBuff) <= 0) {
+        LOGE("Pubkey is invalid, key >= p - 1.");
+        HcFree(primeByte);
+        return false;
+    }
+
+    HcFree(primeByte);
+    return true;
+}
+
 static const AlgLoader g_huksLoader = {
-    InitHks,
-    Sha256,
-    GenerateRandom,
-    ComputeHmac,
-    ComputeHkdf,
-    ImportAsymmetricKey,
-    CheckKeyExist,
-    DeleteKey,
-    AesGcmEncrypt,
-    AesGcmDecrypt,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL
+    .initAlg = InitHks,
+    .sha256 = Sha256,
+    .generateRandom = GenerateRandom,
+    .computeHmac = ComputeHmac,
+    .computeHkdf = ComputeHkdf,
+    .importSymmetricKey = ImportSymmetricKey,
+    .checkKeyExist = CheckKeyExist,
+    .deleteKey = DeleteKey,
+    .aesGcmEncrypt = AesGcmEncrypt,
+    .aesGcmDecrypt = AesGcmDecrypt,
+    .hashToPoint = NULL,
+    .agreeSharedSecretWithStorage = NULL,
+    .agreeSharedSecret = NULL,
+    .bigNumExpMod = BigNumExpMod,
+    .generateKeyPairWithStorage = NULL,
+    .generateKeyPair = NULL,
+    .exportPublicKey = NULL,
+    .sign = NULL,
+    .verify = NULL,
+    .importPublicKey = NULL,
+    .checkDlPublicKey = CheckDlPublicKey,
+    .checkEcPublicKey = NULL,
+    .bigNumCompare = BigNumCompare
 };
 
 const AlgLoader *GetRealLoaderInstance()
