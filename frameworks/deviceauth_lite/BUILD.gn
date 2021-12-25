@@ -19,10 +19,7 @@ lite_component("hichainsdk") {
   features = [
     "//base/security/deviceauth/frameworks/deviceauth_lite/source:hichainsdk",
   ]
-}
-
-if (ohos_build_type == "debug" && ohos_kernel_type == "liteos_a") {
-  group("unittest") {
-    deps = ["//base/security/deviceauth/frameworks/deviceauth_lite/unittest:deviceauth_test"]
+  if (ohos_build_type == "debug" && ohos_kernel_type == "liteos_a") {
+    features += ["//base/security/deviceauth/frameworks/deviceauth_lite/unittest:deviceauth_test"]
   }
 }
