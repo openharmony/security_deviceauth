@@ -1644,13 +1644,8 @@ int32_t GetIpcIoDataLength(const IpcIo *io)
 
 void ShowIpcSvcInfo(const SvcIdentity *svc)
 {
-#ifdef __LINUX__
-    LOGI("svc information - handle(%u), token(%u), cookie(%u), ipcContext(%p)",
-        svc->handle, svc->token, svc->cookie, svc->ipcContext);
-#else
     LOGI("svc information - handle(%u), token(%u), cookie(%u)",
         svc->handle, svc->token, svc->cookie);
-#endif
 }
 
 int32_t InitProxyAdapt(void)
