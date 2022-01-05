@@ -20,11 +20,12 @@
 #include "base_group_auth.h"
 #include "database_manager.h"
 
-typedef void (*GetTcisCandidateGroupFunc)(const CJson *param, const GroupQueryParams *queryParams, GroupInfoVec *vec);
+typedef void (*GetAccountCandidateGroupFunc)(const CJson *param, const GroupQueryParams *queryParams,
+    GroupInfoVec *vec);
 
 typedef struct {
     BaseGroupAuth base;
-    GetTcisCandidateGroupFunc getTcisCandidateGroup;
+    GetAccountCandidateGroupFunc getAccountCandidateGroup;
 } AccountRelatedGroupAuth;
 
 #ifdef __cplusplus

@@ -28,8 +28,8 @@ int GenerateKeyAliasInIso(const IsoParams *params, uint8_t *keyAlias, uint32_t k
 int GeneratePsk(const CJson *in, IsoParams *params);
 
 int GenerateEncResult(const IsoParams *params, int message, CJson *sendToPeer, const char *aad);
-int GenEncResult(const IsoParams *params, int message, CJson *out, const char *aad, bool isNeedReturnKey);
-int SendResultToFinalSelf(const IsoParams *params, CJson *out, bool isNeedReturnKey);
+int GenEncResult(IsoParams *params, int message, CJson *out, const char *aad, bool isNeedReturnKey);
+int SendResultToFinalSelf(IsoParams *params, CJson *out, bool isNeedReturnKey);
 int CheckEncResult(IsoParams *params, const CJson *in, const char *aad);
 void DeleteAuthCode(const IsoParams *params);
 

@@ -32,8 +32,7 @@ static CurTaskType GetTaskType(void)
 
 static void DestroyServerUnbindExchangeTask(struct SymBaseCurTaskT *task)
 {
-    IsoServerUnbindExchangeTask *realTask = (IsoServerUnbindExchangeTask *)task;
-    HcFree(realTask);
+    HcFree(task);
 }
 
 static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson *in, CJson *out, int *status)
@@ -58,29 +57,29 @@ static int CheckRemoveInfo(const Uint8Buff *removeInfoBuf, const IsoParams *para
     int res = GetIntFromJson(removeInfoJson, FIELD_RMV_TYPE, &userType);
     if (res != HC_SUCCESS) {
         LOGE("Get user type failed");
-        goto err;
+        goto ERR;
     }
     if (userType != params->peerUserType) {
         LOGE("User type not match :%d", userType);
         res = HC_ERR_JSON_GET;
-        goto err;
+        goto ERR;
     }
     peerAuthId = (uint8_t *)HcMalloc(params->baseParams.authIdPeer.length, 0);
     if (peerAuthId == NULL) {
         LOGE("Malloc failed");
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     res = GetByteFromJson(removeInfoJson, FIELD_RMV_ID, peerAuthId, params->baseParams.authIdPeer.length);
     if (res != HC_SUCCESS) {
         LOGE("Get remove id failed, res:%d", res);
-        goto err;
+        goto ERR;
     }
     if (memcmp(peerAuthId, params->baseParams.authIdPeer.val, params->baseParams.authIdPeer.length) != 0) {
         LOGE("Compare peerAuthId failed");
         res = HC_ERROR;
     }
-err:
+ERR:
     FreeJson(removeInfoJson);
     HcFree(peerAuthId);
     return res;
@@ -96,7 +95,7 @@ static char *GetAndCheckEncDataStr(const CJson *in, uint32_t *removeInfoFromJson
 
     *removeInfoFromJsonLen = strlen(removeInfoFromJson);
     if (*removeInfoFromJsonLen <= TAG_LEN || *removeInfoFromJsonLen > MAX_BUFFER_LEN) {
-        LOGE("err removeInfoFromJsonLen");
+        LOGE("The length of removeInfoFromJson is invalid.");
         return NULL;
     }
     return removeInfoFromJson;
@@ -112,21 +111,21 @@ static int DecryptRemoveInfo(const IsoParams *params, const CJson *in)
     nonce = (uint8_t *)HcMalloc(NONCE_SIZE, 0);
     if (nonce == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     GOTO_ERR_AND_SET_RET(GetByteFromJson(in, FIELD_NONCE, nonce, NONCE_SIZE), res);
     uint32_t removeInfoFromJsonLen = 0;
     char *removeInfoFromJson = GetAndCheckEncDataStr(in, &removeInfoFromJsonLen);
     if (removeInfoFromJson == NULL) {
         res = HC_ERR_JSON_GET;
-        goto err;
+        goto ERR;
     }
 
     uint32_t removeInfoLen = removeInfoFromJsonLen - TAG_LEN;
     removeInfo = (uint8_t *)HcMalloc(removeInfoLen, 0);
     if (removeInfo == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
 
     encDataBuf.length = removeInfoFromJsonLen / BYTE_TO_HEX_OPER_LENGTH;
@@ -134,12 +133,12 @@ static int DecryptRemoveInfo(const IsoParams *params, const CJson *in)
     if (encDataBuf.val == NULL) {
         LOGE("Malloc encDataBuf.val failed.");
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     res = HexStringToByte(removeInfoFromJson, encDataBuf.val, encDataBuf.length);
     if (res != HC_SUCCESS) {
         LOGE("HexStringToByte for encData failed.");
-        goto err;
+        goto ERR;
     }
     Uint8Buff removeInfoBuf = { removeInfo, removeInfoLen };
     GcmParam gcmParam = { nonce, NONCE_SIZE, (uint8_t *)UNBIND_ADD_REQUEST, HcStrlen(UNBIND_ADD_REQUEST) };
@@ -147,17 +146,17 @@ static int DecryptRemoveInfo(const IsoParams *params, const CJson *in)
         &removeInfoBuf);
     if (res != 0) {
         LOGE("decrypt removeInfo failed, res:%d", res);
-        goto err;
+        goto ERR;
     }
     res = CheckRemoveInfo(&removeInfoBuf, params);
-err:
+ERR:
     HcFree(nonce);
     HcFree(removeInfo);
     HcFree(encDataBuf.val);
     return res;
 }
 
-static int ServerUnbindExchangeStart(const IsoParams *param, IsoServerUnbindExchangeTask *task,
+static int ServerUnbindExchangeStart(IsoParams *param, IsoServerUnbindExchangeTask *task,
     const CJson *in, CJson *out, int *status)
 {
     int res = DecryptRemoveInfo(param, in);
@@ -168,12 +167,12 @@ static int ServerUnbindExchangeStart(const IsoParams *param, IsoServerUnbindExch
     res = GenEncResult(param, ISO_SERVER_UNBIND_EXCHANGE_RET, out, UNBIND_ADD_RESPONSE, false);
     if (res != 0) {
         LOGE("unbind exchange gen enc result failed, res:%d", res);
-        goto err;
+        goto ERR;
     }
 
     task->taskBase.taskStatus = TASK_TYPE_BEGIN;
     *status = FINISH;
-err:
+ERR:
     return res;
 }
 

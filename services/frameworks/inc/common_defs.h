@@ -37,8 +37,13 @@
 #define FIELD_CHANNEL_ID "channelId"
 #define FIELD_CONN_DEVICE_ID "connDeviceId"
 #define FIELD_CONNECT_PARAMS "connectParams"
+#define FIELD_CROSS_USER_ID_LIST "crossUserIdList"
 #define FIELD_CURRENT_VERSION "currentVersion"
 #define FIELD_DELETE_ID "deleteId"
+#define FIELD_DELETED_RESULT "deletedResult"
+#define FIELD_DEVICE_CLOUD_CREDENTIAL "devCloudCred"
+#define FIELD_DEV_ID "devId"
+#define FIELD_DEVICES_CREDENTIAL "devicesCredential"
 #define FIELD_ENC_AUTH_TOKEN "encAuthToken"
 #define FIELD_ENC_RESULT "encResult"
 #define FIELD_ENC_DATA "encData"
@@ -73,7 +78,6 @@
 #define FIELD_PEER_DEVICE_ID "peerDeviceId"
 #define FIELD_PIN_CODE "pinCode"
 #define FIELD_PUBLIC_KEY "publicKey"
-#define FIELD_PK_INFO "pkInfo"
 #define FIELD_PKG_NAME "pkgName"
 #define FIELD_SELF_AUTH_ID "selfAuthId"
 #define FIELD_SELF_DEVICE_ID "selfDeviceId"
@@ -140,10 +144,10 @@ typedef enum {
 typedef enum {
     CREDENTIAL_TYPE_INVALID = 0,
     CREDENTIAL_TYPE_AUTH_CODE = 0X0001,
-    CREDENTIAL_TYPE_TCIS = 0X0002,
+    CREDENTIAL_TYPE_ACCOUNT = 0X0002,
     CREDENTIAL_TYPE_DEFAULT_CONTROLLER = 0X0003,
     CREDENTIAL_TYPE_DEVICE_CLOUD = 0X0004,
-    CREDENTIAL_TYPE_BLE = 0X0008,
+    CREDENTIAL_TYPE_TEMP = 0X0008,
 } CredentialType;
 
 #define MAX_IN_PARAM_LEN 4096
@@ -175,14 +179,14 @@ typedef enum {
 #define GOTO_IF_ERR(x) do { \
         int32_t res = x; \
         if ((res) != HC_SUCCESS) { \
-            goto err; \
+            goto ERR; \
         } \
     } while (0)
 
 #define GOTO_ERR_AND_SET_RET(x, res) do { \
         res = x; \
         if ((res) != HC_SUCCESS) { \
-            goto err; \
+            goto ERR; \
         } \
     } while (0)
 
@@ -193,17 +197,9 @@ typedef enum {
         } \
     } while (0)
 
-typedef struct AuthModuleBaseT {
-    int moduleType;
-    int (*createTask)(int *, const CJson *in, CJson *out);
-    int (*processTask)(int, const CJson *in, CJson *out, int *status);
-    void (*destroyTask)(int);
-    void (*destroyModule)(struct AuthModuleBaseT *module);
-} AuthModuleBase;
-
 typedef enum {
     DAS_MODULE = 0x0001,
-    TCIS_MODULE = 0x0010,
+    ACCOUNT_MODULE = 0x0010,
 } EnumModuleType;
 
 typedef enum {

@@ -16,24 +16,16 @@
 #ifndef PAKE_DEFS_H
 #define PAKE_DEFS_H
 
-#include "common_defs.h"
-#include "protocol_common.h"
 #include "alg_defs.h"
+#include "string_util.h"
 
 #define HICHAIN_SPEKE_BASE_INFO "hichain_speke_base_info"
 #define HICHAIN_SPEKE_SESSIONKEY_INFO "hichain_speke_sessionkey_info"
-#define HICHAIN_RETURN_KEY "hichain_return_key"
-#define TMP_AUTH_KEY_FACTOR "hichain_tmp_auth_enc_key"
 #define SHARED_SECRET_DERIVED_FACTOR "hichain_speke_shared_secret_info"
 
 #define PAKE_SALT_LEN 16
-#define PAKE_NONCE_LEN 32
-#define PAKE_PSK_LEN 32
 #define PAKE_CHALLENGE_LEN 16
-#define PAKE_ESK_LEN 32
-#define PAKE_EPK_LEN 32
 #define PAKE_SECRET_LEN 32
-#define PAKE_EC_POINT_LEN 32
 #define PAKE_HMAC_KEY_LEN 32
 #define PAKE_EC_KEY_LEN 32
 #define PAKE_DL_EXP_LEN 1
@@ -41,6 +33,18 @@
 #define PAKE_DL_ESK_LEN 32
 #define PAKE_DL_PRIME_SMALL_LEN 256
 #define PAKE_DL_PRIME_LEN 384
+
+typedef enum {
+    PAKE_ALG_NONE = 0x0000,
+    PAKE_ALG_DL = 0x0001,
+    PAKE_ALG_EC = 0x0002,
+} PakeAlgType;
+
+typedef enum {
+    DL_PRIME_MOD_NONE = 0x0000,
+    DL_PRIME_MOD_256 = 0x0001,
+    DL_PRIME_MOD_384 = 0x0002,
+} PakeDlPrimeMod;
 
 typedef struct PakeBaseParamsT {
     Uint8Buff salt;
@@ -60,12 +64,14 @@ typedef struct PakeBaseParamsT {
     Uint8Buff kcfDataPeer;
     uint32_t innerKeyLen;
     const char *largePrimeNumHex;
-    bool is256ModSupported;
-
-    AlgType supportedPakeAlg;
-    CurveType curveType;
+    PakeDlPrimeMod supportedDlPrimeMod; // default: DL_PRIME_MOD_NONE
+    CurveType curveType; // default: CURVE_NONE
+    PakeAlgType supportedPakeAlg;
     bool isClient;
+
     const AlgLoader *loader;
 } PakeBaseParams;
+
+void CleanPakeSensitiveKeys(PakeBaseParams *params);
 
 #endif

@@ -54,7 +54,7 @@ static int32_t GetModuleType(const CJson *jsonParams)
 {
     bool isAccountBind = false;
     (void)GetBoolFromJson(jsonParams, FIELD_IS_ACCOUNT_BIND, &isAccountBind);
-    return isAccountBind ? TCIS_MODULE : DAS_MODULE;
+    return isAccountBind ? ACCOUNT_MODULE : DAS_MODULE;
 }
 
 static int32_t AddLiteDataToReceivedData(CJson *receivedData, int64_t requestId, const char *appId)

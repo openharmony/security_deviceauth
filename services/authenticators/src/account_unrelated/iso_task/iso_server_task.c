@@ -14,7 +14,6 @@
  */
 
 #include "iso_server_task.h"
-#include "das_common.h"
 #include "hc_log.h"
 #include "hc_types.h"
 #include "iso_server_bind_exchange_task.h"
@@ -26,7 +25,7 @@ static int GetIsoServerTaskType(const struct SubTaskBaseT *task)
 {
     IsoServerTask *realTask = (IsoServerTask *)task;
     if (realTask->curTask == NULL) {
-        LOGE("cur Task is null");
+        LOGE("CurTask is null.");
         return TASK_TYPE_NONE;
     }
     return realTask->curTask->getCurTaskType();
@@ -48,95 +47,80 @@ static void DestroyIsoServerTask(struct SubTaskBaseT *task)
 static int CreateNextTask(IsoServerTask *realTask, const CJson *in, CJson *out, int *status)
 {
     int message = 0;
-    int res = GetIntFromJson(in, FIELD_MESSAGE, &message);
-    if (res != 0) {
-        LOGE("GetIntFromJson failed, res:%d", res);
-        return res;
+    if (GetIntFromJson(in, FIELD_MESSAGE, &message) != 0) {
+        LOGE("Get message code failed.");
+        return HC_ERR_JSON_GET;
     }
+    int res = HC_SUCCESS;
     switch (realTask->params.opCode) {
         case OP_BIND:
             if (message != ISO_CLIENT_BIND_EXCHANGE_CMD) {
-                LOGI("The message is repeated, ignore it message :%d.", message);
+                LOGI("The message is repeated, ignore it message: %d.", message);
                 *status = IGNORE_MSG;
                 break;
             }
             realTask->curTask = CreateServerBindExchangeTask(&(realTask->params), in, out, status);
             if (realTask->curTask == NULL) {
                 LOGE("CreateBindExchangeTask failed");
-                res = HC_ERROR;
+                return HC_ERROR;
             }
             break;
         case OP_UNBIND:
             if (message != ISO_CLIENT_UNBIND_EXCHANGE_CMD) {
-                LOGI("The message is repeated, ignore it message :%d.", message);
+                LOGI("The message is repeated, ignore it message: %d.", message);
                 *status = IGNORE_MSG;
                 break;
             }
             realTask->curTask = CreateServerUnbindExchangeTask(&(realTask->params), in, out, status);
             if (realTask->curTask == NULL) {
                 LOGE("CreateBindExchangeTask failed");
-                res = HC_ERROR;
+                return HC_ERROR;
             }
             break;
-        default:
-            res = CheckEncResult(&(realTask->params), in, RESULT_AAD);
-            if (res != 0) {
-                LOGE("CheckEncResult failed, res:%d", res);
+        case AUTHENTICATE:
+            if ((res = CheckEncResult(&(realTask->params), in, RESULT_AAD)) != 0) {
+                LOGE("CheckEncResult failed, res: %d.", res);
                 break;
             }
-            res = SendResultToFinalSelf(&(realTask->params), out, true);
-            if (res != 0) {
-                LOGE("SendResultToFinalSelf failed, res:%d", res);
+            if ((res = SendResultToFinalSelf(&(realTask->params), out, true)) != 0) {
+                LOGE("SendResultToFinalSelf failed, res: %d.", res);
                 break;
             }
             LOGD("Authenticate task end.");
             *status = FINISH;
+            break;
+        default:
+            LOGE("Unsupported opCode: %d.", realTask->params.opCode);
+            res = HC_ERR_NOT_SUPPORT;
     }
-    if (res != 0) {
-        SendErrorToOut(out, realTask->params.opCode, res);
-    }
+
     return res;
 }
 
 static int Process(struct SubTaskBaseT *task, const CJson *in, CJson *out, int *status)
 {
-    if (task == NULL || in == NULL || out == NULL || status == NULL) {
-        return HC_ERR_INVALID_PARAMS;
-    }
     IsoServerTask *realTask = (IsoServerTask *)task;
-    int res;
     if (realTask->curTask != NULL) {
-        res = realTask->curTask->process(realTask->curTask, &(realTask->params), in, out, status);
-        if (*status != FINISH) {
-            if (res != 0) {
-                SendErrorToOut(out, realTask->params.opCode, res);
-            }
-            return res;
-        } else {
-            if (realTask->curTask->getCurTaskType() == TASK_TYPE_ISO_PROTOCOL) {
-                realTask->curTask->destroyTask(realTask->curTask);
-                realTask->curTask = NULL;
-                *status = CONTINUE;
-            }
+        int res = realTask->curTask->process(realTask->curTask, &(realTask->params), in, out, status);
+        if (res != HC_SUCCESS) {
+            LOGE("CurTask processes failed, res: %x.", res);
         }
-        if (res != 0) {
-            LOGE("process failed, res:%d", res);
-            SendErrorToOut(out, realTask->params.opCode, res);
-            return res;
+        if (*status == FINISH && (realTask->curTask->getCurTaskType() == TASK_TYPE_ISO_PROTOCOL)) {
+            realTask->curTask->destroyTask(realTask->curTask);
+            realTask->curTask = NULL;
+            *status = CONTINUE;
         }
+        return res;
     } else {
-        res = CreateNextTask(realTask, in, out, status);
+        return CreateNextTask(realTask, in, out, status);
     }
-    if (res != 0) {
-        SendErrorToOut(out, realTask->params.opCode, res);
-    }
-    return res;
 }
 
-SubTaskBase *CreateIsoServerTask(const CJson *in, CJson *out)
+SubTaskBase *CreateIsoServerTask(const CJson *in)
 {
     IsoServerTask *task = (IsoServerTask *)HcMalloc(sizeof(IsoServerTask), 0);
     if (task == NULL) {
+        LOGE("Malloc for IsoServerTask failed.");
         return NULL;
     }
 
@@ -146,14 +130,14 @@ SubTaskBase *CreateIsoServerTask(const CJson *in, CJson *out)
 
     int res = InitIsoParams(&(task->params), in);
     if (res != 0) {
-        SendErrorToOut(out, task->params.opCode, res);
+        LOGE("InitIsoParams failed, res: %x.", res);
         DestroyIsoServerTask((struct SubTaskBaseT *)task);
         return NULL;
     }
 
     task->curTask = CreateProtocolServerTask();
     if (task->curTask == NULL) {
-        SendErrorToOut(out, task->params.opCode, res);
+        LOGE("CreateProtocolServerTask failed.");
         DestroyIsoServerTask((struct SubTaskBaseT *)task);
         return NULL;
     }

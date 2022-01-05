@@ -45,6 +45,11 @@ typedef enum {
 } Algorithm;
 
 typedef enum {
+    KEY_PURPOSE_MAC = 0,
+    KEY_PURPOSE_DERIVE = 1,
+} KeyPurpose;
+
+typedef enum {
     CURVE_NONE,
     CURVE_256,
     CURVE_25519,
@@ -74,7 +79,7 @@ typedef int32_t (*ComputeHmacFunc)(const Uint8Buff *key, const Uint8Buff *messag
 typedef int32_t (*ComputeHkdfFunc)(const Uint8Buff *baseKey, const Uint8Buff *salt, const Uint8Buff *keyInfo,
     Uint8Buff *outHkdf, bool isAlias);
 
-typedef int32_t (*ImportAsymmetricKeyFunc)(const Uint8Buff *keyAlias, const Uint8Buff *authToken,
+typedef int32_t (*ImportSymmetricKeyFunc)(const Uint8Buff *keyAlias, const Uint8Buff *authToken, KeyPurpose purpose,
     const ExtraInfo *exInfo);
 
 typedef int32_t (*CheckKeyExistFunc)(const Uint8Buff *keyAlias);
@@ -127,7 +132,7 @@ typedef struct {
     GenerateRandomFunc generateRandom;
     ComputeHmacFunc computeHmac;
     ComputeHkdfFunc computeHkdf;
-    ImportAsymmetricKeyFunc importAsymmetricKey;
+    ImportSymmetricKeyFunc importSymmetricKey;
     CheckKeyExistFunc checkKeyExist;
     DeleteKeyFunc deleteKey;
     AesGcmEncryptFunc aesGcmEncrypt;

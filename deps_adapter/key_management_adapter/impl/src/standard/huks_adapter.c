@@ -65,7 +65,7 @@ static int32_t ConstructParamSet(struct HksParamSet **out, const struct HksParam
     return HAL_SUCCESS;
 }
 
-static int32_t InitHks()
+static int32_t InitHks(void)
 {
     return HksInitialize();
 }
@@ -755,7 +755,7 @@ static int32_t GenerateKeyPair(Algorithm algo, Uint8Buff *outPriKey, Uint8Buff *
     if (outParamSet == NULL) {
         LOGE("allocate buffer for output param set failed");
         ret = HAL_ERR_BAD_ALLOC;
-        goto err;
+        goto ERR;
     }
     outParamSet->paramSetSize = outParamSetSize;
 
@@ -763,15 +763,15 @@ static int32_t GenerateKeyPair(Algorithm algo, Uint8Buff *outPriKey, Uint8Buff *
     if (ret != HKS_SUCCESS) {
         LOGE("generate x25519 key failed, ret:%d", ret);
         ret = HAL_FAILED;
-        goto err;
+        goto ERR;
     }
 
     ret = GetKeyPair(outParamSet, outPriKey, outPubKey);
     if (ret != HAL_SUCCESS) {
         LOGE("parse x25519 output param set failed, ret:%d", ret);
-        goto err;
+        goto ERR;
     }
-err:
+ERR:
     HksFreeParamSet(&paramSet);
     HcFree(outParamSet);
     return ret;
@@ -838,29 +838,29 @@ static int32_t Sign(const Uint8Buff *keyAlias, const Uint8Buff *message, Algorit
     if (messageHash.val == NULL) {
         LOGE("malloc messageHash.data failed.");
         ret = HAL_ERR_BAD_ALLOC;
-        goto err;
+        goto ERR;
     }
     ret = Sha256(message, &messageHash);
     if (ret != HAL_SUCCESS) {
         LOGE("Sha256 failed.");
-        goto err;
+        goto ERR;
     }
     struct HksBlob messageBlob = { messageHash.length, messageHash.val };
     struct HksBlob signatureBlob = { outSignature->length, outSignature->val };
 
     ret = ConstructSignParams(&paramSet, algo);
     if (ret != HAL_SUCCESS) {
-        goto err;
+        goto ERR;
     }
 
     ret = HksSign(&keyAliasBlob, paramSet, &messageBlob, &signatureBlob);
     if ((ret != HKS_SUCCESS) || (signatureBlob.size != SIGNATURE_LEN)) {
         LOGE("Hks sign failed.");
         ret = HAL_FAILED;
-        goto err;
+        goto ERR;
     }
     ret = HAL_SUCCESS;
-err:
+ERR:
     HksFreeParamSet(&paramSet);
     HcFree(messageHash.val);
     return ret;
@@ -908,29 +908,29 @@ static int32_t Verify(const Uint8Buff *key, const Uint8Buff *message, Algorithm 
     if (messageHash.val == NULL) {
         LOGE("malloc messageHash.data failed.");
         ret = HAL_ERR_BAD_ALLOC;
-        goto err;
+        goto ERR;
     }
     ret = Sha256(message, &messageHash);
     if (ret != HAL_SUCCESS) {
         LOGE("Sha256 failed.");
-        goto err;
+        goto ERR;
     }
     struct HksBlob messageBlob = { messageHash.length, messageHash.val };
     struct HksBlob signatureBlob = { signature->length, signature->val };
 
     ret = ConstructVerifyParams(&paramSet, algo, isAlias);
     if (ret != HAL_SUCCESS) {
-        goto err;
+        goto ERR;
     }
 
     ret = HksVerify(&keyAliasBlob, paramSet, &messageBlob, &signatureBlob);
     if ((ret != HKS_SUCCESS)) {
         LOGE("HksVerify failed, ret: %d", ret);
         ret = HAL_FAILED;
-        goto err;
+        goto ERR;
     }
     ret = HAL_SUCCESS;
-err:
+ERR:
     HksFreeParamSet(&paramSet);
     HcFree(messageHash.val);
     return ret;
@@ -1017,30 +1017,51 @@ static int32_t ImportPublicKey(const Uint8Buff *keyAlias, const Uint8Buff *pubKe
     return HAL_SUCCESS;
 }
 
-static int32_t Compare(const uint8_t *a, uint32_t lenA, const uint8_t *b, uint32_t lenB)
+static bool CheckBigNumCompareParams(const Uint8Buff *a, const Uint8Buff *b, int *res)
 {
-    const uint8_t *tmpA = a;
-    const uint8_t *tmpB = b;
-    uint32_t len = lenA;
-    if (lenA < lenB) {
-        for (uint32_t i = 0; i < lenB - lenA; i++) {
-            if (b[i] > 0) {
+    if ((a == NULL || a->val == NULL) && (b == NULL || b->val == NULL)) {
+        *res = 0; // a = b
+        return false;
+    }
+    if ((a == NULL || a->val == NULL) && (b != NULL && b->val != NULL)) {
+        *res = 1; // a < b
+        return false;
+    }
+    if ((a != NULL && a->val != NULL) && (b == NULL || b->val == NULL)) {
+        *res = -1; // a > b
+        return false;
+    }
+    return true;
+}
+
+static int32_t BigNumCompare(const Uint8Buff *a, const Uint8Buff *b)
+{
+    int res = 0;
+    if (!CheckBigNumCompareParams(a, b, &res)) {
+        return res;
+    }
+    const uint8_t *tmpA = a->val;
+    const uint8_t *tmpB = b->val;
+    uint32_t len = a->length;
+    if (a->length < b->length) {
+        for (uint32_t i = 0; i < b->length - a->length; i++) {
+            if (b->val[i] > 0) {
                 return 1; // a < b
             }
         }
-        tmpA = a;
-        tmpB = b + lenB - lenA;
-        len = lenA;
+        tmpA = a->val;
+        tmpB = b->val + b->length - a->length;
+        len = a->length;
     }
-    if (lenA > lenB) {
-        for (uint32_t i = 0; i < lenA - lenB; i++) {
-            if (a[i] > 0) {
+    if (a->length > b->length) {
+        for (uint32_t i = 0; i < a->length - b->length; i++) {
+            if (a->val[i] > 0) {
                 return -1; // a > b
             }
         }
-        tmpA = a + lenA - lenB;
-        tmpB = b;
-        len = lenB;
+        tmpA = a->val + a->length - b->length;
+        tmpB = b->val;
+        len = b->length;
     }
     for (uint32_t i = 0; i < len; i++) {
         if (*(tmpA + i) > *(tmpB + i)) {
@@ -1053,7 +1074,7 @@ static int32_t Compare(const uint8_t *a, uint32_t lenA, const uint8_t *b, uint32
     return 0; // a == b
 }
 
-bool CheckDlPublicKey(const Uint8Buff *key, const char *primeHex)
+static bool CheckDlPublicKey(const Uint8Buff *key, const char *primeHex)
 {
     if (key == NULL || key->val == NULL || primeHex == NULL) {
         LOGE("Params is null.");
@@ -1082,13 +1103,15 @@ bool CheckDlPublicKey(const Uint8Buff *key, const char *primeHex)
      */
     primeByte[innerKeyLen - 1] -= 1;
 
-    if (Compare(key->val, key->length, &min, sizeof(uint8_t)) >= 0) {
+    Uint8Buff minBuff = { &min, sizeof(uint8_t) };
+    if (BigNumCompare(key, &minBuff) >= 0) {
         LOGE("Pubkey is invalid, key <= 1.");
         HcFree(primeByte);
         return false;
     }
 
-    if (Compare(key->val, key->length, primeByte, innerKeyLen) <= 0) {
+    Uint8Buff primeBuff = { primeByte, innerKeyLen };
+    if (BigNumCompare(key, &primeBuff) <= 0) {
         LOGE("Pubkey is invalid, key >= p - 1.");
         HcFree(primeByte);
         return false;
@@ -1104,7 +1127,7 @@ static const AlgLoader g_huksLoader = {
     .generateRandom = GenerateRandom,
     .computeHmac = ComputeHmac,
     .computeHkdf = ComputeHkdf,
-    .importAsymmetricKey = NULL,
+    .importSymmetricKey = NULL,
     .checkKeyExist = CheckKeyExist,
     .deleteKey = DeleteKey,
     .aesGcmEncrypt = AesGcmEncrypt,
@@ -1121,7 +1144,7 @@ static const AlgLoader g_huksLoader = {
     .importPublicKey = ImportPublicKey,
     .checkDlPublicKey = CheckDlPublicKey,
     .checkEcPublicKey = NULL,
-    .bigNumCompare = NULL
+    .bigNumCompare = BigNumCompare
 };
 
 const AlgLoader *GetRealLoaderInstance()

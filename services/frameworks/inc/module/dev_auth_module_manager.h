@@ -23,6 +23,14 @@
 extern "C" {
 #endif
 
+typedef struct AuthModuleBaseT {
+    int moduleType;
+    int (*createTask)(int *, const CJson *in, CJson *out);
+    int (*processTask)(int, const CJson *in, CJson *out, int *status);
+    void (*destroyTask)(int);
+    void (*destroyModule)(struct AuthModuleBaseT *module);
+} AuthModuleBase;
+
 int32_t InitModules(void);
 void DestroyModules(void);
 
@@ -41,10 +49,8 @@ int32_t DeletePeerAuthInfo(const char *pkgName, const char *serviceType, Uint8Bu
 int32_t GetPublicKey(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType,
     int moduleType, Uint8Buff *returnPk);
 
-// for TCIS
-int32_t SetToken(CJson *in, CJson *out, int moduleType);
-int32_t DeleteToken(int moduleType);
-int32_t GetRegisterProof(CJson *out, int moduleType);
+// for ACCOUNT
+int32_t ProcessCredentials(int credentialOpCode, const CJson *in, CJson *out, int moduleType);
 
 #ifdef __cplusplus
 }

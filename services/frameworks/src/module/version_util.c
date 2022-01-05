@@ -14,18 +14,17 @@
  */
 
 #include "version_util.h"
-#include "securec.h"
 #include "hc_log.h"
 #include "hc_types.h"
 #include "protocol_common.h"
 #include "string_util.h"
 
-static const char *Split(char *str, char delim, int *next)
+static const char *GetSlice(char *str, char delim, int *nextIdx)
 {
-    int len = strlen(str);
-    for (int i = 0; i < len; i++) {
+    uint32_t len = HcStrlen(str);
+    for (uint32_t i = 0; i < len; i++) {
         if (str[i] == delim) {
-            *next = *next + i + 1;
+            *nextIdx = *nextIdx + i + 1;
             str[i] = '\0';
             return str;
         }
@@ -33,52 +32,50 @@ static const char *Split(char *str, char delim, int *next)
     return str;
 }
 
-int32_t StringToVersion(const char* verStr, uint32_t len, VersionStruct* version)
+int32_t StringToVersion(const char* verStr, VersionStruct* version)
 {
     CHECK_PTR_RETURN_ERROR_CODE(version, "version");
     CHECK_PTR_RETURN_ERROR_CODE(verStr, "verStr");
-    if (*(verStr + len) != '\0') {
-        return HC_ERR_INVALID_PARAMS;
-    }
 
     const char *subVer = NULL;
-    int next = 0;
+    int nextIdx = 0;
 
+    uint32_t len = HcStrlen(verStr);
     char *verStrTmp = (char *)HcMalloc(len + 1, 0);
     if (verStrTmp == NULL) {
-        LOGE("Malloc verStrTmp failed.");
+        LOGE("Malloc for verStrTmp failed.");
         return HC_ERR_ALLOC_MEMORY;
     }
     if (memcpy_s(verStrTmp, len + 1, verStr, len) != EOK) {
-        LOGE("Memcpy verStrTmp failed.");
+        LOGE("Memcpy for verStrTmp failed.");
         HcFree(verStrTmp);
         return HC_ERR_MEMORY_COPY;
     }
 
-    subVer = Split(verStrTmp, '.', &next);
+    subVer = GetSlice(verStrTmp, '.', &nextIdx);
     if (subVer == NULL) {
-        goto err;
+        goto CLEAN_UP;
     }
     version->first = (uint32_t)strtoul(subVer, NULL, DEC);
 
-    subVer = Split(verStrTmp + next, '.', &next);
+    subVer = GetSlice(verStrTmp + nextIdx, '.', &nextIdx);
     if (subVer == NULL) {
-        goto err;
+        goto CLEAN_UP;
     }
     version->second = (uint32_t)strtoul(subVer, NULL, DEC);
 
-    subVer = Split(verStrTmp + next, '.', &next);
+    subVer = GetSlice(verStrTmp + nextIdx, '.', &nextIdx);
     if (subVer == NULL) {
-        goto err;
+        goto CLEAN_UP;
     }
     version->third = (uint32_t)strtoul(subVer, NULL, DEC);
 
     HcFree(verStrTmp);
     return HC_SUCCESS;
-err:
-    LOGE("Split failed");
+CLEAN_UP:
+    LOGE("GetSlice failed.");
     HcFree(verStrTmp);
-    return HC_ERR_NULL_PTR;
+    return HC_ERROR;
 }
 
 int32_t VersionToString(const VersionStruct *version, char *verStr, uint32_t len)
@@ -87,11 +84,18 @@ int32_t VersionToString(const VersionStruct *version, char *verStr, uint32_t len
     CHECK_PTR_RETURN_ERROR_CODE(verStr, "verStr");
 
     char tmpStr[TMP_VERSION_STR_LEN] = { 0 };
-    if (sprintf_s(tmpStr, TMP_VERSION_STR_LEN, "%d.%d.%d", version->first, version->second, version->third) == -1) {
-        return HC_ERROR;
+    if (sprintf_s(tmpStr, TMP_VERSION_STR_LEN, "%d.%d.%d", version->first, version->second, version->third) <= 0) {
+        LOGE("Convert version struct to string failed.");
+        return HC_ERR_CONVERT_FAILED;
+    }
+    uint32_t tmpStrLen = HcStrlen(tmpStr);
+    if (len < tmpStrLen + 1) {
+        LOGE("The length of verStr is too short, len: %u.", len);
+        return HC_ERR_INVALID_LEN;
     }
 
-    if (memcpy_s(verStr, len, tmpStr, strlen(tmpStr) + 1) != 0) {
+    if (memcpy_s(verStr, len, tmpStr, tmpStrLen + 1) != 0) {
+        LOGE("Memcpy for verStr failed.");
         return HC_ERR_MEMORY_COPY;
     }
 
@@ -106,7 +110,8 @@ int32_t AddSingleVersionToJson(CJson *jsonObj, const VersionStruct *version)
     char versionStr[TMP_VERSION_STR_LEN] = { 0 };
     int32_t ret = VersionToString(version, versionStr, TMP_VERSION_STR_LEN);
     if (ret != HC_SUCCESS) {
-        return HC_ERROR;
+        LOGE("VersionToString failed, res: %x.", ret);
+        return ret;
     }
 
     CJson *sendToPeer = GetObjFromJson(jsonObj, FIELD_SEND_TO_PEER);
@@ -127,11 +132,15 @@ int32_t GetSingleVersionFromJson(const CJson* jsonObj, VersionStruct *version)
     CHECK_PTR_RETURN_ERROR_CODE(version, "version");
 
     const char *versionStr = GetStringFromJson(jsonObj, FIELD_GROUP_AND_MODULE_VERSION);
-    CHECK_PTR_RETURN_ERROR_CODE(versionStr, "versionStr");
+    if (versionStr == NULL) {
+        LOGE("Get group and module version from json failed.");
+        return HC_ERR_JSON_GET;
+    }
 
-    int32_t ret = StringToVersion(versionStr, strlen(versionStr), version);
+    int32_t ret = StringToVersion(versionStr, version);
     if (ret != HC_SUCCESS) {
-        return HC_ERROR;
+        LOGE("StringToVersion failed, res: %x.", ret);
+        return ret;
     }
     return HC_SUCCESS;
 }
@@ -139,10 +148,10 @@ int32_t GetSingleVersionFromJson(const CJson* jsonObj, VersionStruct *version)
 void InitGroupAndModuleVersion(VersionStruct *version)
 {
     if (version == NULL) {
-        LOGE("version is invalid.");
+        LOGE("Version is null.");
         return;
     }
-    version->first = VERSION_FIRST_BIT;
+    version->first = MAJOR_VERSION_NO;
     version->second = 0;
     version->third = 0;
 }
