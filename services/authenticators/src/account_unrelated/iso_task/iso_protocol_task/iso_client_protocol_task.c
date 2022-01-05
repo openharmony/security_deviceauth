@@ -15,7 +15,7 @@
 
 #include "iso_client_protocol_task.h"
 #include "common_defs.h"
-#include "das_common.h"
+#include "das_task_common.h"
 #include "hc_log.h"
 #include "hc_types.h"
 #include "iso_protocol_common.h"
@@ -35,27 +35,25 @@ static CurTaskType GetTaskType(void)
 
 static void DestroyProtocolClientTask(struct SymBaseCurTaskT *task)
 {
-    IsoProtocolClientTask *realTask = (IsoProtocolClientTask *)task;
-    if (realTask == NULL) {
-        return;
-    }
-    HcFree(realTask);
+    HcFree(task);
 }
 
 static int IsoClientStartPackData(CJson *out, const IsoParams *params)
 {
-    int res = HC_SUCCESS;
+    int res;
     CJson *payload = NULL;
     CJson *sendToPeer = NULL;
     payload = CreateJson();
     if (payload == NULL) {
-        res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        LOGE("Create payload json failed.");
+        res = HC_ERR_JSON_CREATE;
+        goto ERR;
     }
     sendToPeer = CreateJson();
     if (sendToPeer == NULL) {
-        res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        LOGE("Create sendToPeer json failed.");
+        res = HC_ERR_JSON_CREATE;
+        goto ERR;
     }
     GOTO_ERR_AND_SET_RET(AddIntToJson(sendToPeer, FIELD_AUTH_FORM, AUTH_FORM_ACCOUNT_UNRELATED), res);
 
@@ -73,32 +71,32 @@ static int IsoClientStartPackData(CJson *out, const IsoParams *params)
     }
     GOTO_ERR_AND_SET_RET(AddObjToJson(sendToPeer, FIELD_PAYLOAD, payload), res);
     GOTO_ERR_AND_SET_RET(AddObjToJson(out, FIELD_SEND_TO_PEER, sendToPeer), res);
-err:
+ERR:
     FreeJson(payload);
     FreeJson(sendToPeer);
     return res;
 }
 
-static int IsoClientStart(SymBaseCurTask *task, IsoParams *params, const CJson *in, CJson *out, int *status)
+static int IsoClientStart(SymBaseCurTask *task, IsoParams *params, CJson *out, int *status)
 {
-    (void)in;
     if (task->taskStatus != TASK_STATUS_BEGIN) {
-        LOGI("The message is repeated, ignore it, status :%d", task->taskStatus);
+        LOGI("The message is repeated, ignore it, status: %d", task->taskStatus);
         *status = IGNORE_MSG;
         return HC_SUCCESS;
     }
-    int res;
-    res = IsoClientGenRandom(&params->baseParams);
+    int res = IsoClientGenRandom(&params->baseParams);
     if (res != 0) {
+        LOGE("IsoClientGenRandom failed, res: %x.", res);
         return res;
     }
     res = GenerateSeed(params);
     if (res != 0) {
+        LOGE("GenerateSeed failed, res: %x.", res);
         return res;
     }
     res = IsoClientStartPackData(out, params);
     if (res != 0) {
-        LOGE("IsoClientStartPackData failed, res:%d", res);
+        LOGE("IsoClientStartPackData failed, res: %x.", res);
         return res;
     }
     task->taskStatus = TASK_STATUS_SERVER_RES_TOKEN;
@@ -108,19 +106,21 @@ static int IsoClientStart(SymBaseCurTask *task, IsoParams *params, const CJson *
 
 static int PackDataForCalToken(const IsoParams *params, const Uint8Buff *selfTokenBuf, CJson *out)
 {
-    int res = HC_SUCCESS;
+    int res;
     CJson *payload = NULL;
     CJson *sendToPeer = NULL;
 
     sendToPeer = CreateJson();
     if (sendToPeer == NULL) {
-        res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        LOGE("Create sendToPeer json failed.");
+        res = HC_ERR_JSON_CREATE;
+        goto ERR;
     }
     payload = CreateJson();
     if (payload == NULL) {
-        res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        LOGE("Create payload json failed.");
+        res = HC_ERR_JSON_CREATE;
+        goto ERR;
     }
 
     GOTO_ERR_AND_SET_RET(AddIntToJson(sendToPeer, FIELD_AUTH_FORM, AUTH_FORM_ACCOUNT_UNRELATED), res);
@@ -129,13 +129,13 @@ static int PackDataForCalToken(const IsoParams *params, const Uint8Buff *selfTok
     GOTO_ERR_AND_SET_RET(AddByteToJson(payload, FIELD_TOKEN, selfTokenBuf->val, selfTokenBuf->length), res);
     GOTO_ERR_AND_SET_RET(AddObjToJson(sendToPeer, FIELD_PAYLOAD, payload), res);
     GOTO_ERR_AND_SET_RET(AddObjToJson(out, FIELD_SEND_TO_PEER, sendToPeer), res);
-err:
+ERR:
     FreeJson(payload);
     FreeJson(sendToPeer);
     return res;
 }
 
-static int ParseServerStartMessage(IsoParams *params, const CJson *in, uint8_t *peerToken)
+static int ParseServerStartMessage(IsoParams *params, const CJson *in, Uint8Buff *peerToken)
 {
     if (params->opCode == OP_BIND) {
         RETURN_IF_ERR(GetAuthIdPeerFromPayload(in, &(params->baseParams.authIdSelf), &(params->baseParams.authIdPeer)));
@@ -144,7 +144,7 @@ static int ParseServerStartMessage(IsoParams *params, const CJson *in, uint8_t *
     }
     RETURN_IF_ERR(GetByteFromJson(in, FIELD_ISO_SALT, params->baseParams.randPeer.val,
         params->baseParams.randPeer.length));
-    RETURN_IF_ERR(GetByteFromJson(in, FIELD_TOKEN, peerToken, ISO_TOKEN_LEN));
+    RETURN_IF_ERR(GetByteFromJson(in, FIELD_TOKEN, peerToken->val, peerToken->length));
     RETURN_IF_ERR(GetIntFromJson(in, FIELD_PEER_USER_TYPE, &(params->peerUserType)));
     return HC_SUCCESS;
 }
@@ -152,112 +152,100 @@ static int ParseServerStartMessage(IsoParams *params, const CJson *in, uint8_t *
 static int CalculateTokenClient(SymBaseCurTask *task, IsoParams *params, const CJson *in, CJson *out, int *status)
 {
     int res;
-    uint8_t *peerToken = NULL;
-    uint8_t *selfToken = NULL;
     if (task->taskStatus < TASK_STATUS_SERVER_RES_TOKEN) {
-        LOGE("Invalid taskStatus:%d", task->taskStatus);
+        LOGE("Invalid taskStatus: %d", task->taskStatus);
         return HC_ERR_BAD_MESSAGE;
     }
 
     if (task->taskStatus > TASK_STATUS_SERVER_RES_TOKEN) {
-        LOGI("The message is repeated, ignore it, status :%d", task->taskStatus);
+        LOGI("The message is repeated, ignore it, status: %d", task->taskStatus);
         *status = IGNORE_MSG;
         return HC_SUCCESS;
     }
 
     // parse message
-    peerToken = (uint8_t *)HcMalloc(ISO_TOKEN_LEN, 0);
-    if (peerToken == NULL) {
-        res = HC_ERR_ALLOC_MEMORY;
-        goto err;
-    }
+    uint8_t peerToken[ISO_TOKEN_LEN] = { 0 };
     Uint8Buff peerTokenBuf = { peerToken, ISO_TOKEN_LEN };
 
-    selfToken = (uint8_t *)HcMalloc(ISO_TOKEN_LEN, 0);
-    if (selfToken == NULL) {
-        res = HC_ERR_ALLOC_MEMORY;
-        goto err;
-    }
+    uint8_t selfToken[ISO_TOKEN_LEN] = { 0 };
     Uint8Buff selfTokenBuf = { selfToken, ISO_TOKEN_LEN };
 
-    res = ParseServerStartMessage(params, in, peerToken);
+    res = ParseServerStartMessage(params, in, &peerTokenBuf);
     if (res != 0) {
-        LOGE("ParseServerStartMessage failed, res:%d", res);
-        goto err;
+        LOGE("ParseServerStartMessage failed, res: %x.", res);
+        return res;
     }
     res = GeneratePsk(in, params);
     if (res != 0) {
-        LOGE("GeneratePsk failed, res:%d", res);
-        goto err;
+        LOGE("GeneratePsk failed, res: %x.", res);
+        return res;
     }
 
     // execute
     res = IsoClientCheckAndGenToken(&params->baseParams, &peerTokenBuf, &selfTokenBuf);
     if (res != HC_SUCCESS) {
-        LOGE("IsoClientCheckAndGenToken failed, res:%d", res);
-        goto err;
+        LOGE("IsoClientCheckAndGenToken failed, res: %x.", res);
+        return res;
     }
 
     // package message
     res = PackDataForCalToken(params, &selfTokenBuf, out);
     if (res != 0) {
         LOGE("PackDataForCalToken failed, res: %d", res);
-        goto err;
+        return res;
     }
     task->taskStatus = TASK_STATUS_GEN_SESSION_KEY;
     *status = CONTINUE;
-err:
-    HcFree(peerToken);
-    HcFree(selfToken);
     return res;
 }
 
 static int GenerateSessionKey(SymBaseCurTask *task, IsoParams *params, const CJson *in, int *status)
 {
     if (task->taskStatus < TASK_STATUS_GEN_SESSION_KEY) {
-        LOGE("Invalid taskStatus:%d", task->taskStatus);
+        LOGE("Invalid taskStatus: %d", task->taskStatus);
         return HC_ERR_BAD_MESSAGE;
     }
 
     if (task->taskStatus > TASK_STATUS_GEN_SESSION_KEY) {
-        LOGI("The message is repeated, ignore it, status :%d", task->taskStatus);
+        LOGI("The message is repeated, ignore it, status: %d", task->taskStatus);
         *status = IGNORE_MSG;
         return HC_SUCCESS;
     }
 
     uint8_t *hmac = (uint8_t *)HcMalloc(HMAC_LEN, 0);
     if (hmac == NULL) {
+        LOGE("Malloc for hmac failed.");
         return HC_ERR_ALLOC_MEMORY;
     }
-    int res = GetByteFromJson(in, FIELD_RETURN_CODE_MAC, hmac, HMAC_LEN);
-    if (res != 0) {
-        LOGE("get mac failed, res:%d", res);
-        goto err;
+    int res;
+    if (GetByteFromJson(in, FIELD_RETURN_CODE_MAC, hmac, HMAC_LEN) != 0) {
+        LOGE("Get hmac from json failed.");
+        res = HC_ERR_JSON_GET;
+        goto ERR;
     }
 
     // execute
     res = IsoClientGenSessionKey(&params->baseParams, 0, hmac, HMAC_LEN);
     if (res != 0) {
-        LOGE("IsoClientGenSessionKey failed, res:%d", res);
-        goto err;
+        LOGE("IsoClientGenSessionKey failed, res: %x.", res);
+        goto ERR;
     }
 
     task->taskStatus = TASK_STATUS_FINAL;
     *status = FINISH;
-err:
+ERR:
     HcFree(hmac);
     return res;
 }
 
-static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson *in, CJson *out,
-    int *status)
+static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson *in, CJson *out, int *status)
 {
     int res;
     uint32_t step = ProtocolMessageIn(in);
     if (step == INVALID_MESSAGE) {
-        res = IsoClientStart(task, params, in, out, status);
+        res = IsoClientStart(task, params, out, status);
         step = STEP_ONE;
-        goto out_func;
+        goto OUT_FUNC;
     }
 
     step = step + 1; /* when receive peer message code, need to do next step */
@@ -272,17 +260,17 @@ static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson 
             res = HC_ERR_BAD_MESSAGE;
             break;
     }
-out_func:
+OUT_FUNC:
     if (res != HC_SUCCESS) {
+        LOGE("Process step:%d failed, res: %x.", step, res);
         return res;
     }
     if (step != STEP_THREE) {
         res = ClientProtocolMessageOut(out, params->opCode, step);
         if (res != HC_SUCCESS) {
-            LOGE("ClientProtocolMessageOut failed, res:%d", res);
+            LOGE("ClientProtocolMessageOut failed, res: %x.", res);
         }
     }
-
     return res;
 }
 
@@ -290,6 +278,7 @@ SymBaseCurTask *CreateProtocolClientTask(void)
 {
     IsoProtocolClientTask *task = (IsoProtocolClientTask *)HcMalloc(sizeof(IsoProtocolClientTask), 0);
     if (task == NULL) {
+        LOGE("Malloc for IsoProtocolClientTask failed.");
         return NULL;
     }
     task->taskBase.destroyTask = DestroyProtocolClientTask;

@@ -23,7 +23,7 @@
 
 static int32_t AddGroupOpToSendDataIfNeed(const BindSession *session, CJson *sendData)
 {
-    if ((session->moduleType != TCIS_MODULE) || (session->opCode != OP_BIND)) {
+    if ((session->moduleType != ACCOUNT_MODULE) || (session->opCode != OP_BIND)) {
         return HC_SUCCESS;
     }
     if (AddIntToJson(sendData, FIELD_GROUP_OP, ACCOUNT_BIND) != HC_SUCCESS) {
@@ -144,7 +144,7 @@ void InitModuleType(const CJson *jsonParams, BindSession *session)
 {
     bool isAccountBind = false;
     (void)GetBoolFromJson(jsonParams, FIELD_IS_ACCOUNT_BIND, &isAccountBind);
-    session->moduleType = (isAccountBind) ? TCIS_MODULE : DAS_MODULE;
+    session->moduleType = (isAccountBind) ? ACCOUNT_MODULE : DAS_MODULE;
 }
 
 int32_t ProcessLiteBindSession(Session *session, CJson *jsonParams)

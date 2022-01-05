@@ -30,7 +30,7 @@ static int32_t GetModuleTypeFromPayload(const CJson *authParams)
     if (authForm == AUTH_FORM_ACCOUNT_UNRELATED) {
         return DAS_MODULE;
     } else if ((authForm == AUTH_FORM_IDENTICAL_ACCOUNT) || (authForm == AUTH_FORM_ACROSS_ACCOUNT)) {
-        return TCIS_MODULE;
+        return ACCOUNT_MODULE;
     }
     LOGE("Invalid authForm for repeated payload check!");
     return INVALID_MODULE_TYPE;

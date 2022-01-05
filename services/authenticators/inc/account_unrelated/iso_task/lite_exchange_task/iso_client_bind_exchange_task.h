@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef ISO_CLIENT_BIND_EXCHANGE_TASK
-#define ISO_CLIENT_BIND_EXCHANGE_TASK
+#ifndef ISO_CLIENT_BIND_EXCHANGE_TASK_H
+#define ISO_CLIENT_BIND_EXCHANGE_TASK_H
 
 #include "iso_base_cur_task.h"
 

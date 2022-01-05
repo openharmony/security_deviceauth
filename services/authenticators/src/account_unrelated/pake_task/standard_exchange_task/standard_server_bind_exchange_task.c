@@ -14,8 +14,9 @@
  */
 
 #include "standard_server_bind_exchange_task.h"
-#include "das_common.h"
 #include "hc_log.h"
+#include "hc_types.h"
+#include "protocol_common.h"
 #include "standard_exchange_message_util.h"
 
 enum {
@@ -29,11 +30,11 @@ static CurTaskType GetTaskType(void)
     return TASK_TYPE_BIND_STANDARD_EXCHANGE;
 }
 
-static int ExchangeStart(AsyBaseCurTask *task, PakeParams *params, const CJson *in, CJson *out, int *status)
+static int ExchangeStart(AsyBaseCurTask *task, PakeParams *params, CJson *out, int *status)
 {
     int res = HC_SUCCESS;
     if (task->taskStatus != TASK_STATUS_SERVER_BIND_EXCHANGE_BEGIN) {
-        LOGI("The message is repeated, ignore it, status :%d", task->taskStatus);
+        LOGI("The message is repeated, ignore it, status: %d", task->taskStatus);
         *status = IGNORE_MSG;
         return HC_SUCCESS;
     }
@@ -68,7 +69,7 @@ static int ExchangeResponse(AsyBaseCurTask *task, PakeParams *params, const CJso
         return HC_ERR_BAD_MESSAGE;
     }
     if (task->taskStatus > TASK_STATUS_SERVER_BIND_EXCHANGE_START) {
-        LOGI("The message is repeated, ignore it, status :%d", task->taskStatus);
+        LOGI("The message is repeated, ignore it, status: %d", task->taskStatus);
         *status = IGNORE_MSG;
         return HC_SUCCESS;
     }
@@ -76,7 +77,11 @@ static int ExchangeResponse(AsyBaseCurTask *task, PakeParams *params, const CJso
     StandardBindExchangeServerTask *realTask = (StandardBindExchangeServerTask *)task;
 
     // parse message
-    GOTO_ERR_AND_SET_RET(GetIntFromJson(in, FIELD_PEER_USER_TYPE, &(params->userTypePeer)), res);
+    /*
+     * If failing to get userTypePeer, use the default value(DEVICE_TYPE_ACCESSORY),
+     * which was assigned at initialization.
+     */
+    (void)GetIntFromJson(in, FIELD_PEER_USER_TYPE, &(params->userTypePeer));
     if (params->baseParams.challengePeer.val == NULL) {
         GOTO_ERR_AND_SET_RET(GetPeerChallenge(params, in), res);
     }
@@ -93,13 +98,13 @@ static int ExchangeResponse(AsyBaseCurTask *task, PakeParams *params, const CJso
     sendToPeer = CreateJson();
     if (sendToPeer == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     GOTO_ERR_AND_SET_RET(AddIntToJson(sendToPeer, FIELD_MESSAGE, PAKE_BIND_EXCHANGE_RESPONSE), res);
     data = CreateJson();
     if (data == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     GOTO_ERR_AND_SET_RET(PackageNonceAndCipherToJson(&(realTask->params.nonce), &(realTask->params.exInfoCipher),
         data, FIELD_EX_AUTH_INFO), res);
@@ -109,7 +114,7 @@ static int ExchangeResponse(AsyBaseCurTask *task, PakeParams *params, const CJso
 
     task->taskStatus = TASK_STATUS_SERVER_BIND_EXCHANGE_RESPONSE;
     *status = FINISH;
-err:
+ERR:
     FreeJson(data);
     FreeJson(sendToPeer);
     return res;
@@ -118,14 +123,10 @@ err:
 static int Process(struct AsyBaseCurTaskT *task, PakeParams *params, const CJson *in, CJson *out, int *status)
 {
     int res;
-    if ((task == NULL) || (in == NULL) || (out == NULL) || (status == NULL)) {
-        return HC_ERR_INVALID_PARAMS;
-    }
-
     if (task->taskStatus == TASK_STATUS_SERVER_BIND_EXCHANGE_BEGIN) {
-        res = ExchangeStart(task, params, in, out, status);
+        res = ExchangeStart(task, params, out, status);
         if (res != HC_SUCCESS) {
-            goto err;
+            goto ERR;
         }
         return res;
     }
@@ -133,7 +134,7 @@ static int Process(struct AsyBaseCurTaskT *task, PakeParams *params, const CJson
     int message = 0;
     res = GetIntFromJson(in, "message", &message);
     if (res != HC_SUCCESS) {
-        goto err;
+        goto ERR;
     }
 
     switch (message) {
@@ -145,12 +146,11 @@ static int Process(struct AsyBaseCurTaskT *task, PakeParams *params, const CJson
             break;
     }
     if (res != HC_SUCCESS) {
-        goto err;
+        goto ERR;
     }
     return res;
-err:
+ERR:
     FreeAndCleanKey(&(params->baseParams.sessionKey));
-    SendErrorToOut(out, params->opCode, res);
     return res;
 }
 

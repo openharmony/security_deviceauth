@@ -26,6 +26,7 @@ typedef struct {
 
 typedef enum FileIdEnumT {
     FILE_ID_GROUP = 0,
+    FILE_ID_CRED_DATA,
     FILE_ID_LAST,
 } FileIdEnum;
 

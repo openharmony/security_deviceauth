@@ -233,7 +233,7 @@ static void GetCandidateGroupByOrder(const CJson *param, GroupQueryParams *query
     BaseGroupAuth *groupAuth = GetGroupAuth(ACCOUNT_RELATED_GROUP_AUTH_TYPE);
     if (groupAuth != NULL) {
         AccountRelatedGroupAuth *realGroupAuth = (AccountRelatedGroupAuth *)groupAuth;
-        realGroupAuth->getTcisCandidateGroup(param, queryParams, vec);
+        realGroupAuth->getAccountCandidateGroup(param, queryParams, vec);
     }
     queryParams->type = PEER_TO_PEER_GROUP;
     if (GetJoinedGroupInfoVecByDevId(queryParams, vec) != HC_SUCCESS) {

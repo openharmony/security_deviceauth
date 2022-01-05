@@ -14,7 +14,6 @@
  */
 
 #include "iso_client_task.h"
-#include "das_common.h"
 #include "hc_log.h"
 #include "hc_types.h"
 #include "iso_client_bind_exchange_task.h"
@@ -26,7 +25,7 @@ static int GetIsoClientTaskType(const struct SubTaskBaseT *task)
 {
     IsoClientTask *realTask = (IsoClientTask *)task;
     if (realTask->curTask == NULL) {
-        LOGE("cur Task is null");
+        LOGE("CurTask is null.");
         return TASK_TYPE_NONE;
     }
     return realTask->curTask->getCurTaskType();
@@ -51,21 +50,20 @@ static int CreateNextTask(IsoClientTask *realTask, const CJson *in, CJson *out, 
     switch (realTask->params.opCode) {
         case OP_BIND:
             if (realTask->curTask->getCurTaskType() == TASK_TYPE_BIND_LITE_EXCHANGE) {
-                LOGD("bind exchange task end");
+                LOGI("Bind exchange task end successfully.");
                 *status = FINISH;
                 return HC_SUCCESS;
             }
             realTask->curTask->destroyTask(realTask->curTask);
             realTask->curTask = CreateClientBindExchangeTask(&(realTask->params), in, out, status);
             if (realTask->curTask == NULL) {
-                LOGE("CreateBindExchangeTask failed");
-                SendErrorToOut(out, realTask->params.opCode, HC_ERROR);
+                LOGE("CreateBindExchangeTask failed.");
                 return HC_ERROR;
             }
             break;
         case OP_UNBIND:
             if (realTask->curTask->getCurTaskType() == TASK_TYPE_UNBIND_LITE_EXCHANGE) {
-                LOGD("unbind exchange task end");
+                LOGI("Unbind exchange task end successfully.");
                 *status = FINISH;
                 return HC_SUCCESS;
             }
@@ -73,44 +71,38 @@ static int CreateNextTask(IsoClientTask *realTask, const CJson *in, CJson *out, 
             realTask->curTask = CreateClientUnbindExchangeTask(&(realTask->params), in, out, status);
             if (realTask->curTask == NULL) {
                 LOGE("CreateBindExchangeTask failed");
-                SendErrorToOut(out, realTask->params.opCode, HC_ERROR);
                 return HC_ERROR;
             }
             break;
-        default:
+        case AUTHENTICATE:
             res = GenEncResult(&(realTask->params), ISO_RESULT_CONFIRM_CMD, out, RESULT_AAD, true);
             if (res != HC_SUCCESS) {
                 LOGE("GenEncResult failed, res:%d", res);
-                SendErrorToOut(out, realTask->params.opCode, res);
                 return res;
             }
-            LOGD("Authenticate task end.");
+            LOGI("Authenticate task end successfully.");
             *status = FINISH;
             break;
+        default:
+            LOGE("Unsupported opCode: %d.", realTask->params.opCode);
+            res = HC_ERR_NOT_SUPPORT;
     }
     return res;
 }
 
 static int Process(struct SubTaskBaseT *task, const CJson *in, CJson *out, int *status)
 {
-    if (task == NULL || in == NULL || out == NULL || status == NULL) {
-        return HC_ERR_INVALID_PARAMS;
-    }
     IsoClientTask *realTask = (IsoClientTask *)task;
     if (realTask->curTask == NULL) {
-        LOGE("cur Task is null");
+        LOGE("CurTask is null.");
         return HC_ERROR;
     }
     int res = realTask->curTask->process(realTask->curTask, &(realTask->params), in, out, status);
-    if (*status != FINISH) {
-        if (res != 0) {
-            SendErrorToOut(out, realTask->params.opCode, res);
-        }
+    if (res != HC_SUCCESS) {
+        LOGE("CurTask process failed, res: %x.", res);
         return res;
     }
-    if (res != 0) {
-        LOGE("process failed, res:%d", res);
-        SendErrorToOut(out, realTask->params.opCode, res);
+    if (*status != FINISH) {
         return res;
     }
     return CreateNextTask(realTask, in, out, status);
@@ -120,6 +112,7 @@ SubTaskBase *CreateIsoClientTask(const CJson *in)
 {
     IsoClientTask *task = (IsoClientTask *)HcMalloc(sizeof(IsoClientTask), 0);
     if (task == NULL) {
+        LOGE("Malloc for IsoClientTask failed.");
         return NULL;
     }
 
@@ -128,13 +121,15 @@ SubTaskBase *CreateIsoClientTask(const CJson *in)
     task->taskBase.process = Process;
 
     int res = InitIsoParams(&(task->params), in);
-    if (res != 0) {
+    if (res != HC_SUCCESS) {
+        LOGE("InitIsoParams failed, res: %x.", res);
         DestroyIsoClientTask((struct SubTaskBaseT *)task);
         return NULL;
     }
 
     task->curTask = CreateProtocolClientTask();
     if (task->curTask == NULL) {
+        LOGE("CreateProtocolClientTask failed.");
         DestroyIsoClientTask((struct SubTaskBaseT *)task);
         return NULL;
     }

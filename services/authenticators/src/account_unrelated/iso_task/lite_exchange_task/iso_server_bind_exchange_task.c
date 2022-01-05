@@ -14,7 +14,7 @@
  */
 
 #include "iso_server_bind_exchange_task.h"
-#include "das_common.h"
+#include "das_task_common.h"
 #include "das_module_defines.h"
 #include "hc_log.h"
 #include "hc_types.h"
@@ -34,8 +34,7 @@ static CurTaskType GetTaskType(void)
 
 void DestroyServerBindExchangeTask(struct SymBaseCurTaskT *task)
 {
-    IsoServerBindExchangeTask *realTask = (IsoServerBindExchangeTask *)task;
-    HcFree(realTask);
+    HcFree(task);
 }
 
 static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson *in, CJson *out, int *status)
@@ -47,7 +46,7 @@ static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson 
     }
 
     if (realTask->taskBase.taskStatus > TASK_TYPE_BEGIN) {
-        LOGI("The message is repeated, ignore it, status :%d", realTask->taskBase.taskStatus);
+        LOGI("The message is repeated, ignore it, status: %d", realTask->taskBase.taskStatus);
         *status = IGNORE_MSG;
         return HC_SUCCESS;
     }
@@ -84,13 +83,13 @@ static int DecryptChallenge(const IsoParams *params, const CJson *in, uint8_t *c
     encData = (uint8_t *)HcMalloc(ENC_CHALLENGE_LEN, 0);
     if (encData == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     GOTO_ERR_AND_SET_RET(GetByteFromJson(in, FIELD_ENC_DATA, encData, ENC_CHALLENGE_LEN), res);
     nonce = (uint8_t *)HcMalloc(NONCE_SIZE, 0);
     if (nonce == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     GOTO_ERR_AND_SET_RET(GetByteFromJson(in, FIELD_NONCE, nonce, NONCE_SIZE), res);
     Uint8Buff encDataBuf = { encData, ENC_CHALLENGE_LEN };
@@ -104,9 +103,9 @@ static int DecryptChallenge(const IsoParams *params, const CJson *in, uint8_t *c
         &challengeBuf);
     if (res != 0) {
         LOGE("decrypt challenge failed, res:%d", res);
-        goto err;
+        goto ERR;
     }
-err:
+ERR:
     HcFree(encData);
     HcFree(nonce);
     return res;
@@ -120,48 +119,49 @@ static int GenAndEncAuthCode(const IsoParams *params, Uint8Buff *nonceBuf, const
     uint8_t *authCode = (uint8_t *)HcMalloc(AUTH_CODE_LEN, 0);
     if (authCode == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     Uint8Buff authCodeBuf = { authCode, AUTH_CODE_LEN };
     res = params->baseParams.loader->generateRandom(&authCodeBuf);
     if (res != 0) {
         LOGE("generate auth code failed, res:%d", res);
-        goto err;
+        goto ERR;
     }
 
     res = params->baseParams.loader->generateRandom(nonceBuf);
     if (res != 0) {
         LOGE("generate nonce failed, res:%d", res);
-        goto err;
+        goto ERR;
     }
     GcmParam gcmParam = { nonceBuf->val, nonceBuf->length, challengeBuf->val, challengeBuf->length };
     res = params->baseParams.loader->aesGcmEncrypt(&params->baseParams.sessionKey, &authCodeBuf, &gcmParam, false,
         encAuthCodeBuf);
     if (res != 0) {
         LOGE("encrypt auth code failed, res:%d", res);
-        goto err;
+        goto ERR;
     }
 
     keyAlias = (uint8_t *)HcMalloc(ISO_KEY_ALIAS_LEN, 0);
     if (keyAlias == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     res = GenerateKeyAliasInIso(params, keyAlias, ISO_KEY_ALIAS_LEN, true);
     if (res != 0) {
         LOGE("GenerateKeyAliasInIso failed, res:%d", res);
-        goto err;
+        goto ERR;
     }
 
+    LOGI("AuthCode alias: %x%x%x%x****.", keyAlias[0], keyAlias[1], keyAlias[2], keyAlias[3]);
     Uint8Buff keyAliasBuf = { keyAlias, ISO_KEY_ALIAS_LEN };
     ExtraInfo exInfo = { { params->baseParams.authIdPeer.val, params->baseParams.authIdPeer.length },
         params->peerUserType, PAIR_TYPE_BIND };
-    res = params->baseParams.loader->importAsymmetricKey(&keyAliasBuf, &authCodeBuf, &exInfo);
+    res = params->baseParams.loader->importSymmetricKey(&keyAliasBuf, &authCodeBuf, KEY_PURPOSE_MAC, &exInfo);
     if (res != 0) {
-        LOGE("importAsymmetricKey failed, res:%d", res);
-        goto err;
+        LOGE("ImportSymmetricKey failed, res: %x.", res);
+        goto ERR;
     }
-err:
+ERR:
     HcFree(keyAlias);
     FreeAndCleanKey(&authCodeBuf);
     return res;
@@ -178,12 +178,12 @@ static int GenerateAuthCodeAndImport(const IsoParams *params, CJson *out, uint8_
     nonce = (uint8_t *)HcMalloc(NONCE_SIZE, 0);
     if (nonce == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     encAuthCode = (uint8_t *)HcMalloc(AUTH_CODE_LEN + TAG_LEN, 0);
     if (encAuthCode == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     Uint8Buff encAuthCodeBuf = { encAuthCode, AUTH_CODE_LEN + TAG_LEN };
     Uint8Buff nonceBuf = { nonce, NONCE_SIZE };
@@ -192,17 +192,17 @@ static int GenerateAuthCodeAndImport(const IsoParams *params, CJson *out, uint8_
     res = GenAndEncAuthCode(params, &nonceBuf, &challengeBuf, &encAuthCodeBuf);
     if (res != 0) {
         LOGE("GenAndEncAuthCode failed, res:%d", res);
-        goto err;
+        goto ERR;
     }
     payload = CreateJson();
     if (payload == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     sendToPeer = CreateJson();
     if (sendToPeer == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     GOTO_ERR_AND_SET_RET(AddIntToJson(sendToPeer, FIELD_MESSAGE, ISO_SERVER_BIND_EXCHANGE_RET), res);
     GOTO_ERR_AND_SET_RET(AddByteToJson(payload, FIELD_ENC_AUTH_TOKEN, encAuthCodeBuf.val, encAuthCodeBuf.length), res);
@@ -210,7 +210,7 @@ static int GenerateAuthCodeAndImport(const IsoParams *params, CJson *out, uint8_
     GOTO_ERR_AND_SET_RET(AddObjToJson(sendToPeer, FIELD_PAYLOAD, payload), res);
     GOTO_ERR_AND_SET_RET(AddObjToJson(out, FIELD_SEND_TO_PEER, sendToPeer), res);
 
-err:
+ERR:
     HcFree(nonce);
     HcFree(encAuthCode);
     FreeJson(payload);
@@ -225,21 +225,21 @@ static int ServerBindExchangeStart(const IsoParams *params, IsoServerBindExchang
     uint8_t *challenge = (uint8_t *)HcMalloc(CHALLENGE_SIZE, 0);
     if (challenge == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     res = DecryptChallenge(params, in, challenge, CHALLENGE_SIZE);
     if (res != 0) {
         LOGE("decrypt challenge failed, res:%d", res);
-        goto err;
+        goto ERR;
     }
     res = GenerateAuthCodeAndImport(params, out, challenge, CHALLENGE_SIZE);
     if (res != 0) {
         LOGE("GenerateAuthCodeAndImport failed, res:%d", res);
-        goto err;
+        goto ERR;
     }
     task->taskBase.taskStatus = TASK_TYPE_BEGIN;
     *status = CONTINUE;
-err:
+ERR:
     HcFree(challenge);
     return res;
 }

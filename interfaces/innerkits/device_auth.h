@@ -66,6 +66,7 @@
 #define FIELD_GROUP_VISIBILITY "groupVisibility"
 #define FIELD_EXPIRE_TIME "expireTime"
 #define FIELD_IS_DELETE_ALL "isDeleteAll"
+#define FIELD_BLE_CHALLENGE "bleChallenge"
 
 typedef enum {
     ALL_GROUP = 0,
@@ -92,10 +93,13 @@ typedef enum {
 } GroupAuthForm;
 
 typedef enum {
-    CREDENTIAL_SAVE = 0,
-    CREDENTIAL_CLEAR = 1,
-    CREDENTIAL_UPDATE = 2,
-    CREDENTIAL_QUERY = 3,
+    IMPORT_SELF_CREDENTIAL = 0,
+    DELETE_SELF_CREDENTIAL = 1,
+    QUERY_SELF_CREDENTIAL_INFO = 2,
+    IMPORT_TRUSTED_CREDENTIALS = 3,
+    DELETE_TRUSTED_CREDENTIALS = 4,
+    QUERY_TRUSTED_CREDENTIALS = 5,
+    REQUEST_SIGNATURE = 6,
 } CredentialCode;
 
 typedef enum {
@@ -103,6 +107,12 @@ typedef enum {
     DEVICE_TYPE_CONTROLLER = 1,
     DEVICE_TYPE_PROXY = 2
 } UserType;
+
+typedef enum {
+    EXPIRE_TIME_INDEFINITE = -1,
+    EXPIRE_TIME_MIN = 1,
+    EXPIRE_TIME_MAX = 90,
+} ExpireTime;
 
 typedef enum {
     REQUEST_REJECTED = 0x80000005,

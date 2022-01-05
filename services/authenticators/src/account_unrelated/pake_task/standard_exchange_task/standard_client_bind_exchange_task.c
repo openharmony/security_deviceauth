@@ -14,7 +14,6 @@
  */
 
 #include "standard_client_bind_exchange_task.h"
-#include "das_common.h"
 #include "hc_log.h"
 #include "hc_types.h"
 #include "protocol_common.h"
@@ -35,7 +34,7 @@ static int ExchangeRequest(AsyBaseCurTask *task, PakeParams *params, const CJson
 {
     int res;
     if (task->taskStatus != TASK_STATUS_CLIENT_BIND_EXCHANGE_BEGIN) {
-        LOGI("The message is repeated, ignore it, status :%d", task->taskStatus);
+        LOGI("The message is repeated, ignore it, status: %d", task->taskStatus);
         *status = IGNORE_MSG;
         return HC_SUCCESS;
     }
@@ -47,7 +46,7 @@ static int ExchangeRequest(AsyBaseCurTask *task, PakeParams *params, const CJson
     CJson *sendToPeer = CreateJson();
     if (sendToPeer == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
 
     // parse message
@@ -75,21 +74,21 @@ static int ExchangeRequest(AsyBaseCurTask *task, PakeParams *params, const CJson
 
     task->taskStatus = TASK_STATUS_CLIENT_BIND_EXCHANGE_REQUEST;
     *status = CONTINUE;
-err:
+ERR:
     FreeJson(data);
     FreeJson(sendToPeer);
     return res;
 }
 
-static int ExchangeConfirm(AsyBaseCurTask *task, PakeParams *params, const CJson *in, CJson *out, int *status)
+static int ExchangeConfirm(AsyBaseCurTask *task, PakeParams *params, const CJson *in, int *status)
 {
     int res;
     if (task->taskStatus < TASK_STATUS_CLIENT_BIND_EXCHANGE_REQUEST) {
-        LOGE("Invalid taskStatus:%d", task->taskStatus);
+        LOGE("Invalid taskStatus: %d", task->taskStatus);
         return HC_ERR_BAD_MESSAGE;
     }
     if (task->taskStatus > TASK_STATUS_CLIENT_BIND_EXCHANGE_REQUEST) {
-        LOGI("The message is repeated, ignore it, status :%d", task->taskStatus);
+        LOGI("The message is repeated, ignore it, status: %d", task->taskStatus);
         *status = IGNORE_MSG;
         return HC_SUCCESS;
     }
@@ -97,7 +96,7 @@ static int ExchangeConfirm(AsyBaseCurTask *task, PakeParams *params, const CJson
     StandardBindExchangeClientTask *realTask = (StandardBindExchangeClientTask *)task;
 
     // parse message
-    RETURN_IF_ERR(GetIntFromJson(in, FIELD_PEER_USER_TYPE, &(params->userTypePeer)));
+    (void)GetIntFromJson(in, FIELD_PEER_USER_TYPE, &(params->userTypePeer));
     RETURN_IF_ERR(ParseNonceAndCipherFromJson(&(realTask->params.nonce),
         &(realTask->params.exInfoCipher), in, FIELD_EX_AUTH_INFO));
 
@@ -119,7 +118,7 @@ static int Process(struct AsyBaseCurTaskT *task, PakeParams *params, const CJson
     if (task->taskStatus == TASK_STATUS_CLIENT_BIND_EXCHANGE_BEGIN) {
         res = ExchangeRequest(task, params, in, out, status);
         if (res != HC_SUCCESS) {
-            goto err;
+            goto ERR;
         }
         return res;
     }
@@ -127,24 +126,23 @@ static int Process(struct AsyBaseCurTaskT *task, PakeParams *params, const CJson
     int message = 0;
     res = GetIntFromJson(in, "message", &message);
     if (res != HC_SUCCESS) {
-        goto err;
+        goto ERR;
     }
 
     switch (message) {
         case PAKE_BIND_EXCHANGE_RESPONSE:
-            res = ExchangeConfirm(task, params, in, out, status);
+            res = ExchangeConfirm(task, params, in, status);
             break;
         default:
             res = HC_ERR_INVALID_PARAMS;
             break;
     }
     if (res != HC_SUCCESS) {
-        goto err;
+        goto ERR;
     }
     return res;
-err:
+ERR:
     FreeAndCleanKey(&(params->baseParams.sessionKey));
-    SendErrorToOut(out, params->opCode, res);
     return res;
 }
 
@@ -159,7 +157,7 @@ static void DestroyStandardBindExchangeClientTask(struct AsyBaseCurTaskT *task)
     HcFree(innerTask);
 }
 
-AsyBaseCurTask *CreateStandardBindExchangeClientTask()
+AsyBaseCurTask *CreateStandardBindExchangeClientTask(void)
 {
     StandardBindExchangeClientTask *task =
         (StandardBindExchangeClientTask *)HcMalloc(sizeof(StandardBindExchangeClientTask), 0);

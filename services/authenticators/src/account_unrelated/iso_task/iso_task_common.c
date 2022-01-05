@@ -15,13 +15,14 @@
 
 #include "iso_task_common.h"
 #include <time.h>
-#include "das_common.h"
+#include "das_task_common.h"
 #include "das_module_defines.h"
 #include "hc_log.h"
 #include "hc_types.h"
 #include "iso_protocol_common.h"
+#include "protocol_common.h"
 
-static int GenerateReturnKey(const IsoParams *params, uint8_t *returnKey, uint32_t returnKeyLen)
+static int GenerateReturnKey(IsoParams *params, uint8_t *returnKey, uint32_t returnKeyLen)
 {
     int hkdfSaltLen = params->baseParams.randPeer.length + params->baseParams.randPeer.length;
     int res;
@@ -34,26 +35,26 @@ static int GenerateReturnKey(const IsoParams *params, uint8_t *returnKey, uint32
             params->baseParams.randSelf.length) != EOK) {
             LOGE("Copy randSelf failed.");
             res = HC_ERR_MEMORY_COPY;
-            goto err;
+            goto ERR;
         }
         if (memcpy_s(hkdfSalt + params->baseParams.randSelf.length, hkdfSaltLen - params->baseParams.randSelf.length,
             params->baseParams.randPeer.val, params->baseParams.randPeer.length) != EOK) {
             LOGE("Copy randPeer failed.");
             res = HC_ERR_MEMORY_COPY;
-            goto err;
+            goto ERR;
         }
     } else {
         if (memcpy_s(hkdfSalt, hkdfSaltLen, params->baseParams.randPeer.val,
             params->baseParams.randPeer.length) != EOK) {
             LOGE("Copy randPeer failed.");
             res = HC_ERR_MEMORY_COPY;
-            goto err;
+            goto ERR;
         }
         if (memcpy_s(hkdfSalt + params->baseParams.randPeer.length, hkdfSaltLen - params->baseParams.randPeer.length,
             params->baseParams.randSelf.val, params->baseParams.randSelf.length) != EOK) {
             LOGE("Copy randSelf failed.");
             res = HC_ERR_MEMORY_COPY;
-            goto err;
+            goto ERR;
         }
     }
     Uint8Buff hkdfSaltBuf = { hkdfSalt, hkdfSaltLen };
@@ -63,9 +64,10 @@ static int GenerateReturnKey(const IsoParams *params, uint8_t *returnKey, uint32
         &returnKeyBuf, false);
     if (res != HC_SUCCESS) {
         LOGE("computeHkdf for returnKey failed.");
-        goto err;
+        goto ERR;
     }
-err:
+ERR:
+    FreeAndCleanKey(&(params->baseParams.sessionKey));
     HcFree(hkdfSalt);
     return res;
 }
@@ -78,6 +80,7 @@ int GenerateEncResult(const IsoParams *params, int message, CJson *sendToPeer, c
     Uint8Buff nonceBuf = { nonce, sizeof(nonce) };
     int ret = params->baseParams.loader->generateRandom(&nonceBuf);
     if (ret != 0) {
+        LOGE("Generate nonce failed, res: %x.", ret);
         return ret;
     }
 
@@ -91,18 +94,18 @@ int GenerateEncResult(const IsoParams *params, int message, CJson *sendToPeer, c
     out = (uint8_t *)HcMalloc((sizeof(int) + TAG_LEN), 0);
     if (out == NULL) {
         ret = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     Uint8Buff outBuf = { out, sizeof(int) + TAG_LEN };
     ret = params->baseParams.loader->aesGcmEncrypt(&params->baseParams.sessionKey, &plainBuf,
         &encryptInfo, false, &outBuf);
     if (ret != HC_SUCCESS) {
-        goto err;
+        goto ERR;
     }
     payload = CreateJson();
     if (payload == NULL) {
         ret = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     GOTO_ERR_AND_SET_RET(AddByteToJson(payload, FIELD_NONCE, nonce, sizeof(nonce)), ret);
     GOTO_ERR_AND_SET_RET(AddByteToJson(payload, FIELD_ENC_RESULT, out, sizeof(int) + TAG_LEN), ret);
@@ -110,17 +113,18 @@ int GenerateEncResult(const IsoParams *params, int message, CJson *sendToPeer, c
     GOTO_ERR_AND_SET_RET(AddObjToJson(sendToPeer, FIELD_PAYLOAD, payload), ret);
     GOTO_ERR_AND_SET_RET(AddIntToJson(sendToPeer, FIELD_MESSAGE, message), ret);
     GOTO_ERR_AND_SET_RET(AddIntToJson(sendToPeer, FIELD_AUTH_FORM, AUTH_FORM_ACCOUNT_UNRELATED), ret);
-err:
+ERR:
     FreeJson(payload);
     HcFree(out);
     return ret;
 }
 
-int SendResultToFinalSelf(const IsoParams *params, CJson *out, bool isNeedReturnKey)
+int SendResultToFinalSelf(IsoParams *params, CJson *out, bool isNeedReturnKey)
 {
     CJson *sendToSelf = CreateJson();
     if (sendToSelf == NULL) {
-        return HC_ERR_ALLOC_MEMORY;
+        LOGE("Create sendToSelf json failed.");
+        return HC_ERR_JSON_CREATE;
     }
     uint8_t *returnSessionKey = NULL;
     int res = 0;
@@ -129,18 +133,20 @@ int SendResultToFinalSelf(const IsoParams *params, CJson *out, bool isNeedReturn
     if (isNeedReturnKey) {
         returnSessionKey = (uint8_t *)HcMalloc(params->keyLen, 0);
         if (returnSessionKey == NULL) {
+            LOGE("Malloc for returnSessionKey failed.");
             res = HC_ERR_ALLOC_MEMORY;
-            goto err;
+            goto ERR;
         }
         res = GenerateReturnKey(params, returnSessionKey, params->keyLen);
         if (res != 0) {
             LOGE("gen return key failed, res:%d", res);
-            goto err;
+            goto ERR;
         }
         GOTO_ERR_AND_SET_RET(AddByteToJson(sendToSelf, FIELD_SESSION_KEY, returnSessionKey, params->keyLen), res);
     }
     GOTO_ERR_AND_SET_RET(AddObjToJson(out, FIELD_SEND_TO_SELF, sendToSelf), res);
-err:
+ERR:
+    ClearSensitiveStringInJson(sendToSelf, FIELD_SESSION_KEY);
     FreeJson(sendToSelf);
     if (returnSessionKey != NULL) {
         (void)memset_s(returnSessionKey, params->keyLen, 0, params->keyLen);
@@ -149,34 +155,36 @@ err:
     return res;
 }
 
-int GenEncResult(const IsoParams *params, int message, CJson *out, const char *aad, bool isNeedReturnKey)
+int GenEncResult(IsoParams *params, int message, CJson *out, const char *aad, bool isNeedReturnKey)
 {
     CJson *sendToSelf = CreateJson();
     if (sendToSelf == NULL) {
-        return HC_ERR_ALLOC_MEMORY;
+        LOGE("Create sendToSelf json failed.");
+        return HC_ERR_JSON_CREATE;
     }
     CJson *sendToPeer = CreateJson();
     if (sendToPeer == NULL) {
+        LOGE("Create sendToPeer json failed.");
         FreeJson(sendToSelf);
-        return HC_ERR_ALLOC_MEMORY;
+        return HC_ERR_JSON_CREATE;
     }
 
     uint8_t *returnKey = NULL;
     int res = GenerateEncResult(params, message, sendToPeer, aad);
     if (res != 0) {
-        goto err;
+        goto ERR;
     }
     GOTO_ERR_AND_SET_RET(AddIntToJson(sendToSelf, FIELD_AUTH_FORM, AUTH_FORM_ACCOUNT_UNRELATED), res);
     if (isNeedReturnKey) {
         returnKey = (uint8_t *)HcMalloc(params->keyLen, 0);
         if (returnKey == NULL) {
             res = HC_ERR_ALLOC_MEMORY;
-            goto err;
+            goto ERR;
         }
         res = GenerateReturnKey(params, returnKey, params->keyLen);
         if (res != 0) {
             LOGE("gen return key failed, res:%d", res);
-            goto err;
+            goto ERR;
         }
         GOTO_ERR_AND_SET_RET(AddByteToJson(sendToSelf, FIELD_SESSION_KEY, returnKey,
             params->keyLen), res);
@@ -184,7 +192,8 @@ int GenEncResult(const IsoParams *params, int message, CJson *out, const char *a
     GOTO_ERR_AND_SET_RET(AddIntToJson(sendToSelf, FIELD_OPERATION_CODE, params->opCode), res);
     GOTO_ERR_AND_SET_RET(AddObjToJson(out, FIELD_SEND_TO_PEER, sendToPeer), res);
     GOTO_ERR_AND_SET_RET(AddObjToJson(out, FIELD_SEND_TO_SELF, sendToSelf), res);
-err:
+ERR:
+    ClearSensitiveStringInJson(sendToSelf, FIELD_SESSION_KEY);
     FreeJson(sendToPeer);
     FreeJson(sendToSelf);
     if (returnKey != NULL) {
@@ -204,13 +213,13 @@ int CheckEncResult(IsoParams *params, const CJson *in, const char *aad)
     nonce = (uint8_t *)HcMalloc(NONCE_SIZE, 0);
     if (nonce == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     GOTO_ERR_AND_SET_RET(GetByteFromJson(in, FIELD_NONCE, nonce, NONCE_SIZE), res);
     encResult = (uint8_t *)HcMalloc(sizeof(int) + TAG_LEN, 0);
     if (encResult == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
     GOTO_ERR_AND_SET_RET(GetByteFromJson(in, FIELD_ENC_RESULT, encResult, sizeof(int) + TAG_LEN), res);
     Uint8Buff outBuf = { (uint8_t *)&result, sizeof(int) };
@@ -225,9 +234,9 @@ int CheckEncResult(IsoParams *params, const CJson *in, const char *aad)
         &outBuf);
     if (res != 0) {
         LOGE("decrypt result failed, res:%d", res);
-        goto err;
+        goto ERR;
     }
-err:
+ERR:
     HcFree(nonce);
     HcFree(encResult);
     return res;
@@ -242,11 +251,12 @@ void DeleteAuthCode(const IsoParams *params)
     int res = GenerateKeyAliasInIso(params, keyAlias, ISO_KEY_ALIAS_LEN, true);
     if (res != 0) {
         LOGE("GenerateKeyAliasInIso failed, res:%d", res);
-        goto err;
+        goto ERR;
     }
+    LOGI("AuthCode alias: %x%x%x%x****.", keyAlias[0], keyAlias[1], keyAlias[2], keyAlias[3]);
     Uint8Buff outKeyAlias = { keyAlias, ISO_KEY_ALIAS_LEN };
     params->baseParams.loader->deleteKey(&outKeyAlias);
-err:
+ERR:
     HcFree(keyAlias);
     return;
 }
@@ -256,12 +266,9 @@ void DestroyIsoParams(IsoParams *params)
     if (params == NULL) {
         return;
     }
-    if (params->baseParams.sessionKey.val != NULL) {
-        (void)memset_s(params->baseParams.sessionKey.val, params->baseParams.sessionKey.length, 0,
-            params->baseParams.sessionKey.length);
-        HcFree(params->baseParams.sessionKey.val);
-        params->baseParams.sessionKey.val = NULL;
-    }
+
+    DestroyIsoBaseParams(&params->baseParams);
+
     if (params->packageName != NULL) {
         HcFree(params->packageName);
         params->packageName = NULL;
@@ -269,22 +276,6 @@ void DestroyIsoParams(IsoParams *params)
     if (params->serviceType != NULL) {
         HcFree(params->serviceType);
         params->serviceType = NULL;
-    }
-    if (params->baseParams.randSelf.val != NULL) {
-        HcFree(params->baseParams.randSelf.val);
-        params->baseParams.randSelf.val = NULL;
-    }
-    if (params->baseParams.randPeer.val != NULL) {
-        HcFree(params->baseParams.randPeer.val);
-        params->baseParams.randPeer.val = NULL;
-    }
-    if (params->baseParams.authIdPeer.val != NULL) {
-        HcFree(params->baseParams.authIdPeer.val);
-        params->baseParams.authIdPeer.val = NULL;
-    }
-    if (params->baseParams.authIdSelf.val != NULL) {
-        HcFree(params->baseParams.authIdSelf.val);
-        params->baseParams.authIdSelf.val = NULL;
     }
     if (params->seed.val != NULL) {
         HcFree(params->seed.val);
@@ -307,7 +298,7 @@ static int FillAuthId(IsoParams *params, const CJson *in)
     }
     uint32_t authIdLen = strlen(authId);
     if (authIdLen == 0 || authIdLen > MAX_AUTH_ID_LEN) {
-        LOGE("Invalid authIdSelfLen");
+        LOGE("Invalid authIdSelfLen: %d.", authIdLen);
         return HC_ERR_INVALID_PARAMS;
     }
     params->baseParams.authIdSelf.length = authIdLen;
@@ -333,7 +324,7 @@ static int FillAuthId(IsoParams *params, const CJson *in)
         }
         authIdLen = strlen(authId);
         if (authIdLen == 0 || authIdLen > MAX_AUTH_ID_LEN) {
-            LOGE("Invalid authIdPeerLen");
+            LOGE("Invalid authIdPeerLen %d.", authIdLen);
             return HC_ERR_INVALID_PARAMS;
         }
         params->baseParams.authIdPeer.length = authIdLen;
@@ -350,24 +341,6 @@ static int FillAuthId(IsoParams *params, const CJson *in)
     }
 
     return HC_SUCCESS;
-}
-
-static int AllocRandom(IsoParams *params)
-{
-    int res = HC_SUCCESS;
-    params->baseParams.randSelf.length = RAND_BYTE_LEN;
-    params->baseParams.randPeer.length = RAND_BYTE_LEN;
-    params->baseParams.randSelf.val = (uint8_t *)HcMalloc(params->baseParams.randSelf.length, 0);
-    if (params->baseParams.randSelf.val == NULL) {
-        LOGE("malloc randSelf failed");
-        return HC_ERR_ALLOC_MEMORY;
-    }
-    params->baseParams.randPeer.val = (uint8_t *)HcMalloc(params->baseParams.randPeer.length, 0);
-    if (params->baseParams.randPeer.val == NULL) {
-        LOGE("malloc randPeer failed");
-        res = HC_ERR_ALLOC_MEMORY;
-    }
-    return res;
 }
 
 static int FillPkgNameAndServiceType(IsoParams *params, const CJson *in)
@@ -433,6 +406,7 @@ static int AllocSeed(IsoParams *params)
 {
     params->seed.val = (uint8_t *)HcMalloc(SEED_LEN, 0);
     if (params->seed.val == NULL) {
+        LOGE("Malloc for seed failed.");
         return HC_ERR_ALLOC_MEMORY;
     }
     params->seed.length = SEED_LEN;
@@ -462,13 +436,13 @@ static int32_t GetKeyLength(IsoParams *params, const CJson *in)
         params->keyLen = 0;
         return HC_SUCCESS;
     }
-    int res = GetIntFromJson(in, FIELD_KEY_LENGTH, (int *)&(params->keyLen));
-    if (res != HC_SUCCESS) {
-        LOGD("get key length failed, use default, res: %d", res);
+
+    if (GetIntFromJson(in, FIELD_KEY_LENGTH, (int *)&(params->keyLen)) != 0) {
+        LOGD("Get key length failed, use default.");
         params->keyLen = DEFAULT_RETURN_KEY_LENGTH;
     }
     if (params->keyLen < MIN_OUTPUT_KEY_LEN || params->keyLen > MAX_OUTPUT_KEY_LEN) {
-        LOGE("Output key length is invalid.");
+        LOGE("Output key length is invalid, keyLen: %d.", params->keyLen);
         return HC_ERR_INVALID_LEN;
     }
     return HC_SUCCESS;
@@ -476,51 +450,52 @@ static int32_t GetKeyLength(IsoParams *params, const CJson *in)
 
 int InitIsoParams(IsoParams *params, const CJson *in)
 {
-    int res = GetIntFromJson(in, FIELD_OPERATION_CODE, &(params->opCode));
-    if (res != 0) {
+    int res;
+    if (GetIntFromJson(in, FIELD_OPERATION_CODE, &(params->opCode)) != 0) {
+        LOGD("Get opCode failed, use default.");
         params->opCode = AUTHENTICATE;
     }
-    res = GetBoolFromJson(in, FIELD_IS_CLIENT, &(params->isClient));
-    if (res != HC_SUCCESS) {
+    if (params->opCode != OP_BIND && params->opCode != OP_UNBIND && params->opCode != AUTHENTICATE) {
+        LOGE("Unsupported opCode: %d.", params->opCode);
+        res = HC_ERR_NOT_SUPPORT;
+        goto ERR;
+    }
+    if (GetBoolFromJson(in, FIELD_IS_CLIENT, &(params->isClient)) != 0) {
         LOGE("get isClient failed");
-        goto err;
+        res = HC_ERR_JSON_GET;
+        goto ERR;
+    }
+    res = InitIsoBaseParams(&params->baseParams);
+    if (res != HC_SUCCESS) {
+        LOGE("InitIsoBaseParams failed, res: %x.", res);
+        goto ERR;
     }
     res = GetKeyLength(params, in);
-    if (res != 0) {
-        goto err;
-    }
-    params->baseParams.sessionKey.length = ISO_SESSION_KEY_LEN;
-    params->baseParams.loader = GetLoaderInstance();
-    if (params->baseParams.loader == NULL) {
-        res = HC_ERROR;
-        goto err;
+    if (res != HC_SUCCESS) {
+        goto ERR;
     }
     res = GetUserType(params, in);
-    if (res != 0) {
-        goto err;
+    if (res != HC_SUCCESS) {
+        goto ERR;
     }
     res = FillAuthId(params, in);
-    if (res != 0) {
-        goto err;
-    }
-    res = AllocRandom(params);
-    if (res != 0) {
-        goto err;
+    if (res != HC_SUCCESS) {
+        goto ERR;
     }
     res = FillPkgNameAndServiceType(params, in);
-    if (res != 0) {
-        goto err;
+    if (res != HC_SUCCESS) {
+        goto ERR;
     }
     res = FillPin(params, in);
-    if (res != 0) {
-        goto err;
+    if (res != HC_SUCCESS) {
+        goto ERR;
     }
     res = AllocSeed(params);
-    if (res != 0) {
-        goto err;
+    if (res != HC_SUCCESS) {
+        goto ERR;
     }
     return HC_SUCCESS;
-err:
+ERR:
     DestroyIsoParams(params);
     return res;
 }
@@ -533,6 +508,7 @@ static int AuthGeneratePsk(const Uint8Buff *seed, IsoParams *params)
         return res;
     }
 
+    LOGI("AuthCode alias: %x%x%x%x****.", keyAlias[0], keyAlias[1], keyAlias[2], keyAlias[3]);
     Uint8Buff keyAliasBuf = { keyAlias, sizeof(keyAlias) };
     Uint8Buff pskBuf = { params->baseParams.psk, sizeof(params->baseParams.psk) };
     return params->baseParams.loader->computeHmac(&keyAliasBuf, seed, &pskBuf, true);
@@ -574,18 +550,29 @@ int GenerateKeyAliasInIso(const IsoParams *params, uint8_t *keyAlias, uint32_t k
 
 int GeneratePsk(const CJson *in, IsoParams *params)
 {
-    int res = 0;
     if (!params->isClient) {
-        res = GetByteFromJson(in, FIELD_SEED, params->seed.val, params->seed.length);
+        if (GetByteFromJson(in, FIELD_SEED, params->seed.val, params->seed.length) != 0) {
+            LOGE("Get seed failed.");
+            return HC_ERR_JSON_GET;
+        }
     }
-    if (res != 0) {
-        LOGE("get seed failed.");
-        return res;
-    }
+    int res;
     if (params->opCode == AUTHENTICATE || params->opCode == OP_UNBIND) {
-        return AuthGeneratePsk(&params->seed, params);
+        res = AuthGeneratePsk(&params->seed, params);
+    } else {
+        res = AuthGeneratePskUsePin(&params->seed, params, params->pinCodeString);
+        if (params->pinCodeString != NULL) {
+            (void)memset_s(params->pinCodeString, HcStrlen(params->pinCodeString), 0, HcStrlen(params->pinCodeString));
+        }
     }
-    return AuthGeneratePskUsePin(&params->seed, params, params->pinCodeString);
+    if (res != HC_SUCCESS) {
+        LOGE("Generate psk failed, res: %x.", res);
+        goto ERR;
+    }
+    return res;
+ERR:
+    (void)memset_s(params->baseParams.psk, sizeof(params->baseParams.psk), 0, sizeof(params->baseParams.psk));
+    return res;
 }
 
 int GenerateSeed(IsoParams *params)
@@ -612,20 +599,20 @@ int GenerateSeed(IsoParams *params)
     if (memcpy_s(input, SEED_LEN + sizeof(clock_t), random, SEED_LEN) != EOK) {
         LOGE("memcpy seed failed.");
         res = HC_ERR_MEMORY_COPY;
-        goto err;
+        goto ERR;
     }
     if (memcpy_s(input + SEED_LEN, sizeof(clock_t), &times, sizeof(clock_t)) != EOK) {
         LOGE("memcpy times failed.");
         res = HC_ERR_MEMORY_COPY;
-        goto err;
+        goto ERR;
     }
     Uint8Buff inputBuf = { input, SEED_LEN + sizeof(clock_t) };
     res = params->baseParams.loader->sha256(&inputBuf, &params->seed);
     if (res != HC_SUCCESS) {
         LOGE("sha256 failed.");
-        goto err;
+        goto ERR;
     }
-err:
+ERR:
     HcFree(random);
     HcFree(input);
     return res;

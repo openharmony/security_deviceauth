@@ -67,6 +67,10 @@ static bool InitProcessDataTask(AuthDeviceTask *task, int64_t authReqId, CJson *
         LOGE("Failed to add requestId to json!");
         return false;
     }
+    if (AddIntToJson(receivedData, FIELD_OPERATION_CODE, AUTHENTICATE) != HC_SUCCESS) {
+        LOGE("Failed to add operation code to json!");
+        return false;
+    }
     task->authParams = receivedData;
     task->callback = gaCallback;
     if (task->callback == NULL) {

@@ -14,8 +14,9 @@
  */
 
 #include "standard_client_unbind_exchange_task.h"
-#include "das_common.h"
 #include "hc_log.h"
+#include "hc_types.h"
+#include "protocol_common.h"
 #include "standard_exchange_message_util.h"
 
 enum {
@@ -33,7 +34,7 @@ static int ExchangeRequest(AsyBaseCurTask *task, PakeParams *params, const CJson
 {
     int res;
     if (task->taskStatus != TASK_STATUS_CLIENT_UNBIND_EXCHANGE_BEGIN) {
-        LOGI("The message is repeated, ignore it, status :%d", task->taskStatus);
+        LOGI("The message is repeated, ignore it, status: %d", task->taskStatus);
         *status = IGNORE_MSG;
         return HC_SUCCESS;
     }
@@ -45,7 +46,7 @@ static int ExchangeRequest(AsyBaseCurTask *task, PakeParams *params, const CJson
     CJson *sendToPeer = CreateJson();
     if (sendToPeer == NULL) {
         res = HC_ERR_ALLOC_MEMORY;
-        goto err;
+        goto ERR;
     }
 
     // parse message
@@ -72,13 +73,13 @@ static int ExchangeRequest(AsyBaseCurTask *task, PakeParams *params, const CJson
 
     task->taskStatus = TASK_STATUS_CLIENT_UNBIND_EXCHANGE_REQUEST;
     *status = CONTINUE;
-err:
+ERR:
     FreeJson(data);
     FreeJson(sendToPeer);
     return res;
 }
 
-static int ExchangeConfirm(AsyBaseCurTask *task, PakeParams *params, const CJson *in, CJson *out, int *status)
+static int ExchangeConfirm(AsyBaseCurTask *task, PakeParams *params, const CJson *in, int *status)
 {
     int res;
     if (task->taskStatus < TASK_STATUS_CLIENT_UNBIND_EXCHANGE_REQUEST) {
@@ -87,7 +88,7 @@ static int ExchangeConfirm(AsyBaseCurTask *task, PakeParams *params, const CJson
     }
 
     if (task->taskStatus > TASK_STATUS_CLIENT_UNBIND_EXCHANGE_REQUEST) {
-        LOGI("The message is repeated, ignore it, status :%d", task->taskStatus);
+        LOGI("The message is repeated, ignore it, status: %d", task->taskStatus);
         *status = IGNORE_MSG;
         return HC_SUCCESS;
     }
@@ -116,7 +117,7 @@ static int Process(struct AsyBaseCurTaskT *task, PakeParams *params, const CJson
     if (task->taskStatus == TASK_STATUS_CLIENT_UNBIND_EXCHANGE_BEGIN) {
         res = ExchangeRequest(task, params, in, out, status);
         if (res != HC_SUCCESS) {
-            goto err;
+            goto ERR;
         }
         return res;
     }
@@ -124,24 +125,23 @@ static int Process(struct AsyBaseCurTaskT *task, PakeParams *params, const CJson
     int message = 0;
     res = GetIntFromJson(in, "message", &message);
     if (res != HC_SUCCESS) {
-        goto err;
+        goto ERR;
     }
 
     switch (message) {
         case PAKE_UNBIND_EXCHANGE_RESPONSE:
-            res = ExchangeConfirm(task, params, in, out, status);
+            res = ExchangeConfirm(task, params, in, status);
             break;
         default:
             res = HC_ERR_INVALID_PARAMS;
             break;
     }
     if (res != HC_SUCCESS) {
-        goto err;
+        goto ERR;
     }
     return res;
-err:
+ERR:
     FreeAndCleanKey(&(params->baseParams.sessionKey));
-    SendErrorToOut(out, params->opCode, res);
     return res;
 }
 
