@@ -484,12 +484,10 @@ static CJson *GenerateGroupErrorMsg(int32_t errorCode, int64_t requestId, const 
 static void InformPeerProcessError(int64_t requestId, const CJson *jsonParams, const DeviceAuthCallback *callback,
     int32_t errorCode)
 {
-    ChannelType channelType = GetChannelType(callback, jsonParams);
     int64_t channelId = DEFAULT_CHANNEL_ID;
-    if ((channelType == SOFT_BUS) &&
-        (GetByteFromJson(jsonParams, FIELD_CHANNEL_ID, (uint8_t *)&channelId, sizeof(int64_t)) != HC_SUCCESS)) {
-        LOGE("No soft bus available channel found!");
-        return;
+    ChannelType channelType = SOFT_BUS;
+    if (GetByteFromJson(jsonParams, FIELD_CHANNEL_ID, (uint8_t *)&channelId, sizeof(int64_t)) != HC_SUCCESS) {
+        channelType = SERVICE_CHANNEL;
     }
     CJson *errorData = GenerateGroupErrorMsg(errorCode, requestId, jsonParams);
     if (errorData == NULL) {
