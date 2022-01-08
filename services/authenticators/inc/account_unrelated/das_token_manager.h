@@ -24,7 +24,6 @@ typedef struct TokenManagerT {
     int (*unregisterLocalIdentity)(const char *, const char *, Uint8Buff *, int);
     int (*deletePeerAuthInfo)(const char *, const char *, Uint8Buff *, int);
     int (*computeAndSavePsk)(const PakeParams *);
-    int (*getPublicKey)(const char *, const char *, Uint8Buff *, int, Uint8Buff *);
 } TokenManager;
 
 #endif

@@ -25,7 +25,6 @@ typedef struct DasAuthModuleT {
     int (*registerLocalIdentity)(const char *, const char *, Uint8Buff *, int);
     int (*unregisterLocalIdentity)(const char *, const char *, Uint8Buff *, int);
     int (*deletePeerAuthInfo)(const char *, const char *, Uint8Buff *, int);
-    int (*getPublicKey)(const char *, const char *, Uint8Buff *, int, Uint8Buff *);
 } DasAuthModule;
 
 bool IsDasSupported(void);

@@ -117,12 +117,6 @@ int32_t CheckAccessToGroupImpl(const char *appId, const char *groupId)
     return IsGroupSupport() ? GetGroupImplInstance()->checkAccessToGroup(appId, groupId) : HC_ERR_NOT_SUPPORT;
 }
 
-int32_t GetPkInfoListImpl(const char *appId, const char *queryParams, char **returnInfoList, uint32_t *returnInfoNum)
-{
-    return IsGroupSupport() ? GetGroupImplInstance()->getPkInfoList(appId, queryParams, returnInfoList,
-        returnInfoNum) : HC_ERR_NOT_SUPPORT;
-}
-
 int32_t GetGroupInfoByIdImpl(const char *appId, const char *groupId, char **returnGroupInfo)
 {
     return IsGroupSupport() ? GetGroupImplInstance()->getAccessibleGroupInfoById(appId, groupId,

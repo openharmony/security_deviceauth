@@ -46,8 +46,6 @@ int32_t UnregisterLocalIdentity(const char *pkgName, const char *serviceType, Ui
     int moduleType);
 int32_t DeletePeerAuthInfo(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType,
     int moduleType);
-int32_t GetPublicKey(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType,
-    int moduleType, Uint8Buff *returnPk);
 
 // for ACCOUNT
 int32_t ProcessCredentials(int credentialOpCode, const CJson *in, CJson *out, int moduleType);
