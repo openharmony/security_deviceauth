@@ -166,42 +166,11 @@ static int32_t ComputeAndSavePsk(const PakeParams *params)
     return res;
 }
 
-static int32_t GetPublicKey(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType,
-    Uint8Buff *returnPk)
-{
-    const AlgLoader *loader = GetLoaderInstance();
-    Uint8Buff pkgNameBuff = { (uint8_t *)pkgName, strlen(pkgName) };
-    Uint8Buff serviceTypeBuff = { (uint8_t *)serviceType, strlen(serviceType) };
-    KeyAliasType keyType = userType;
-    uint8_t keyAliasVal[PAKE_KEY_ALIAS_LEN] = { 0 };
-    Uint8Buff keyAliasBuff = { keyAliasVal, PAKE_KEY_ALIAS_LEN };
-    int32_t res = GenerateKeyAlias(&pkgNameBuff, &serviceTypeBuff, keyType, authId, &keyAliasBuff);
-    if (res != HC_SUCCESS) {
-        LOGE("Failed to generate keyPair alias!");
-        return res;
-    }
-
-    res = loader->checkKeyExist(&keyAliasBuff);
-    if (res != HC_SUCCESS) {
-        LOGE("Key pair is not exist!");
-        return res;
-    }
-
-    res = loader->exportPublicKey(&keyAliasBuff, returnPk);
-    if (res != HC_SUCCESS) {
-        LOGE("Failed to export public key!");
-        return res;
-    }
-    LOGI("Get public key successfully!");
-    return HC_SUCCESS;
-}
-
 TokenManager g_asyTokenManagerInstance = {
     .registerLocalIdentity = RegisterLocalIdentity,
     .unregisterLocalIdentity = UnregisterLocalIdentity,
     .deletePeerAuthInfo = DeletePeerAuthInfo,
     .computeAndSavePsk = ComputeAndSavePsk,
-    .getPublicKey = GetPublicKey
 };
 
 const TokenManager *GetStandardTokenManagerInstance()

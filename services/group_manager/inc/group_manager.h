@@ -47,7 +47,6 @@ int32_t RegListenerImpl(const char *appId, const DataChangeListener *listener);
 int32_t UnRegListenerImpl(const char *appId);
 
 int32_t CheckAccessToGroupImpl(const char *appId, const char *groupId);
-int32_t GetPkInfoListImpl(const char *appId, const char *queryParams, char **returnInfoList, uint32_t *returnInfoNum);
 int32_t GetGroupInfoByIdImpl(const char *appId, const char *groupId, char **returnGroupInfo);
 int32_t GetGroupInfoImpl(const char *appId, const char *queryParams, char **returnGroupVec, uint32_t *groupNum);
 int32_t GetJoinedGroupsImpl(const char *appId, int groupType, char **returnGroupVec, uint32_t *groupNum);

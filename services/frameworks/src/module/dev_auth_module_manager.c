@@ -146,27 +146,6 @@ int32_t DeletePeerAuthInfo(const char *pkgName, const char *serviceType, Uint8Bu
     return HC_SUCCESS;
 }
 
-int32_t GetPublicKey(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType,
-    int moduleType, Uint8Buff *returnPk)
-{
-    if (!IsParamsForDasTokenManagerValid(pkgName, serviceType, authId, userType, moduleType) || returnPk == NULL) {
-        LOGE("Params for GetPublicKey is invalid.");
-        return HC_ERR_INVALID_PARAMS;
-    }
-    AuthModuleBase *module = GetModule(moduleType);
-    if (module == NULL) {
-        LOGE("Failed to get module for das.");
-        return HC_ERR_MODULE_NOT_FOUNT;
-    }
-    DasAuthModule *dasModule = (DasAuthModule *)module;
-    int32_t res = dasModule->getPublicKey(pkgName, serviceType, authId, userType, returnPk);
-    if (res != HC_SUCCESS) {
-        LOGE("Get public key failed, res: %d", res);
-        return res;
-    }
-    return HC_SUCCESS;
-}
-
 int32_t ProcessTask(int taskId, const CJson *in, CJson *out, int *status, int moduleType)
 {
     if (in == NULL || out == NULL || status == NULL) {
