@@ -281,7 +281,6 @@ DEVICE_AUTH_API_PUBLIC const DeviceGroupManager *GetGmInstance(void)
     g_groupManagerInstance->getRegisterInfo = GetRegisterInfo;
     g_groupManagerInstance->getLocalConnectInfo = NULL;
     g_groupManagerInstance->checkAccessToGroup = CheckAccessToGroupImpl;
-    g_groupManagerInstance->getPkInfoList = GetPkInfoListImpl;
     g_groupManagerInstance->addGroupManager = AddGroupManagerImpl;
     g_groupManagerInstance->deleteGroupManager = DeleteGroupManagerImpl;
     g_groupManagerInstance->getGroupManagers = GetGroupManagersImpl;
