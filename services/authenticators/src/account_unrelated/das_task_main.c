@@ -469,25 +469,6 @@ int32_t DeletePeerAuthInfoInTask(const char *pkgName, const char *serviceType, U
     return res;
 }
 
-int32_t GetPublicKeyInTask(const char *pkgName, const char *serviceType, Uint8Buff *authIdPeer, int userTypePeer,
-    Uint8Buff *returnPk)
-{
-    uint32_t index;
-    void **ptr = NULL;
-    FOR_EACH_HC_VECTOR(g_protocolEntityVec, index, ptr) {
-        if (ptr != NULL && (*ptr) != NULL) {
-            DasProtocolEntity *temp = (DasProtocolEntity *)(*ptr);
-            if ((temp->tokenManagerInstance == NULL) || (temp->tokenManagerInstance->getPublicKey == NULL)) {
-                LOGD("Protocol type: %d, unsupported method!", temp->type);
-                continue;
-            }
-            return temp->tokenManagerInstance->getPublicKey(pkgName, serviceType, authIdPeer, userTypePeer, returnPk);
-        }
-    }
-    LOGE("Failed to find valid protocol!");
-    return HC_ERR_NOT_SUPPORT;
-}
-
 static uint32_t GetPakeAlgInProtocol(int offset)
 {
     uint32_t algInProtocol = PSK_SPEKE;

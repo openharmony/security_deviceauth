@@ -97,7 +97,6 @@ static void GetIpcReplyByType(const IpcDataInfo *ipcData,
             case PARAM_TYPE_FRIEND_APPID:
             case PARAM_TYPE_DEVICE_INFO:
             case PARAM_TYPE_GROUP_INFO:
-            case PARAM_TYPE_RETURN_DATA:
                 *(uint8_t **)outCache = ipcData[i].val;
                 if (cacheLen != NULL) {
                     *cacheLen = ipcData[i].valSz;
@@ -1288,86 +1287,6 @@ static int32_t IpcGmGetGroupInfoById(const char *appId, const char *groupId, cha
     return ret;
 }
 
-static int32_t ParseReturnResult(const IpcDataInfo *replies,
-    int32_t cacheNum, char **returnData, uint32_t *returnNum)
-{
-    int32_t ret;
-    int32_t inOutLen;
-
-    inOutLen = sizeof(int32_t);
-    GetIpcReplyByType(replies, cacheNum, PARAM_TYPE_IPC_RESULT_NUM, (uint8_t *)&ret, &inOutLen);
-    if ((ret < IPC_RESULT_NUM_2) || (inOutLen != sizeof(int32_t))) {
-        return HC_ERR_IPC_OUT_DATA_NUM;
-    }
-    GetIpcReplyByType(replies, cacheNum, PARAM_TYPE_RETURN_DATA, (uint8_t *)returnData, NULL);
-    if (*returnData == NULL) {
-        return HC_ERR_IPC_OUT_DATA;
-    }
-    *returnData = strdup(*returnData);
-    if (*returnData == NULL) {
-        return HC_ERR_ALLOC_MEMORY;
-    }
-    inOutLen = sizeof(int32_t);
-    GetIpcReplyByType(replies, cacheNum, PARAM_TYPE_DATA_NUM, (uint8_t *)returnNum, &inOutLen);
-    return HC_SUCCESS;
-}
-
-static int32_t IpcGmGetPkInfoList(const char *appId, const char *queryParams, char **returnInfoList,
-    uint32_t *returnInfoNum)
-{
-    uintptr_t callCtx = 0x0;
-    int32_t ret;
-    int32_t inOutLen;
-    IpcDataInfo replyCache[IPC_DATA_CACHES_4] = {{0}};
-
-    LOGI("starting ...");
-    if (!IS_STRING_VALID(queryParams) || !IS_STRING_VALID(appId) ||
-        (returnInfoList == NULL) || (returnInfoNum == NULL)) {
-        return HC_ERR_INVALID_PARAMS;
-    }
-    if (!IsServiceRunning()) {
-        LOGE("service is not activity");
-        return HC_ERROR;
-    }
-    ret = CreateCallCtx(&callCtx, NULL);
-    if (ret != HC_SUCCESS) {
-        LOGE("CreateCallCtx failed, ret %d", ret);
-        return HC_ERR_IPC_INIT;
-    }
-    ret = SetCallRequestParamInfo(callCtx, PARAM_TYPE_APPID, (const uint8_t *)appId, strlen(appId) + 1);
-    if (ret != HC_SUCCESS) {
-        LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_APPID);
-        DestroyCallCtx(&callCtx, NULL);
-        return HC_ERR_IPC_BUILD_PARAM;
-    }
-    ret = SetCallRequestParamInfo(callCtx, PARAM_TYPE_QUERY_PARAMS,
-                                  (const uint8_t *)queryParams, strlen(queryParams) + 1);
-    if (ret != HC_SUCCESS) {
-        LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_QUERY_PARAMS);
-        DestroyCallCtx(&callCtx, NULL);
-        return HC_ERR_IPC_BUILD_PARAM;
-    }
-    ret = DoBinderCall(callCtx, IPC_CALL_ID_GET_PK_INFO_LIST, true);
-    if (ret == HC_ERR_IPC_INTERNAL_FAILED) {
-        LOGE("ipc call failed");
-        DestroyCallCtx(&callCtx, NULL);
-        return HC_ERR_IPC_PROC_FAILED;
-    }
-    DecodeCallReply(callCtx, replyCache, REPLAY_CACHE_NUM(replyCache));
-    ret = HC_ERR_IPC_UNKNOW_REPLY;
-    inOutLen = sizeof(int32_t);
-    GetIpcReplyByType(replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
-    LOGI("process done, ret %d", ret);
-    if (ret != HC_SUCCESS) {
-        DestroyCallCtx(&callCtx, NULL);
-        return ret;
-    }
-    ret = ParseReturnResult(replyCache, REPLAY_CACHE_NUM(replyCache), returnInfoList, returnInfoNum);
-    LOGI("proc result done, ret %d", ret);
-    DestroyCallCtx(&callCtx, NULL);
-    return ret;
-}
-
 static int32_t SearchGroupsIpcResult(const IpcDataInfo *replies,
     int32_t cacheNum, char **outGroupVec, uint32_t *groupNum)
 {
@@ -1884,7 +1803,6 @@ static void InitIpcGmMethods(DeviceGroupManager *gmMethodObj)
     gmMethodObj->getDeviceInfoById = IpcGmGetDeviceInfoById;
     gmMethodObj->getTrustedDevices = IpcGmGetTrustedDevices;
     gmMethodObj->checkAccessToGroup = IpcGmCheckAccessToGroup;
-    gmMethodObj->getPkInfoList = IpcGmGetPkInfoList;
     gmMethodObj->isDeviceInGroup = IpcGmIsDeviceInGroup;
     gmMethodObj->destroyInfo = IpcGmDestroyInfo;
     gmMethodObj->authKeyAgree = IpcGmAuthKeyAgree;

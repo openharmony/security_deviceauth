@@ -169,8 +169,6 @@ typedef struct {
     int32_t (*getRegisterInfo)(char **returnRegisterInfo);
     int32_t (*getLocalConnectInfo)(char *returnInfo, int32_t bufLen);
     int32_t (*checkAccessToGroup)(const char *appId, const char *groupId);
-    int32_t (*getPkInfoList)(const char *appId, const char *queryParams, char **returnInfoList,
-        uint32_t *returnInfoNum);
     int32_t (*addGroupManager)(const char *appId, const char *groupId, const char *managerAppId);
     int32_t (*addGroupFriend)(const char *appId, const char *groupId, const char *friendAppId);
     int32_t (*deleteGroupManager)(const char *appId, const char *groupId, const char *managerAppId);

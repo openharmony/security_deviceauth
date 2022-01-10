@@ -41,8 +41,6 @@ typedef struct {
     int32_t (*regListener)(const char *appId, const DataChangeListener *listener);
     int32_t (*unRegListener)(const char *appId);
     int32_t (*checkAccessToGroup)(const char *appId, const char *groupId);
-    int32_t (*getPkInfoList)(const char *appId, const char *queryParams, char **returnInfoList,
-        uint32_t *returnInfoNum);
     int32_t (*getAccessibleGroupInfoById)(const char *appId, const char *groupId, char **returnGroupInfo);
     int32_t (*getAccessibleGroupInfo)(const char *appId, const char *queryParams, char **returnGroupVec,
         uint32_t *groupNum);
