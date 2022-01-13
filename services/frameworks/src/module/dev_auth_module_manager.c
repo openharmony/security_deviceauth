@@ -212,7 +212,7 @@ void DestroyTask(int taskId, int moduleType)
     module->destroyTask(taskId);
 }
 
-static uint32_t InitDasModule(void)
+static int32_t InitDasModule(void)
 {
     AuthModuleBase *das = CreateDasModule();
     if (das == NULL) {
@@ -223,7 +223,7 @@ static uint32_t InitDasModule(void)
     return HC_SUCCESS;
 }
 
-static uint32_t InitAccountModule(void)
+static int32_t InitAccountModule(void)
 {
     AuthModuleBase *accountModule = CreateAccountModule();
     if (accountModule == NULL) {
