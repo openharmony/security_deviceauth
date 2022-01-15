@@ -33,7 +33,7 @@ static void DestroyClientUnbindExchangeTask(struct SymBaseCurTaskT *task)
     HcFree(task);
 }
 
-static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson *in, CJson *out, int *status)
+static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson *in, CJson *out, int32_t *status)
 {
     IsoClientUnbindExchangeTask *realTask = (IsoClientUnbindExchangeTask *)task;
     if (realTask->taskBase.taskStatus < TASK_TYPE_BEGIN) {
@@ -48,7 +48,7 @@ static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson 
     }
     int res;
     uint8_t *keyAlias = NULL;
-    int message = 0;
+    int32_t message = 0;
     res = GetIntFromJson(in, FIELD_MESSAGE, &message);
     if (res != 0 || message != ISO_SERVER_UNBIND_EXCHANGE_RET) {
         return HC_ERR_BAD_MESSAGE;
@@ -167,7 +167,7 @@ ERR:
 
 
 static int ClientUnbindExchangeStart(const IsoParams *params, IsoClientUnbindExchangeTask *task, CJson *out,
-    int *status)
+    int32_t *status)
 {
     int res;
     uint8_t *nonce = NULL;
@@ -196,7 +196,7 @@ ERR:
     return res;
 }
 
-SymBaseCurTask *CreateClientUnbindExchangeTask(IsoParams *params, const CJson *in, CJson *out, int *status)
+SymBaseCurTask *CreateClientUnbindExchangeTask(IsoParams *params, const CJson *in, CJson *out, int32_t *status)
 {
     (void)in;
     IsoClientUnbindExchangeTask *task = (IsoClientUnbindExchangeTask *)HcMalloc(sizeof(IsoClientUnbindExchangeTask), 0);

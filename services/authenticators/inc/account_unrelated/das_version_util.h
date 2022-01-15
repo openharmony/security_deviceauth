@@ -40,7 +40,7 @@ typedef enum {
 } VersionAgreementStatus;
 
 typedef struct VersionInfoT {
-    int opCode;
+    int32_t opCode;
     VersionAgreementStatus versionStatus;
     VersionStruct minVersion;
     VersionStruct curVersion;

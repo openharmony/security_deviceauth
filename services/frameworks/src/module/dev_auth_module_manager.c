@@ -146,7 +146,7 @@ int32_t DeletePeerAuthInfo(const char *pkgName, const char *serviceType, Uint8Bu
     return HC_SUCCESS;
 }
 
-int32_t ProcessTask(int taskId, const CJson *in, CJson *out, int *status, int moduleType)
+int32_t ProcessTask(int taskId, const CJson *in, CJson *out, int32_t *status, int moduleType)
 {
     if (in == NULL || out == NULL || status == NULL) {
         LOGE("Params is null.");
@@ -175,7 +175,7 @@ int32_t ProcessTask(int taskId, const CJson *in, CJson *out, int *status, int mo
     return res;
 }
 
-int32_t CreateTask(int *taskId, const CJson *in, CJson *out, int moduleType)
+int32_t CreateTask(int32_t *taskId, const CJson *in, CJson *out, int moduleType)
 {
     if (in == NULL || out == NULL || taskId == NULL) {
         LOGE("Params is null.");

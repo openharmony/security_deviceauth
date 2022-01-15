@@ -27,11 +27,11 @@ typedef struct TaskT {
     int taskId;
     VersionInfo versionInfo;
     void(*destroyTask)(struct TaskT *);
-    int(*processTask)(struct TaskT *, const CJson *in, CJson *out, int *status);
+    int(*processTask)(struct TaskT *, const CJson *in, CJson *out, int32_t *status);
     SubTaskVec vec;
 } Task;
 
-Task *CreateTaskT(int *taskId, const CJson *in, CJson *out);
+Task *CreateTaskT(int32_t *taskId, const CJson *in, CJson *out);
 
 int32_t InitDasProtocolEntities(void);
 void DestroyDasProtocolEntities(void);

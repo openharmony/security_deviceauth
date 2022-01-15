@@ -170,7 +170,7 @@ int32_t SendBindSessionData(const BindSession *session, const CJson *sendData)
 
 int32_t CreateAndProcessModule(BindSession *session, const CJson *in, CJson *out)
 {
-    int status = 0;
+    int32_t status = 0;
     LOGI("Start to create and process module task! [ModuleType]: %d", session->moduleType);
     int32_t res = CreateTask(&(session->curTaskId), in, out, session->moduleType);
     if (res != HC_SUCCESS) {

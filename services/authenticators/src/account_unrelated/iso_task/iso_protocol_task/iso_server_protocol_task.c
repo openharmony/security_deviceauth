@@ -72,7 +72,7 @@ ERR:
     return res;
 }
 
-static int IsoServerStart(SymBaseCurTask *task, IsoParams *params, const CJson *in, CJson *out, int *status)
+static int IsoServerStart(SymBaseCurTask *task, IsoParams *params, const CJson *in, CJson *out, int32_t *status)
 {
     if (task->taskStatus != TASK_STATUS_BEGIN) {
         LOGI("The message is repeated, ignore it, status: %d", task->taskStatus);
@@ -151,7 +151,8 @@ ERR:
     return res;
 }
 
-static int CalTokenAndGenSessionKey(SymBaseCurTask *task, IsoParams *params, const CJson *in, CJson *out, int *status)
+static int CalTokenAndGenSessionKey(SymBaseCurTask *task, IsoParams *params, const CJson *in, CJson *out,
+                                    int32_t *status)
 {
     int res;
     uint8_t *peerToken = NULL;
@@ -207,7 +208,7 @@ ERR:
     return res;
 }
 
-static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson *in, CJson *out, int *status)
+static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson *in, CJson *out, int32_t *status)
 {
     int res;
     uint32_t step = ProtocolMessageIn(in);

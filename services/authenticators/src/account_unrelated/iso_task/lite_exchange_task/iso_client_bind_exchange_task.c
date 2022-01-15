@@ -121,7 +121,7 @@ ERR:
     return res;
 }
 
-static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson *in, CJson *out, int *status)
+static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson *in, CJson *out, int32_t *status)
 {
     IsoClientBindExchangeTask *realTask = (IsoClientBindExchangeTask *)task;
     if (realTask->taskBase.taskStatus < TASK_TYPE_BEGIN) {
@@ -135,7 +135,7 @@ static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson 
         return HC_SUCCESS;
     }
     int res;
-    int message = 0;
+    int32_t message = 0;
     res = GetIntFromJson(in, FIELD_MESSAGE, &message);
     if (res != 0 || message != ISO_SERVER_BIND_EXCHANGE_RET) {
         return HC_ERR_BAD_MESSAGE;
@@ -192,7 +192,8 @@ static int ClientBindAesEncrypt(IsoClientBindExchangeTask *task, const IsoParams
     return res;
 }
 
-static int ClientBindExchangeStart(const IsoParams *params, IsoClientBindExchangeTask *task, CJson *out, int *status)
+static int ClientBindExchangeStart(const IsoParams *params, IsoClientBindExchangeTask *task, CJson *out,
+                                   int32_t *status)
 {
     uint8_t *nonce = NULL;
     uint8_t *encData = NULL;
@@ -232,7 +233,7 @@ ERR:
     return res;
 }
 
-SymBaseCurTask *CreateClientBindExchangeTask(IsoParams *params, const CJson *in, CJson *out, int *status)
+SymBaseCurTask *CreateClientBindExchangeTask(IsoParams *params, const CJson *in, CJson *out, int32_t *status)
 {
     (void)in;
     IsoClientBindExchangeTask *task = (IsoClientBindExchangeTask *)HcMalloc(sizeof(IsoClientBindExchangeTask), 0);

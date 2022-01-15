@@ -165,7 +165,7 @@ static int32_t AddGroupAndDevInfoToParams(const BindSession *session, CJson *mod
         LOGE("Failed to get authId from params!");
         return HC_ERR_JSON_GET;
     }
-    int userType = DEVICE_TYPE_ACCESSORY;
+    int32_t userType = DEVICE_TYPE_ACCESSORY;
     if (GetIntFromJson(session->params, FIELD_USER_TYPE, &userType) != HC_SUCCESS) {
         LOGE("Failed to get userType from params!");
         return HC_ERR_JSON_GET;
@@ -243,7 +243,7 @@ static int32_t AddPeerAuthIdToParams(BindSession *session, CJson *moduleParams)
 
 static int32_t AddPeerUserTypeToParams(BindSession *session, CJson *moduleParams)
 {
-    int peerUserType = DEVICE_TYPE_ACCESSORY;
+    int32_t peerUserType = DEVICE_TYPE_ACCESSORY;
     if (GetIntFromJson(session->params, FIELD_PEER_USER_TYPE, &peerUserType) != HC_SUCCESS) {
         LOGE("Failed to get peerUserType from params!");
         return HC_ERR_JSON_GET;
@@ -269,7 +269,7 @@ static int32_t AddPeerAuthIdAndUserTypeToParamsIfNeed(BindSession *session, CJso
 
 static int32_t TryAddPeerUserTypeToParams(const CJson *jsonParams, BindSession *session)
 {
-    int peerUserType = DEVICE_TYPE_ACCESSORY;
+    int32_t peerUserType = DEVICE_TYPE_ACCESSORY;
     if (GetIntFromJson(jsonParams, FIELD_PEER_USER_TYPE, &peerUserType) == HC_SUCCESS) {
         if (AddIntToJson(session->params, FIELD_PEER_USER_TYPE, peerUserType) != HC_SUCCESS) {
             LOGE("Failed to add peerUserType to params!");
@@ -412,7 +412,7 @@ static int32_t AddGroupTypeIfValid(const CJson *jsonParams, CJson *params)
 
 static int32_t AddGroupVisibilityIfValidOrDefault(const CJson *jsonParams, CJson *params)
 {
-    int groupVisibility = GROUP_VISIBILITY_PUBLIC;
+    int32_t groupVisibility = GROUP_VISIBILITY_PUBLIC;
     (void)GetIntFromJson(jsonParams, FIELD_GROUP_VISIBILITY, &groupVisibility);
     if (!IsGroupVisibilityValid(groupVisibility)) {
         LOGE("The input groupVisibility is invalid!");
@@ -427,7 +427,7 @@ static int32_t AddGroupVisibilityIfValidOrDefault(const CJson *jsonParams, CJson
 
 static int32_t AddExpireTimeIfValidOrDefault(const CJson *jsonParams, CJson *params)
 {
-    int expireTime = DEFAULT_EXPIRE_TIME;
+    int32_t expireTime = DEFAULT_EXPIRE_TIME;
     (void)GetIntFromJson(jsonParams, FIELD_EXPIRE_TIME, &expireTime);
     if (!IsExpireTimeValid(expireTime)) {
         LOGE("The input expireTime is invalid!");
@@ -472,7 +472,7 @@ static int32_t CheckAuthIdAndUserTypeValid(int userType, const char *groupId, co
 
 static int32_t AddAuthIdAndUserTypeIfValidOrDefault(const char *groupId, const CJson *jsonParams, CJson *params)
 {
-    int userType = DEVICE_TYPE_ACCESSORY;
+    int32_t userType = DEVICE_TYPE_ACCESSORY;
     (void)GetIntFromJson(jsonParams, FIELD_USER_TYPE, &userType);
     if (!IsUserTypeValid(userType)) {
         LOGE("The input userType is invalid!");
@@ -516,7 +516,7 @@ static int32_t AddUdid(CJson *params)
 
 static int32_t AddUserTypeIfValidOrDefault(const CJson *jsonParams, CJson *params)
 {
-    int userType = DEVICE_TYPE_ACCESSORY;
+    int32_t userType = DEVICE_TYPE_ACCESSORY;
     (void)GetIntFromJson(jsonParams, FIELD_USER_TYPE, &userType);
     if (!IsUserTypeValid(userType)) {
         LOGE("The input userType is invalid!");
@@ -802,7 +802,7 @@ static int32_t SetGroupType(const CJson *params, GroupInfo *groupParams)
 
 static int32_t SetGroupVisibility(const CJson *params, GroupInfo *groupParams)
 {
-    int groupVisibility = GROUP_VISIBILITY_PUBLIC;
+    int32_t groupVisibility = GROUP_VISIBILITY_PUBLIC;
     (void)GetIntFromJson(params, FIELD_GROUP_VISIBILITY, &groupVisibility);
     groupParams->visibility = groupVisibility;
     return HC_SUCCESS;
@@ -810,7 +810,7 @@ static int32_t SetGroupVisibility(const CJson *params, GroupInfo *groupParams)
 
 static int32_t SetGroupExpireTime(const CJson *params, GroupInfo *groupParams)
 {
-    int expireTime = DEFAULT_EXPIRE_TIME;
+    int32_t expireTime = DEFAULT_EXPIRE_TIME;
     (void)GetIntFromJson(params, FIELD_EXPIRE_TIME, &expireTime);
     groupParams->expireTime = expireTime;
     return HC_SUCCESS;
@@ -830,7 +830,7 @@ static int32_t ForceDeletePeerKey(CJson *params)
         LOGE("Failed to get groupId from params!");
         return HC_ERR_JSON_GET;
     }
-    int peerUserType = DEVICE_TYPE_ACCESSORY;
+    int32_t peerUserType = DEVICE_TYPE_ACCESSORY;
     (void)GetIntFromJson(params, FIELD_PEER_USER_TYPE, &peerUserType);
     Uint8Buff peerAuthIdBuff = {
         .val = (uint8_t *)peerAuthId,
@@ -925,7 +925,7 @@ static int32_t AddGroupAndLocalDevIfNotExist(const char *groupId, const BindSess
             LOGI("No authId is found. The default value is udid!");
             authId = udid;
         }
-        int userType = DEVICE_TYPE_ACCESSORY;
+        int32_t userType = DEVICE_TYPE_ACCESSORY;
         (void)GetIntFromJson(session->params, FIELD_USER_TYPE, &userType);
         return AddTrustDevToDatabase(authId, udid, groupId, userType);
     }
@@ -943,7 +943,7 @@ static int32_t AddPeerDevToGroup(const char *peerAuthId, const char *peerUdid,
         }
         LOGI("Delete the original data successfully! RequestId: %" PRId64, session->reqId);
     }
-    int peerUserType = DEVICE_TYPE_ACCESSORY;
+    int32_t peerUserType = DEVICE_TYPE_ACCESSORY;
     (void)GetIntFromJson(session->params, FIELD_PEER_USER_TYPE, &peerUserType);
     int32_t result = AddTrustDevToDatabase(peerAuthId, peerUdid, groupId, peerUserType);
     if (result != HC_SUCCESS) {

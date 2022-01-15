@@ -69,7 +69,7 @@ int32_t ConvertGroupIdToJsonStr(const char *groupId, char **returnJsonStr);
 int32_t GenerateBindSuccessData(const char *peerAuthId, const char *groupId, char **returnDataStr);
 int32_t GenerateUnbindSuccessData(const char *peerAuthId, const char *groupId, char **returnDataStr);
 
-int32_t GetGroupTypeFromDb(const char *groupId, int *returnGroupType);
+int32_t GetGroupTypeFromDb(const char *groupId, int32_t *returnGroupType);
 int32_t GetUserIdHashFromJson(const CJson *jsonParams, char **userIdHash);
 int32_t GetGroupIdFromJson(const CJson *jsonParams, const char **groupId);
 int32_t GetAppIdFromJson(const CJson *jsonParams, const char **appId);

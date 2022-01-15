@@ -24,12 +24,12 @@
 
 static int32_t AddRecvModuleDataToParams(CJson *jsonParams, CJson *moduleParams)
 {
-    int message = ERR_MESSAGE;
+    int32_t message = ERR_MESSAGE;
     if (GetIntFromJson(jsonParams, FIELD_MESSAGE, &message) != HC_SUCCESS) {
         LOGE("Failed to get message from in!");
         return HC_ERR_JSON_GET;
     }
-    int authForm = ERR_AUTH_FORM;
+    int32_t authForm = ERR_AUTH_FORM;
     (void)GetIntFromJson(jsonParams, FIELD_AUTH_FORM, &authForm);
     CJson *payload = GetObjFromJson(jsonParams, FIELD_PAYLOAD);
     if (payload == NULL) {
@@ -227,7 +227,7 @@ static int32_t AddAuthIdIfExist(const CJson *returnData, CJson *jsonParams)
 
 static int32_t AddUserTypeIfExistAndValid(const CJson *returnData, CJson *jsonParams)
 {
-    int userType = DEVICE_TYPE_ACCESSORY;
+    int32_t userType = DEVICE_TYPE_ACCESSORY;
     if (GetIntFromJson(returnData, FIELD_USER_TYPE, &userType) == HC_SUCCESS) {
         if (!IsUserTypeValid(userType)) {
             LOGE("The input userType is invalid!");
@@ -243,7 +243,7 @@ static int32_t AddUserTypeIfExistAndValid(const CJson *returnData, CJson *jsonPa
 
 static int32_t AddGroupVisibilityIfExistAndValid(const CJson *returnData, CJson *jsonParams)
 {
-    int groupVisibility = GROUP_VISIBILITY_PUBLIC;
+    int32_t groupVisibility = GROUP_VISIBILITY_PUBLIC;
     if (GetIntFromJson(returnData, FIELD_GROUP_VISIBILITY, &groupVisibility) == HC_SUCCESS) {
         if (!IsGroupVisibilityValid(groupVisibility)) {
             LOGE("The input groupVisibility invalid!");
@@ -259,7 +259,7 @@ static int32_t AddGroupVisibilityIfExistAndValid(const CJson *returnData, CJson 
 
 static int32_t AddExpireTimeIfExistAndValid(const CJson *returnData, CJson *jsonParams)
 {
-    int expireTime = DEFAULT_EXPIRE_TIME;
+    int32_t expireTime = DEFAULT_EXPIRE_TIME;
     if (GetIntFromJson(returnData, FIELD_EXPIRE_TIME, &expireTime) == HC_SUCCESS) {
         if (!IsExpireTimeValid(expireTime)) {
             LOGE("The input expireTime invalid!");
@@ -444,7 +444,7 @@ static int32_t HandleRequest(CJson *jsonParams, BindSession *session, bool *isNe
 
 Session *CreateServerBindSession(CJson *jsonParams, const DeviceAuthCallback *callback)
 {
-    int opCode = MEMBER_INVITE;
+    int32_t opCode = MEMBER_INVITE;
     if (GetIntFromJson(jsonParams, FIELD_GROUP_OP, &opCode) != HC_SUCCESS) {
         LOGE("Failed to get opCode from jsonParams!");
         return NULL;

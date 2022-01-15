@@ -25,8 +25,8 @@ extern "C" {
 
 typedef struct AuthModuleBaseT {
     int moduleType;
-    int (*createTask)(int *, const CJson *in, CJson *out);
-    int (*processTask)(int, const CJson *in, CJson *out, int *status);
+    int (*createTask)(int32_t *, const CJson *in, CJson *out);
+    int (*processTask)(int32_t, const CJson *in, CJson *out, int32_t *status);
     void (*destroyTask)(int);
     void (*destroyModule)(struct AuthModuleBaseT *module);
 } AuthModuleBase;
@@ -34,8 +34,8 @@ typedef struct AuthModuleBaseT {
 int32_t InitModules(void);
 void DestroyModules(void);
 
-int32_t CreateTask(int *taskId, const CJson *in, CJson *out, int moduleType);
-int32_t ProcessTask(int taskId, const CJson *in, CJson *out, int *status, int moduleType);
+int32_t CreateTask(int32_t *taskId, const CJson *in, CJson *out, int moduleType);
+int32_t ProcessTask(int taskId, const CJson *in, CJson *out, int32_t *status, int moduleType);
 void DestroyTask(int taskId, int moduleType);
 int32_t CheckMsgRepeatability(const CJson *in, int moduleType);
 
