@@ -22,7 +22,7 @@
 #include "json_utils.h"
 #include "session_common.h"
 
-static int ProcessClientAuthSession(Session *session, CJson *in);
+static int32_t ProcessClientAuthSession(Session *session, CJson *in);
 
 int32_t CheckInputAuthParams(const CJson *authParam)
 {
@@ -86,7 +86,7 @@ static int32_t StartClientAuthTask(AuthSession *session)
 int32_t CheckClientGroupAuthMsg(AuthSession *session, const CJson *in)
 {
     int32_t groupErrMsg = 0;
-    if (GetIntFromJson(in, FIELD_GROUP_ERROR_MSG, (int *)&groupErrMsg) != HC_SUCCESS) {
+    if (GetIntFromJson(in, FIELD_GROUP_ERROR_MSG, &groupErrMsg) != HC_SUCCESS) {
         return HC_SUCCESS;
     }
     CJson *outData = CreateJson();

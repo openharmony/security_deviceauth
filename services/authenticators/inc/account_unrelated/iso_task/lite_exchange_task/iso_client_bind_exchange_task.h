@@ -23,6 +23,6 @@ typedef struct {
     uint8_t challenge[CHALLENGE_SIZE];
 } IsoClientBindExchangeTask;
 
-SymBaseCurTask *CreateClientBindExchangeTask(IsoParams *params, const CJson *in, CJson *out, int *status);
+SymBaseCurTask *CreateClientBindExchangeTask(IsoParams *params, const CJson *in, CJson *out, int32_t *status);
 
 #endif

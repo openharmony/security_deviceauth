@@ -437,7 +437,7 @@ static int32_t GetKeyLength(IsoParams *params, const CJson *in)
         return HC_SUCCESS;
     }
 
-    if (GetIntFromJson(in, FIELD_KEY_LENGTH, (int *)&(params->keyLen)) != 0) {
+    if (GetIntFromJson(in, FIELD_KEY_LENGTH, (int32_t *)&(params->keyLen)) != 0) {
         LOGD("Get key length failed, use default.");
         params->keyLen = DEFAULT_RETURN_KEY_LENGTH;
     }

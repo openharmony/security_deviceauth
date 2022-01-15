@@ -127,7 +127,7 @@ static void DestroyTaskT(Task *task)
     HcFree(task);
 }
 
-static int ProcessMultiTask(Task *task, const CJson *in, CJson *out, int *status)
+static int ProcessMultiTask(Task *task, const CJson *in, CJson *out, int32_t *status)
 {
     int res;
     uint32_t index;
@@ -175,7 +175,7 @@ ERR:
     return res;
 }
 
-static int NegotiateAndProcessTask(Task *task, const CJson *in, CJson *out, int *status)
+static int NegotiateAndProcessTask(Task *task, const CJson *in, CJson *out, int32_t *status)
 {
     VersionStruct curVersionPeer = { 0, 0, 0 };
     VersionStruct minVersionPeer = { 0, 0, 0 };
@@ -224,7 +224,7 @@ static int NegotiateAndProcessTask(Task *task, const CJson *in, CJson *out, int 
 
 static bool IsPeerErrMessage(const CJson *in, int32_t *res)
 {
-    int message = 0;
+    int32_t message = 0;
     if (GetIntFromJson(in, FIELD_MESSAGE, &message) != HC_SUCCESS) {
         LOGD("There is no message code.");
         return false;
@@ -239,9 +239,9 @@ static bool IsPeerErrMessage(const CJson *in, int32_t *res)
     return true;
 }
 
-static int ProcessTaskT(Task *task, const CJson *in, CJson *out, int *status)
+static int ProcessTaskT(Task *task, const CJson *in, CJson *out, int32_t *status)
 {
-    int res;
+    int32_t res;
     if (IsPeerErrMessage(in, &res)) {
         LOGE("Receive error message from peer, errCode: %x.", res);
         DasSendErrMsgToSelf(out, HC_ERR_PEER_ERROR);
@@ -351,7 +351,7 @@ static int CreateSingleSubTask(Task *task, const CJson *in)
     return HC_ERR_NOT_SUPPORT;
 }
 
-Task *CreateTaskT(int *taskId, const CJson *in, CJson *out)
+Task *CreateTaskT(int32_t *taskId, const CJson *in, CJson *out)
 {
     int res;
     Task *task = NULL;

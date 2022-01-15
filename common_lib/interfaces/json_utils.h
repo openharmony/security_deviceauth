@@ -81,7 +81,7 @@ const char *GetStringFromJson(const CJson *jsonObj, const char *key);
  * This function will convert the hex string to byte, and then put it in param--byte in the form of byte.
  */
 int32_t GetByteFromJson(const CJson *jsonObj, const char *key, uint8_t *byte, uint32_t len);
-int32_t GetIntFromJson(const CJson *jsonObj, const char *key, int *value);
+int32_t GetIntFromJson(const CJson *jsonObj, const char *key, int32_t *value);
 int32_t GetInt64FromJson(const CJson *jsonObj, const char *key, int64_t *value);
 int32_t GetBoolFromJson(const CJson *jsonObj, const char *key, bool *value);
 char *GetStringValue(const CJson *item);

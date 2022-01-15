@@ -42,12 +42,12 @@ typedef struct IsoParamsT {
     IsoBaseParams baseParams;
 
     Uint8Buff seed;
-    int selfUserType;
-    int peerUserType;
+    int32_t selfUserType;
+    int32_t peerUserType;
     char *packageName;
     char *serviceType;
     char *pinCodeString;
-    int opCode;
+    int32_t opCode;
     uint32_t keyLen;
     bool isClient;
 } IsoParams;
@@ -55,7 +55,7 @@ typedef struct IsoParamsT {
 typedef struct SymBaseCurTaskT {
     CurTaskType (*getCurTaskType)(void);
     void (*destroyTask)(struct SymBaseCurTaskT *);
-    int(*process)(struct SymBaseCurTaskT *, IsoParams *params, const CJson *in, CJson *out, int *status);
+    int(*process)(struct SymBaseCurTaskT *, IsoParams *params, const CJson *in, CJson *out, int32_t *status);
     int taskStatus;
 } SymBaseCurTask;
 

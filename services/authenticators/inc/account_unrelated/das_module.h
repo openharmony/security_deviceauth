@@ -22,9 +22,9 @@
 
 typedef struct DasAuthModuleT {
     AuthModuleBase moduleBase;
-    int (*registerLocalIdentity)(const char *, const char *, Uint8Buff *, int);
-    int (*unregisterLocalIdentity)(const char *, const char *, Uint8Buff *, int);
-    int (*deletePeerAuthInfo)(const char *, const char *, Uint8Buff *, int);
+    int32_t (*registerLocalIdentity)(const char *, const char *, Uint8Buff *, int);
+    int32_t (*unregisterLocalIdentity)(const char *, const char *, Uint8Buff *, int);
+    int32_t  (*deletePeerAuthInfo)(const char *, const char *, Uint8Buff *, int);
 } DasAuthModule;
 
 bool IsDasSupported(void);
