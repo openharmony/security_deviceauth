@@ -165,11 +165,7 @@ if (defined(ohos_lite)) {
   }
 
   ohos_prebuilt_etc("auth_service.rc") {
-    if (use_musl) {
-      source = "${frameworks_path}/src/standard/deviceauth_service.cfg"
-    } else {
-      source = "${frameworks_path}/src/standard/deviceauth_service.rc"
-    }
+    source = "${frameworks_path}/src/standard/deviceauth_service.cfg"
     relative_install_dir = "init"
     subsystem_name = "security"
     part_name = "deviceauth_standard"
