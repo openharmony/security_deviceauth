@@ -37,7 +37,7 @@ void DestroyServerBindExchangeTask(struct SymBaseCurTaskT *task)
     HcFree(task);
 }
 
-static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson *in, CJson *out, int *status)
+static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson *in, CJson *out, int32_t *status)
 {
     IsoServerBindExchangeTask *realTask = (IsoServerBindExchangeTask *)task;
     if (realTask->taskBase.taskStatus < TASK_TYPE_BEGIN) {
@@ -51,7 +51,7 @@ static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson 
         return HC_SUCCESS;
     }
     int res;
-    int message = 0;
+    int32_t message = 0;
     res = GetIntFromJson(in, FIELD_MESSAGE, &message);
     if (res != 0 || message != ISO_CLIENT_BIND_EXCHANGE_CONFIRM) {
         return HC_ERR_BAD_MESSAGE;
@@ -219,7 +219,7 @@ ERR:
 }
 
 static int ServerBindExchangeStart(const IsoParams *params, IsoServerBindExchangeTask *task,
-    const CJson *in, CJson *out, int *status)
+    const CJson *in, CJson *out, int32_t *status)
 {
     int res;
     uint8_t *challenge = (uint8_t *)HcMalloc(CHALLENGE_SIZE, 0);
@@ -244,7 +244,7 @@ ERR:
     return res;
 }
 
-SymBaseCurTask *CreateServerBindExchangeTask(IsoParams *params, const CJson *in, CJson *out, int *status)
+SymBaseCurTask *CreateServerBindExchangeTask(IsoParams *params, const CJson *in, CJson *out, int32_t *status)
 {
     IsoServerBindExchangeTask *task = (IsoServerBindExchangeTask *)HcMalloc(sizeof(IsoServerBindExchangeTask), 0);
     if (task == NULL) {

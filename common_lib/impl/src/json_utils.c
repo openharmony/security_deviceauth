@@ -211,7 +211,7 @@ int32_t GetByteFromJson(const CJson *jsonObj, const char *key, uint8_t *byte, ui
     return ret;
 }
 
-int32_t GetIntFromJson(const CJson *jsonObj, const char *key, int *value)
+int32_t GetIntFromJson(const CJson *jsonObj, const char *key, int32_t *value)
 {
     if (jsonObj == NULL || key == NULL || value == NULL) {
         return CLIB_ERR_NULL_PTR;

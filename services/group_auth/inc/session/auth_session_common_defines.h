@@ -24,7 +24,7 @@ DECLARE_HC_VECTOR(ParamsVec, void*)
 
 typedef struct {
     Session base;
-    int curTaskId;
+    int32_t curTaskId;
     ParamsVec paramsList;
     uint32_t currentIndex;
 } AuthSession;

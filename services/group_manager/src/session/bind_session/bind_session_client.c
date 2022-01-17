@@ -145,7 +145,7 @@ static int32_t PrepareClient(const CJson *jsonParams, BindSession *session)
 
 Session *CreateClientBindSession(CJson *jsonParams, const DeviceAuthCallback *callback)
 {
-    int opCode = MEMBER_INVITE;
+    int32_t opCode = MEMBER_INVITE;
     if (GetIntFromJson(jsonParams, FIELD_OPERATION_CODE, &opCode) != HC_SUCCESS) {
         LOGE("Failed to get opCode from json!");
         return NULL;

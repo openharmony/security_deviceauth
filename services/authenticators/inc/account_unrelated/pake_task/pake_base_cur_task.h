@@ -35,7 +35,7 @@ typedef struct PakeParamsT {
     bool isPskSupported;
     Uint8Buff returnKey;
     Uint8Buff nonce;
-    int opCode;
+    int32_t opCode;
     int32_t userType;
     int32_t userTypePeer;
     char *packageName;

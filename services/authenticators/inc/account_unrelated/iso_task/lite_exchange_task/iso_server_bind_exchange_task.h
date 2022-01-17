@@ -22,6 +22,6 @@ typedef struct {
     SymBaseCurTask taskBase;
 } IsoServerBindExchangeTask;
 
-SymBaseCurTask *CreateServerBindExchangeTask(IsoParams *params, const CJson *in, CJson *out, int *status);
+SymBaseCurTask *CreateServerBindExchangeTask(IsoParams *params, const CJson *in, CJson *out, int32_t *status);
 
 #endif
