@@ -113,7 +113,7 @@ void DeInitIpcCallBackList(void)
     for (i = 0; i < IPC_CALL_BACK_MAX_NODES; i++) {
         ResetIpcCallBackNode(g_ipcCallBackList.ctx[i]);
     }
-    delete g_ipcCallBackList.ctx;
+    delete[] g_ipcCallBackList.ctx;
     g_ipcCallBackList.ctx = nullptr;
     return;
 }
