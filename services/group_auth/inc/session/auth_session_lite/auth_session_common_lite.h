@@ -23,7 +23,7 @@
 
 typedef struct AuthSessionLiteT {
     Session base;
-    int curTaskId;
+    int32_t curTaskId;
     CJson *authParams;
 } AuthSessionLite;
 

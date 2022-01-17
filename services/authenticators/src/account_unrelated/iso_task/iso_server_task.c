@@ -44,9 +44,9 @@ static void DestroyIsoServerTask(struct SubTaskBaseT *task)
     HcFree(innerTask);
 }
 
-static int CreateNextTask(IsoServerTask *realTask, const CJson *in, CJson *out, int *status)
+static int CreateNextTask(IsoServerTask *realTask, const CJson *in, CJson *out, int32_t *status)
 {
-    int message = 0;
+    int32_t message = 0;
     if (GetIntFromJson(in, FIELD_MESSAGE, &message) != 0) {
         LOGE("Get message code failed.");
         return HC_ERR_JSON_GET;
@@ -97,7 +97,7 @@ static int CreateNextTask(IsoServerTask *realTask, const CJson *in, CJson *out, 
     return res;
 }
 
-static int Process(struct SubTaskBaseT *task, const CJson *in, CJson *out, int *status)
+static int Process(struct SubTaskBaseT *task, const CJson *in, CJson *out, int32_t *status)
 {
     IsoServerTask *realTask = (IsoServerTask *)task;
     if (realTask->curTask != NULL) {

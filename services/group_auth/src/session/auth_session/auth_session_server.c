@@ -25,7 +25,7 @@
 #include "hc_types.h"
 #include "session_common.h"
 
-static int ProcessServerAuthSession(Session *session, CJson *in);
+static int32_t ProcessServerAuthSession(Session *session, CJson *in);
 
 static int32_t CombineServerParams(const CJson *confirmationJson, CJson *dataFromClient)
 {
@@ -108,7 +108,7 @@ static int32_t AddAuthParamByRequest(CJson *dataFromClient, const DeviceAuthCall
         LOGE("Failed to create json from string!");
         return HC_ERR_JSON_FAIL;
     }
-    int serverConfirm = REQUEST_ACCEPTED;
+    int32_t serverConfirm = REQUEST_ACCEPTED;
     (void)GetIntFromJson(confirmationJson, FIELD_CONFIRMATION, &serverConfirm);
     if ((uint32_t)serverConfirm == REQUEST_REJECTED) {
         LOGE("Server reject to response.");
@@ -184,14 +184,14 @@ static int32_t StartServerAuthTask(AuthSession *session, const CJson *receivedDa
 static int32_t CheckServerGroupAuthMsg(const CJson *in, const CJson *paramInSession, const DeviceAuthCallback *callback)
 {
     int32_t groupErrMsg = 0;
-    if (GetIntFromJson(in, FIELD_GROUP_ERROR_MSG, (int *)&groupErrMsg) != HC_SUCCESS) {
+    if (GetIntFromJson(in, FIELD_GROUP_ERROR_MSG, &groupErrMsg) != HC_SUCCESS) {
         return HC_SUCCESS;
     }
     InformLocalAuthError(paramInSession, callback);
     return HC_ERR_PEER_ERROR;
 }
 
-static int ProcessServerAuthSession(Session *session, CJson *in)
+static int32_t ProcessServerAuthSession(Session *session, CJson *in)
 {
     LOGI("Begin process server authSession.");
     if ((session == NULL) || (in == NULL)) {

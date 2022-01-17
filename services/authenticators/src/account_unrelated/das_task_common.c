@@ -104,8 +104,8 @@ void DasSendErrMsgToSelf(CJson *out, int errCode)
 
 uint32_t ProtocolMessageIn(const CJson *in)
 {
-    uint32_t message = 0;
-    if (GetIntFromJson(in, FIELD_MESSAGE, (int *)&message) != 0) {
+    int32_t message = 0;
+    if (GetIntFromJson(in, FIELD_MESSAGE, &message) != 0) {
         return INVALID_MESSAGE;
     }
     if (message == ERR_MESSAGE) {
@@ -438,7 +438,7 @@ int32_t GetAndCheckKeyLenOnServer(const CJson *in, uint32_t *keyLen)
         return HC_ERR_JSON_GET;
     }
     uint32_t tmpKeyLen = 0;
-    if (GetIntFromJson(payload, FIELD_KEY_LENGTH, (int *)&tmpKeyLen) != HC_SUCCESS) {
+    if (GetIntFromJson(payload, FIELD_KEY_LENGTH, (int32_t *)&tmpKeyLen) != HC_SUCCESS) {
         LOGE("Get tmpKeyLen from payload failed.");
         return HC_ERR_JSON_GET;
     }

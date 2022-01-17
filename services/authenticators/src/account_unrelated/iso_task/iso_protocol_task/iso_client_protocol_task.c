@@ -77,7 +77,7 @@ ERR:
     return res;
 }
 
-static int IsoClientStart(SymBaseCurTask *task, IsoParams *params, CJson *out, int *status)
+static int IsoClientStart(SymBaseCurTask *task, IsoParams *params, CJson *out, int32_t *status)
 {
     if (task->taskStatus != TASK_STATUS_BEGIN) {
         LOGI("The message is repeated, ignore it, status: %d", task->taskStatus);
@@ -149,7 +149,7 @@ static int ParseServerStartMessage(IsoParams *params, const CJson *in, Uint8Buff
     return HC_SUCCESS;
 }
 
-static int CalculateTokenClient(SymBaseCurTask *task, IsoParams *params, const CJson *in, CJson *out, int *status)
+static int CalculateTokenClient(SymBaseCurTask *task, IsoParams *params, const CJson *in, CJson *out, int32_t *status)
 {
     int res;
     if (task->taskStatus < TASK_STATUS_SERVER_RES_TOKEN) {
@@ -199,7 +199,7 @@ static int CalculateTokenClient(SymBaseCurTask *task, IsoParams *params, const C
     return res;
 }
 
-static int GenerateSessionKey(SymBaseCurTask *task, IsoParams *params, const CJson *in, int *status)
+static int GenerateSessionKey(SymBaseCurTask *task, IsoParams *params, const CJson *in, int32_t *status)
 {
     if (task->taskStatus < TASK_STATUS_GEN_SESSION_KEY) {
         LOGE("Invalid taskStatus: %d", task->taskStatus);
@@ -238,7 +238,7 @@ ERR:
     return res;
 }
 
-static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson *in, CJson *out, int *status)
+static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson *in, CJson *out, int32_t *status)
 {
     int res;
     uint32_t step = ProtocolMessageIn(in);

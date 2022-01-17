@@ -46,8 +46,8 @@ static int32_t DeleteDasPeerAuthInfo(const char *pkgName, const char *serviceTyp
 
 bool IsDasMsgNeedIgnore(const CJson *in)
 {
-    uint32_t message = 0;
-    if (GetIntFromJson(in, FIELD_MESSAGE, (int *)&message) != HC_SUCCESS) {
+    int32_t message = 0;
+    if (GetIntFromJson(in, FIELD_MESSAGE, &message) != HC_SUCCESS) {
         LOGD("There is no message code."); // There is no message code in the client's createTask request params
         return false;
     }
@@ -59,7 +59,7 @@ bool IsDasMsgNeedIgnore(const CJson *in)
     return true;
 }
 
-static int CreateDasTask(int *taskId, const CJson *in, CJson *out)
+static int CreateDasTask(int32_t *taskId, const CJson *in, CJson *out)
 {
     if (taskId == NULL || in == NULL || out == NULL) {
         LOGE("Params is null.");
@@ -94,7 +94,7 @@ static void DestroyDasModule(AuthModuleBase *module)
     }
 }
 
-static int ProcessDasTask(int taskId, const CJson* in, CJson* out, int *status)
+static int ProcessDasTask(int32_t taskId, const CJson* in, CJson* out, int32_t *status)
 {
     if (status == NULL || in == NULL || out == NULL) {
         LOGE("Params is null.");

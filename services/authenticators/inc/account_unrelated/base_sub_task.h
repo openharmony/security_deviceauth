@@ -23,7 +23,7 @@
 typedef struct SubTaskBaseT {
     int (*getTaskType)(const struct SubTaskBaseT *);
     void (*destroyTask)(struct SubTaskBaseT *);
-    int (*process)(struct SubTaskBaseT *, const CJson *in, CJson *out, int *status);
+    int (*process)(struct SubTaskBaseT *, const CJson *in, CJson *out, int32_t *status);
     VersionStruct curVersion;
 } SubTaskBase;
 

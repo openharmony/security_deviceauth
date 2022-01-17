@@ -22,7 +22,7 @@
 #include "json_utils.h"
 
 typedef struct SessionT {
-    int (*process)(struct SessionT *, CJson *);
+    int32_t (*process)(struct SessionT *, CJson *);
     void (*destroy)(struct SessionT *);
     const DeviceAuthCallback *callback;
     int type;

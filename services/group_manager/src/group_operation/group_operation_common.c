@@ -301,7 +301,7 @@ bool IsGroupVisibilityValid(int groupVisibility)
 
 int32_t CheckUserTypeIfExist(const CJson *jsonParams)
 {
-    int userType = DEVICE_TYPE_ACCESSORY;
+    int32_t userType = DEVICE_TYPE_ACCESSORY;
     (void)GetIntFromJson(jsonParams, FIELD_USER_TYPE, &userType);
     if (!IsUserTypeValid(userType)) {
         LOGE("The input userType is invalid! [UserType]: %d", userType);
@@ -312,7 +312,7 @@ int32_t CheckUserTypeIfExist(const CJson *jsonParams)
 
 int32_t CheckGroupVisibilityIfExist(const CJson *jsonParams)
 {
-    int groupVisibility = GROUP_VISIBILITY_PUBLIC;
+    int32_t groupVisibility = GROUP_VISIBILITY_PUBLIC;
     (void)GetIntFromJson(jsonParams, FIELD_GROUP_VISIBILITY, &groupVisibility);
     if (!IsGroupVisibilityValid(groupVisibility)) {
         LOGE("The input groupVisibility is invalid! [GroupVisibility]: %d", groupVisibility);
@@ -323,7 +323,7 @@ int32_t CheckGroupVisibilityIfExist(const CJson *jsonParams)
 
 int32_t CheckExpireTimeIfExist(const CJson *jsonParams)
 {
-    int expireTime = DEFAULT_EXPIRE_TIME;
+    int32_t expireTime = DEFAULT_EXPIRE_TIME;
     (void)GetIntFromJson(jsonParams, FIELD_EXPIRE_TIME, &expireTime);
     if (!IsExpireTimeValid(expireTime)) {
         LOGE("Invalid group expire time! [ExpireTime]: %d", expireTime);
@@ -368,7 +368,7 @@ int32_t AddGroupTypeToParams(int groupType, GroupInfo *groupParams)
 int32_t AddGroupVisibilityOrDefault(const CJson *jsonParams, GroupInfo *groupParams)
 {
     /* Currently, only the public group and private group can be created. */
-    int groupVisibility = GROUP_VISIBILITY_PUBLIC;
+    int32_t groupVisibility = GROUP_VISIBILITY_PUBLIC;
     (void)GetIntFromJson(jsonParams, FIELD_GROUP_VISIBILITY, &groupVisibility);
     groupParams->visibility = groupVisibility;
     return HC_SUCCESS;
@@ -376,7 +376,7 @@ int32_t AddGroupVisibilityOrDefault(const CJson *jsonParams, GroupInfo *groupPar
 
 int32_t AddExpireTimeOrDefault(const CJson *jsonParams, GroupInfo *groupParams)
 {
-    int expireTime = DEFAULT_EXPIRE_TIME;
+    int32_t expireTime = DEFAULT_EXPIRE_TIME;
     (void)GetIntFromJson(jsonParams, FIELD_EXPIRE_TIME, &expireTime);
     groupParams->expireTime = expireTime;
     return HC_SUCCESS;
@@ -433,7 +433,7 @@ int32_t AddAuthIdToParamsOrDefault(const CJson *jsonParams, DeviceInfo *devParam
 
 int32_t AddUserTypeToParamsOrDefault(const CJson *jsonParams, DeviceInfo *devParams)
 {
-    int userType = DEVICE_TYPE_ACCESSORY;
+    int32_t userType = DEVICE_TYPE_ACCESSORY;
     (void)GetIntFromJson(jsonParams, FIELD_USER_TYPE, &userType);
     devParams->devType = userType;
     return HC_SUCCESS;
@@ -687,7 +687,7 @@ int32_t ProcessKeyPair(int action, const CJson *jsonParams, const char *groupId)
         }
         authId = udid;
     }
-    int userType = DEVICE_TYPE_ACCESSORY;
+    int32_t userType = DEVICE_TYPE_ACCESSORY;
     (void)GetIntFromJson(jsonParams, FIELD_USER_TYPE, &userType);
     Uint8Buff authIdBuff = { 0, 0 };
     authIdBuff.length = HcStrlen(authId);
@@ -715,7 +715,7 @@ int32_t ProcessKeyPair(int action, const CJson *jsonParams, const char *groupId)
     return result;
 }
 
-int32_t GetGroupTypeFromDb(const char *groupId, int *returnGroupType)
+int32_t GetGroupTypeFromDb(const char *groupId, int32_t *returnGroupType)
 {
     if ((groupId == NULL) || (returnGroupType == NULL)) {
         LOGE("The input parameters contains NULL value!");

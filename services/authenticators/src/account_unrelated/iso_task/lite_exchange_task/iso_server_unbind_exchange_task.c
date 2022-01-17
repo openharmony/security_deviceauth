@@ -35,7 +35,7 @@ static void DestroyServerUnbindExchangeTask(struct SymBaseCurTaskT *task)
     HcFree(task);
 }
 
-static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson *in, CJson *out, int *status)
+static int Process(struct SymBaseCurTaskT *task, IsoParams *params, const CJson *in, CJson *out, int32_t *status)
 {
     (void)task;
     (void)params;
@@ -52,7 +52,7 @@ static int CheckRemoveInfo(const Uint8Buff *removeInfoBuf, const IsoParams *para
         LOGE("Get remove info json failed");
         return HC_ERR_JSON_GET;
     }
-    int userType = 0;
+    int32_t userType = 0;
     uint8_t *peerAuthId = NULL;
     int res = GetIntFromJson(removeInfoJson, FIELD_RMV_TYPE, &userType);
     if (res != HC_SUCCESS) {
@@ -157,7 +157,7 @@ ERR:
 }
 
 static int ServerUnbindExchangeStart(IsoParams *param, IsoServerUnbindExchangeTask *task,
-    const CJson *in, CJson *out, int *status)
+    const CJson *in, CJson *out, int32_t *status)
 {
     int res = DecryptRemoveInfo(param, in);
     if (res != 0) {
@@ -176,7 +176,7 @@ ERR:
     return res;
 }
 
-SymBaseCurTask *CreateServerUnbindExchangeTask(IsoParams *params, const CJson *in, CJson *out, int *status)
+SymBaseCurTask *CreateServerUnbindExchangeTask(IsoParams *params, const CJson *in, CJson *out, int32_t *status)
 {
     (void)in;
     IsoServerUnbindExchangeTask *task = (IsoServerUnbindExchangeTask *)HcMalloc(sizeof(IsoServerUnbindExchangeTask), 0);

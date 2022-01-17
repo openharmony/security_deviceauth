@@ -637,7 +637,7 @@ static int32_t AddMemberToGroup(int64_t requestId, CJson *jsonParams, const Devi
         return HC_ERR_INVALID_PARAMS;
     }
     int32_t result;
-    int operationCode = MEMBER_INVITE;
+    int32_t operationCode = MEMBER_INVITE;
     (void)GetIntFromJson(jsonParams, FIELD_OPERATION_CODE, &operationCode);
     result = CheckClientStatus(operationCode, jsonParams);
     if (result != HC_SUCCESS) {
@@ -678,7 +678,7 @@ static int32_t ProcessData(int64_t requestId, CJson *jsonParams, const DeviceAut
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
-    int operationCode = MEMBER_INVITE;
+    int32_t operationCode = MEMBER_INVITE;
     (void)(GetIntFromJson(jsonParams, FIELD_GROUP_OP, &operationCode));
     int32_t result = CheckServerStatusIfNotInvite(operationCode, jsonParams);
     if (result != HC_SUCCESS) {

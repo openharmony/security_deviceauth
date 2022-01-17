@@ -44,7 +44,7 @@ static void DestroyIsoClientTask(struct SubTaskBaseT *task)
     HcFree(innerTask);
 }
 
-static int CreateNextTask(IsoClientTask *realTask, const CJson *in, CJson *out, int *status)
+static int CreateNextTask(IsoClientTask *realTask, const CJson *in, CJson *out, int32_t *status)
 {
     int res = HC_SUCCESS;
     switch (realTask->params.opCode) {
@@ -90,7 +90,7 @@ static int CreateNextTask(IsoClientTask *realTask, const CJson *in, CJson *out, 
     return res;
 }
 
-static int Process(struct SubTaskBaseT *task, const CJson *in, CJson *out, int *status)
+static int Process(struct SubTaskBaseT *task, const CJson *in, CJson *out, int32_t *status)
 {
     IsoClientTask *realTask = (IsoClientTask *)task;
     if (realTask->curTask == NULL) {
