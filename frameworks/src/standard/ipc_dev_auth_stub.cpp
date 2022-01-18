@@ -41,7 +41,7 @@ ServiceDevAuth::~ServiceDevAuth()
 {
     maxCallMapSz = MAX_CALLMAP_SIZE;
     if (callMapTable != nullptr) {
-        delete callMapTable;
+        delete[] callMapTable;
         callMapTable = nullptr;
     }
     callMapElemNum = 0;
@@ -212,12 +212,12 @@ int32_t ServiceDevAuth::SetCallMap(IpcServiceCall method, int32_t methodId)
         if (callMapTmp != nullptr) {
             eno = memcpy_s(callMapTable, len, callMapTmp, (sizeof(IpcServiceCallMap) * callMapElemNum));
             if (eno != EOK) {
-                delete callMapTable;
+                delete[] callMapTable;
                 callMapTable = callMapTmp;
                 maxCallMapSz -= MAX_CALLMAP_SIZE;
                 return HC_ERR_MEMORY_COPY;
             }
-            delete callMapTmp;
+            delete[] callMapTmp;
             callMapTmp = nullptr;
         }
     }
