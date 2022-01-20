@@ -1,0 +1,61 @@
+{
+    "name": "@ohos/deviceauth",
+    "version": "3.1",
+    "description": "The device authentication module belongs to the security subsystem of OpenHarmony. It manages the entire lifecycle of trust relationships between devices.",
+    "publishAs": "code-segment",
+    "segment": {
+        "destPath": "base/security/deviceauth"
+    },
+    "dirs": {},
+    "scripts": {},
+    "author": {},
+    "repository": "",
+    "license": "Apache License 2.0",
+    "component": {
+      "name": "deviceauth_standard",
+      "subsystem": "security",
+      "syscap": [ "SystemCapbility.security.deviceauth" ],
+      "features": [],
+      "adapted_system_type": [
+          "standard",
+          "small",
+          "mini"
+        ],
+      "rom": "500KB",
+      "ram": "500KB",
+      "deps": {
+        "components": [
+          "libhilog",
+          "ipc_core",
+          "system_ability_fwk",
+          "samgr_proxy",
+          "utils_base",
+          "softbus_client"
+        ],
+        "third_party": [ 
+          "cJSON",
+          "bounds_checking_function"
+        ]
+      },
+      "build": {
+        "sub_component": [
+          "//base/security/deviceauth:deviceauth_sdk"
+        ],
+        "inner_kits": [
+          {
+            "name": "//base/security/deviceauth:deviceauth_sdk",
+            "header": {
+              "header_files": [
+                "device_auth_defines.h",
+                "device_auth.h"
+              ],
+              "header_base": "//base/security/deviceauth/interfaces/innerkits"
+            }
+          }
+        ],
+        "test": [ 
+            "//base/security/deviceauth:deviceauth_test_build"
+        ]
+      }
+    }
+}
