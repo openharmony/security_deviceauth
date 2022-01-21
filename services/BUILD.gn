@@ -19,10 +19,9 @@ if (defined(ohos_lite)) {
 import("//base/security/deviceauth/deps_adapter/deviceauth_hals.gni")
 import("deviceauth.gni")
 
+include_dirs = inc_path + hals_inc_path
 if (defined(ohos_lite)) {
   static_library("deviceauth") {
-    include_dirs = inc_path
-    include_dirs += hals_inc_path
     include_dirs += [
       "//third_party/cJSON",
       "//utils/native/lite/include",
@@ -59,8 +58,6 @@ if (defined(ohos_lite)) {
 
   if (ohos_kernel_type == "linux" || ohos_kernel_type == "liteos_a") {
     executable("deviceauth_service") {
-      include_dirs = inc_path
-      include_dirs += hals_inc_path
       include_dirs += [
         "//third_party/cJSON",
         "//utils/native/lite/include",
@@ -96,8 +93,6 @@ if (defined(ohos_lite)) {
     }
 
     shared_library("deviceauth_sdk") {
-      include_dirs = inc_path
-      include_dirs += hals_inc_path
       include_dirs += [
         "//third_party/cJSON",
         "//utils/native/lite/include",
@@ -132,9 +127,6 @@ if (defined(ohos_lite)) {
   ohos_static_library("deviceauth") {
     subsystem_name = "security"
     part_name = "deviceauth_standard"
-
-    include_dirs = inc_path
-    include_dirs += hals_inc_path
     include_dirs += [
       "//third_party/cJSON",
       "//utils/native/base/include",
@@ -180,8 +172,6 @@ if (defined(ohos_lite)) {
     part_name = "deviceauth_standard"
     install_enable = true
 
-    include_dirs = inc_path
-    include_dirs += hals_inc_path
     include_dirs += [
       "//third_party/cJSON",
       "//utils/native/base/include",
@@ -217,8 +207,6 @@ if (defined(ohos_lite)) {
     subsystem_name = "security"
     part_name = "deviceauth_standard"
 
-    include_dirs = inc_path
-    include_dirs += hals_inc_path
     include_dirs += [
       "//third_party/cJSON",
       "//utils/native/base/include",
