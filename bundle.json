@@ -39,7 +39,9 @@
       },
       "build": {
         "sub_component": [
-          "//base/security/deviceauth:deviceauth_sdk"
+          "//base/security/deviceauth:deviceauth_sdk",
+          "//base/security/deviceauth:deviceauth_service",
+          "//base/security/deviceauth:deviceauth"
         ],
         "inner_kits": [
           {
