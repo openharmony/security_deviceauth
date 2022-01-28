@@ -16,8 +16,6 @@
 #ifndef __BASE_H__
 #define __BASE_H__
 
-#define _HC_DEBUF_ 1
-
 #include <stdint.h>
 
 #ifdef _HC_DEBUG_
