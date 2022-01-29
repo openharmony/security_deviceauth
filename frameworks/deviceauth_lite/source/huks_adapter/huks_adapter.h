@@ -178,7 +178,7 @@ int32_t sign(struct hc_key_alias *key_alias, const struct uint8_buff *message, s
  *
  * @param service_id: the service ID
  * @param hc_auth_id: the auth ID
- * @param user_type:
+ * @param user_type: accessor:0 controller:1
  * @param message: the message to verify
  * @param signature: signature to compare
  * @return 0 -- success, others -- failed
@@ -191,7 +191,7 @@ int32_t verify(struct hc_key_alias *key_alias, const int32_t user_type, const st
  *
  * @param service_id: the service ID
  * @param hc_auth_id: the auth ID
- * @param user_type:
+ * @param user_type: accessor:0 controller:1
  * @param message: the message to verify
  * @param public_key: the public key
  * @param signature: signature to compare
@@ -244,7 +244,7 @@ int32_t compute_hkdf(struct var_buffer *shared_secret, struct hc_salt *salt, cha
  *
  * @param key: encrypt key
  * @param plain: data to be encrypted
- * @param aad:
+ * @param aad: aad for encrypt
  * @param out_cipher: encrypted data
  * @return 0 -- success, others -- failed
  */
@@ -256,7 +256,7 @@ int32_t aes_gcm_encrypt(struct var_buffer *key, const struct uint8_buff *plain,
  *
  * @param key: encrypt key
  * @param cipher: data to be decrypted
- * @param aad:
+ * @param aad: aad for encrypt
  * @param out_plain: edecrypted data
  * @return 0 -- success, others -- failed
  */
