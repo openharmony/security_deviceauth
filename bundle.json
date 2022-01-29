@@ -14,7 +14,7 @@
     "component": {
       "name": "deviceauth_standard",
       "subsystem": "security",
-      "syscap": [ "SystemCapbility.security.deviceauth" ],
+      "syscap": [ "SystemCapability.security.deviceauth" ],
       "features": [],
       "adapted_system_type": [
           "standard",
@@ -30,22 +30,26 @@
           "system_ability_fwk",
           "samgr_proxy",
           "utils_base",
-          "softbus_client"
+          "softbus_client",
+          "libhukssdk",
+          "libsyspara"
         ],
-        "third_party": [ 
+        "third_party": [
           "cJSON",
-          "bounds_checking_function"
+          "bounds_checking_function",
+          "mbedtls",
+          "openssl"
         ]
       },
       "build": {
         "sub_component": [
-          "//base/security/deviceauth:deviceauth_sdk",
-          "//base/security/deviceauth:deviceauth_service",
-          "//base/security/deviceauth:deviceauth"
+          "//base/security/deviceauth:deviceauth_sdk_build",
+          "//base/security/deviceauth:deviceauth_service_build",
+          "//base/security/deviceauth:deviceauth_build"
         ],
         "inner_kits": [
           {
-            "name": "//base/security/deviceauth:deviceauth_sdk",
+            "name": "//base/security/deviceauth/services:deviceauth_sdk",
             "header": {
               "header_files": [
                 "device_auth_defines.h",
@@ -55,7 +59,7 @@
             }
           }
         ],
-        "test": [ 
+        "test": [
             "//base/security/deviceauth:deviceauth_test_build"
         ]
       }
