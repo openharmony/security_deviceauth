@@ -26,19 +26,19 @@ if (defined(ohos_lite)) {
   import("//build/ohos.gni")
   import("deviceauth_env.gni")
 
-  group("deviceauth_sdk") {
+  group("deviceauth_sdk_build") {
     if (os_level == "standard" || os_level == "small") {
       deps = [ "services:deviceauth_sdk" ]
     }
   }
 
-  group("deviceauth_service") {
+  group("deviceauth_service_build") {
     if (os_level == "standard" || os_level == "small") {
       deps = [ "services:deviceauth_service" ]
     }
   }
 
-  group("deviceauth") {
+  group("deviceauth_build") {
     deps = [ "services:deviceauth" ]
   }
 
