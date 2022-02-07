@@ -16,8 +16,8 @@
 #ifndef __STS_CLIENT_H__
 #define __STS_CLIENT_H__
 
-#include "key_agreement_server.h"
 #include <stdint.h>
+#include "key_agreement_server.h"
 #include "base.h"
 #include "hichain.h"
 #include "sts_server.h"
