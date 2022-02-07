@@ -19,9 +19,13 @@ if (defined(ohos_lite)) {
 import("//base/security/deviceauth/deps_adapter/deviceauth_hals.gni")
 import("deviceauth.gni")
 
+config("deviceauth_config") {
+  include_dirs = [ "//base/security/deviceauth/interfaces/innerkits" ]
+}
 include_dirs = inc_path + hals_inc_path
 if (defined(ohos_lite)) {
   static_library("deviceauth") {
+    public_configs = [ ":deviceauth_config" ]
     include_dirs += [
       "//third_party/cJSON",
       "//utils/native/lite/include",
@@ -93,6 +97,7 @@ if (defined(ohos_lite)) {
     }
 
     shared_library("deviceauth_sdk") {
+      public_configs = [ ":deviceauth_config" ]
       include_dirs += [
         "//third_party/cJSON",
         "//utils/native/lite/include",
@@ -206,6 +211,7 @@ if (defined(ohos_lite)) {
   ohos_shared_library("deviceauth_sdk") {
     subsystem_name = "security"
     part_name = "deviceauth_standard"
+    public_configs = [ ":deviceauth_config" ]
 
     include_dirs += [
       "//third_party/cJSON",
