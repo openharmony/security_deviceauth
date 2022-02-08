@@ -54,6 +54,12 @@ void DestroyPakeV1BaseParams(PakeBaseParams *params)
 
     HcFree(params->kcfDataPeer.val);
     params->kcfDataPeer.val = NULL;
+
+    HcFree(params->idSelf.val);
+    params->idSelf.val = NULL;
+
+    HcFree(params->idPeer.val);
+    params->idPeer.val = NULL;
 }
 
 static int32_t AllocDefaultParams(PakeBaseParams *params)
