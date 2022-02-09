@@ -29,7 +29,6 @@ declare_args() {
 
 if (defined(ohos_lite)) {
   if (ohos_kernel_type == "liteos_m") {
-    enable_soft_bus_channel = false
     import("${deviceauth_feature_config}/mini/config.gni")
   } else {
     import("${deviceauth_feature_config}/small/config.gni")
