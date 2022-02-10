@@ -18,17 +18,22 @@
 #include "alg_defs.h"
 #include "broadcast_manager.h"
 #include "callback_manager.h"
-#include "database_manager.h"
+#include "common_defs.h"
+#include "data_manager.h"
 #include "dev_auth_module_manager.h"
+#include "device_auth_defines.h"
 #include "group_manager_common.h"
 #include "group_operation_common.h"
+#include "hc_dev_info.h"
 #include "hc_log.h"
+#include "os_account_adapter.h"
 #include "session_manager.h"
 #include "task_manager.h"
 
 #include "across_account_group.h"
 #include "identical_account_group.h"
 #include "peer_to_peer_group.h"
+
 
 static bool IsGroupTypeSupported(int groupType)
 {
@@ -41,23 +46,24 @@ static bool IsGroupTypeSupported(int groupType)
     return false;
 }
 
-static void RemoveNoPermissionGroup(GroupInfoVec *groupInfoVec, const char *appId)
+static void RemoveNoPermissionGroup(int32_t osAccountId, GroupEntryVec *groupEntryVec, const char *appId)
 {
     uint32_t index = 0;
-    void **groupInfoPtr = NULL;
-    while (index < groupInfoVec->size(groupInfoVec)) {
-        groupInfoPtr = groupInfoVec->getp(groupInfoVec, index);
-        if ((groupInfoPtr == NULL) || (*groupInfoPtr == NULL)) {
+    TrustedGroupEntry **groupEntryPtr = NULL;
+    while (index < groupEntryVec->size(groupEntryVec)) {
+        groupEntryPtr = groupEntryVec->getp(groupEntryVec, index);
+        if ((groupEntryPtr == NULL) || (*groupEntryPtr == NULL)) {
             index++;
             continue;
         }
-        GroupInfo *groupInfo = (GroupInfo *)(*groupInfoPtr);
-        if (IsGroupAccessible(StringGet(&groupInfo->id), appId)) {
+        if (IsGroupAccessible(osAccountId, StringGet(&(*groupEntryPtr)->id), appId)) {
             index++;
             continue;
         }
-        void *tempEntry = NULL;
-        HC_VECTOR_POPELEMENT(groupInfoVec, &tempEntry, index);
+        LOGI("Remove a group without permission!");
+        TrustedGroupEntry *tempEntry = NULL;
+        HC_VECTOR_POPELEMENT(groupEntryVec, &tempEntry, index);
+        DestroyGroupEntry(tempEntry);
     }
 }
 
@@ -77,7 +83,7 @@ static int32_t GenerateReturnEmptyArrayStr(char **returnVec)
     return HC_SUCCESS;
 }
 
-static int32_t GenerateReturnGroupVec(GroupInfoVec *groupInfoVec, char **returnGroupVec, uint32_t *groupNum)
+static int32_t GenerateReturnGroupVec(GroupEntryVec *groupInfoVec, char **returnGroupVec, uint32_t *groupNum)
 {
     if (HC_VECTOR_SIZE(groupInfoVec) == 0) {
         LOGI("No group is found based on the query parameters!");
@@ -92,10 +98,10 @@ static int32_t GenerateReturnGroupVec(GroupInfoVec *groupInfoVec, char **returnG
     }
     uint32_t groupCount = 0;
     uint32_t index;
-    void **groupInfoPtr = NULL;
+    TrustedGroupEntry **groupInfoPtr = NULL;
     FOR_EACH_HC_VECTOR(*groupInfoVec, index, groupInfoPtr) {
-        if ((groupInfoPtr != NULL) && ((*groupInfoPtr) != NULL)) {
-            GroupInfo *groupInfo = (GroupInfo*)(*groupInfoPtr);
+        if (groupInfoPtr != NULL) {
+            TrustedGroupEntry *groupInfo = *groupInfoPtr;
             CJson *groupInfoJson = CreateJson();
             if (groupInfoJson == NULL) {
                 LOGE("Failed to allocate groupInfoJson memory!");
@@ -127,7 +133,7 @@ static int32_t GenerateReturnGroupVec(GroupInfoVec *groupInfoVec, char **returnG
     return HC_SUCCESS;
 }
 
-static int32_t GenerateReturnDeviceVec(DeviceInfoVec *devInfoVec, char **returnDevInfoVec, uint32_t *deviceNum)
+static int32_t GenerateReturnDeviceVec(DeviceEntryVec *devInfoVec, char **returnDevInfoVec, uint32_t *deviceNum)
 {
     if (HC_VECTOR_SIZE(devInfoVec) == 0) {
         LOGI("No device is found based on the query parameters!");
@@ -142,10 +148,10 @@ static int32_t GenerateReturnDeviceVec(DeviceInfoVec *devInfoVec, char **returnD
     }
     uint32_t devCount = 0;
     uint32_t index;
-    void **devInfoPtr = NULL;
+    TrustedDeviceEntry **devInfoPtr = NULL;
     FOR_EACH_HC_VECTOR(*devInfoVec, index, devInfoPtr) {
         if ((devInfoPtr != NULL) && ((*devInfoPtr) != NULL)) {
-            DeviceInfo *devInfo = (DeviceInfo*)(*devInfoPtr);
+            TrustedDeviceEntry *devInfo = (TrustedDeviceEntry*)(*devInfoPtr);
             CJson *devInfoJson = CreateJson();
             if (devInfoJson == NULL) {
                 LOGE("Failed to allocate devInfoJson memory!");
@@ -186,6 +192,182 @@ static bool IsQueryParamsValid(int groupType, const char *groupId, const char *g
     }
 }
 
+static int32_t QueryRelatedGroupsForGetPk(int32_t osAccountId, const char *udid, GroupEntryVec *returnGroupEntryVec)
+{
+    DeviceEntryVec deviceEntryVec = CreateDeviceEntryVec();
+    QueryDeviceParams params = InitQueryDeviceParams();
+    params.udid = udid;
+    int32_t result = QueryDevices(osAccountId, &params, &deviceEntryVec);
+    if (result != HC_SUCCESS) {
+        LOGE("Failed to query trusted devices!");
+        ClearDeviceEntryVec(&deviceEntryVec);
+        return result;
+    }
+    uint32_t index;
+    TrustedDeviceEntry **entry = NULL;
+    FOR_EACH_HC_VECTOR(deviceEntryVec, index, entry) {
+        if ((entry == NULL) || (*entry == NULL)) {
+            continue;
+        }
+        TrustedGroupEntry *groupEntry = GetGroupEntryById(osAccountId, StringGet(&(*entry)->groupId));
+        if (groupEntry == NULL) {
+            LOGE("Failed to get group entry by id!");
+            ClearDeviceEntryVec(&deviceEntryVec);
+            return HC_ERR_GROUP_NOT_EXIST;
+        }
+        if ((groupEntry->type != PEER_TO_PEER_GROUP) || (groupEntry->visibility != GROUP_VISIBILITY_PUBLIC)) {
+            DestroyGroupEntry(groupEntry);
+            continue;
+        }
+        if (returnGroupEntryVec->pushBackT(returnGroupEntryVec, groupEntry) == NULL) {
+            LOGE("Failed to push groupEntry to returnGroupEntryVec!");
+            DestroyGroupEntry(groupEntry);
+            ClearDeviceEntryVec(&deviceEntryVec);
+            return HC_ERR_MEMORY_COPY;
+        }
+    }
+    ClearDeviceEntryVec(&deviceEntryVec);
+    return HC_SUCCESS;
+}
+
+static int32_t GetPkByParams(const char *groupId, const TrustedDeviceEntry *deviceEntry,
+    char *returnPkHexStr, int32_t returnPkHexStrLen)
+{
+    /* Use the DeviceGroupManager package name. */
+    const char *appId = GROUP_MANAGER_PACKAGE_NAME;
+    int userType = deviceEntry->devType;
+    const char *authId = StringGet(&deviceEntry->authId);
+    if (authId == NULL) {
+        LOGE("Failed to get authId from deviceEntry!");
+        return HC_ERR_DB;
+    }
+    Uint8Buff authIdBuff = { 0, 0 };
+    authIdBuff.length = HcStrlen(authId);
+    authIdBuff.val = (uint8_t *)HcMalloc(authIdBuff.length, 0);
+    if (authIdBuff.val == NULL) {
+        LOGE("Failed to allocate authIdBuff memory!");
+        return HC_ERR_ALLOC_MEMORY;
+    }
+    if (memcpy_s(authIdBuff.val, authIdBuff.length, authId, authIdBuff.length) != HC_SUCCESS) {
+        LOGE("Failed to copy authId!");
+        HcFree(authIdBuff.val);
+        return HC_ERR_MEMORY_COPY;
+    }
+    uint8_t returnPkBytes[PUBLIC_KEY_MAX_LENGTH] = { 0 };
+    Uint8Buff returnPkBuff = { 0, 0 };
+    returnPkBuff.length = PUBLIC_KEY_MAX_LENGTH;
+    returnPkBuff.val = returnPkBytes;
+    AuthModuleParams authParams = {
+        .pkgName = appId,
+        .serviceType = groupId,
+        .authId = &authIdBuff,
+        .userType = userType
+    };
+    int32_t res = GetPublicKey(DAS_MODULE, &authParams, &returnPkBuff);
+    HcFree(authIdBuff.val);
+    if (res != HC_SUCCESS) {
+        return res;
+    }
+    res = GetHashResult(returnPkBuff.val, returnPkBuff.length, returnPkHexStr, returnPkHexStrLen);
+    if (res != HC_SUCCESS) {
+        LOGE("Failed to get hash for pk!");
+        return HC_ERR_HASH_FAIL;
+    }
+    return HC_SUCCESS;
+}
+
+static int32_t GeneratePkInfo(int32_t osAccountId, const char *queryUdid, const char *groupId, CJson *pkInfo)
+{
+    TrustedDeviceEntry *deviceEntry = GetTrustedDeviceEntryById(osAccountId, queryUdid, true, groupId);
+    if (deviceEntry == NULL) {
+        LOGE("The trusted device is not found!");
+        return HC_ERR_DEVICE_NOT_EXIST;
+    }
+    char returnPkHexStr[SHA256_LEN * BYTE_TO_HEX_OPER_LENGTH + 1] = { 0 };
+    int32_t result = GetPkByParams(groupId, deviceEntry, returnPkHexStr, sizeof(returnPkHexStr));
+    DestroyDeviceEntry(deviceEntry);
+    if (result != HC_SUCCESS) {
+        return result;
+    }
+    if (AddStringToJson(pkInfo, FIELD_GROUP_ID, groupId) != HC_SUCCESS) {
+        LOGE("Failed to add groupId to pkInfo!");
+        return HC_ERR_JSON_ADD;
+    }
+    if (AddStringToJson(pkInfo, FIELD_PUBLIC_KEY, returnPkHexStr) != HC_SUCCESS) {
+        LOGE("Failed to add publicKey to pkInfo!");
+        return HC_ERR_JSON_ADD;
+    }
+    return HC_SUCCESS;
+}
+
+static void AddAllPkInfoToList(int32_t osAccountId, const char *queryUdid, const GroupEntryVec *groupEntryVec,
+    CJson *pkInfoList)
+{
+    uint32_t index;
+    TrustedGroupEntry **entry = NULL;
+    FOR_EACH_HC_VECTOR(*groupEntryVec, index, entry) {
+        if ((entry == NULL) || (*entry == NULL)) {
+            continue;
+        }
+        const char *groupId = StringGet(&((*entry)->id));
+        if (groupId == NULL) {
+            LOGE("Failed to get groupId from groupInfo!");
+            continue;
+        }
+        CJson *pkInfo = CreateJson();
+        if (pkInfo == NULL) {
+            LOGE("Failed to create json!");
+            continue;
+        }
+        int32_t res = GeneratePkInfo(osAccountId, queryUdid, groupId, pkInfo);
+        if (res != HC_SUCCESS) {
+            FreeJson(pkInfo);
+            continue;
+        }
+        if (AddObjToArray(pkInfoList, pkInfo) != HC_SUCCESS) {
+            LOGE("Failed to add pkInfo to pkInfoList!");
+            FreeJson(pkInfo);
+        }
+    }
+}
+
+static int32_t GeneratePkInfoList(int32_t osAccountId, const char *appId, const CJson *params, CJson *pkInfoList)
+{
+    const char *udid = GetStringFromJson(params, FIELD_UDID);
+    if (udid == NULL) {
+        LOGE("Failed to get udid from params!");
+        return HC_ERR_JSON_GET;
+    }
+    bool isSelfPk = false;
+    if (GetBoolFromJson(params, FIELD_IS_SELF_PK, &isSelfPk) != HC_SUCCESS) {
+        LOGE("Failed to get isSelfPk from json!");
+        return HC_ERR_JSON_GET;
+    }
+    GroupEntryVec groupEntryVec = CreateGroupEntryVec();
+    int32_t res = QueryRelatedGroupsForGetPk(osAccountId, udid, &groupEntryVec);
+    if (res != HC_SUCCESS) {
+        ClearGroupEntryVec(&groupEntryVec);
+        return res;
+    }
+    RemoveNoPermissionGroup(osAccountId, &groupEntryVec, appId);
+    const char *queryUdid = NULL;
+    char selfUdid[INPUT_UDID_LEN] = { 0 };
+    if (isSelfPk) {
+        res = HcGetUdid((uint8_t *)selfUdid, INPUT_UDID_LEN);
+        if (res != HC_SUCCESS) {
+            LOGE("Failed to get local udid! res: %d", res);
+            ClearGroupEntryVec(&groupEntryVec);
+            return HC_ERR_DB;
+        }
+        queryUdid = selfUdid;
+    } else {
+        queryUdid = udid;
+    }
+    AddAllPkInfoToList(osAccountId, queryUdid, &groupEntryVec, pkInfoList);
+    ClearGroupEntryVec(&groupEntryVec);
+    return HC_SUCCESS;
+}
+
 static BaseGroup *GetGroupInstance(int32_t groupType)
 {
     if (!IsGroupTypeSupported(groupType)) {
@@ -202,7 +384,7 @@ static BaseGroup *GetGroupInstance(int32_t groupType)
     return instance;
 }
 
-static int32_t CreateGroup(CJson *jsonParams, char **returnJsonStr)
+static int32_t CreateGroup(int32_t osAccountId, CJson *jsonParams, char **returnJsonStr)
 {
     if ((jsonParams == NULL) || (returnJsonStr == NULL)) {
         LOGE("The input parameters contains NULL value!");
@@ -218,10 +400,10 @@ static int32_t CreateGroup(CJson *jsonParams, char **returnJsonStr)
         LOGE("The group instance is NULL or its function ptr is NULL!");
         return HC_ERR_NULL_PTR;
     }
-    return instance->createGroup(jsonParams, returnJsonStr);
+    return instance->createGroup(osAccountId, jsonParams, returnJsonStr);
 }
 
-static int32_t DeleteGroup(CJson *jsonParams, char **returnJsonStr)
+static int32_t DeleteGroup(int32_t osAccountId, CJson *jsonParams, char **returnJsonStr)
 {
     if ((jsonParams == NULL) || (returnJsonStr == NULL)) {
         LOGE("The input parameters contains NULL value!");
@@ -233,9 +415,9 @@ static int32_t DeleteGroup(CJson *jsonParams, char **returnJsonStr)
     int32_t groupType = PEER_TO_PEER_GROUP;
     if (((result = GetGroupIdFromJson(jsonParams, &groupId)) != HC_SUCCESS) ||
         ((result = GetAppIdFromJson(jsonParams, &appId)) != HC_SUCCESS) ||
-        ((result = CheckGroupExist(groupId)) != HC_SUCCESS) ||
-        ((result = GetGroupTypeFromDb(groupId, &groupType)) != HC_SUCCESS) ||
-        ((result = CheckPermForGroup(GROUP_DISBAND, appId, groupId)) != HC_SUCCESS)) {
+        ((result = CheckGroupExist(osAccountId, groupId)) != HC_SUCCESS) ||
+        ((result = GetGroupTypeFromDb(osAccountId, groupId, &groupType)) != HC_SUCCESS) ||
+        ((result = CheckPermForGroup(osAccountId, GROUP_DISBAND, appId, groupId)) != HC_SUCCESS)) {
         return result;
     }
     BaseGroup *instance = GetGroupInstance(groupType);
@@ -243,10 +425,11 @@ static int32_t DeleteGroup(CJson *jsonParams, char **returnJsonStr)
         LOGE("The group instance is NULL or its function ptr is NULL!");
         return HC_ERR_NULL_PTR;
     }
-    return instance->deleteGroup(jsonParams, returnJsonStr);
+    return instance->deleteGroup(osAccountId, jsonParams, returnJsonStr);
 }
 
-static int32_t AddMemberToPeerToPeerGroup(int64_t requestId, CJson *jsonParams, const DeviceAuthCallback *callback)
+static int32_t AddMemberToPeerToPeerGroup(int32_t osAccountId, int64_t requestId, CJson *jsonParams,
+    const DeviceAuthCallback *callback)
 {
     if ((jsonParams == NULL) || (callback == NULL)) {
         LOGE("The input parameters contains NULL value!");
@@ -261,10 +444,11 @@ static int32_t AddMemberToPeerToPeerGroup(int64_t requestId, CJson *jsonParams, 
         LOGE("The group instance is NULL or its function ptr is NULL!");
         return HC_ERR_NULL_PTR;
     }
-    return instance->addMember(requestId, jsonParams, callback);
+    return instance->addMember(osAccountId, requestId, jsonParams, callback);
 }
 
-static int32_t DeleteMemberFromPeerToPeerGroup(int64_t requestId, CJson *jsonParams, const DeviceAuthCallback *callback)
+static int32_t DeleteMemberFromPeerToPeerGroup(int32_t osAccountId, int64_t requestId, CJson *jsonParams,
+    const DeviceAuthCallback *callback)
 {
     if ((jsonParams == NULL) || (callback == NULL)) {
         LOGE("The input parameters contains NULL value!");
@@ -279,7 +463,7 @@ static int32_t DeleteMemberFromPeerToPeerGroup(int64_t requestId, CJson *jsonPar
         LOGE("The group instance is NULL or its function ptr is NULL!");
         return HC_ERR_NULL_PTR;
     }
-    return instance->deleteMember(requestId, jsonParams, callback);
+    return instance->deleteMember(osAccountId, requestId, jsonParams, callback);
 }
 
 static int32_t ProcessBindData(int64_t requestId, CJson *jsonParams, const DeviceAuthCallback *callback)
@@ -342,7 +526,8 @@ static int32_t SyncAcrossAccountGroup(const char *appId, const char *userIdHash,
     return instance->syncGroup(appId, userIdHash, deviceId, sharedUserIdHashList);
 }
 
-static int32_t AddGroupRoleWithCheck(bool isManager, const char *appId, const char *groupId, const char *roleAppId)
+static int32_t AddGroupRoleWithCheck(int32_t osAccuntId, bool isManager, const char *appId, const char *groupId,
+    const char *roleAppId)
 {
     if ((appId == NULL) || (groupId == NULL) || (roleAppId == NULL)) {
         LOGE("The input parameters contains NULL value!");
@@ -357,10 +542,11 @@ static int32_t AddGroupRoleWithCheck(bool isManager, const char *appId, const ch
         LOGE("The group instance is NULL or its function ptr is NULL!");
         return HC_ERR_NULL_PTR;
     }
-    return instance->addGroupRole(isManager, appId, groupId, roleAppId);
+    return instance->addGroupRole(osAccuntId, isManager, appId, groupId, roleAppId);
 }
 
-static int32_t DeleteGroupRoleWithCheck(bool isManager, const char *appId, const char *groupId, const char *roleAppId)
+static int32_t DeleteGroupRoleWithCheck(int32_t osAccuntId, bool isManager, const char *appId, const char *groupId,
+    const char *roleAppId)
 {
     if ((appId == NULL) || (groupId == NULL) || (roleAppId == NULL)) {
         LOGE("The input parameters contains NULL value!");
@@ -375,11 +561,11 @@ static int32_t DeleteGroupRoleWithCheck(bool isManager, const char *appId, const
         LOGE("The group instance is NULL or its function ptr is NULL!");
         return HC_ERR_NULL_PTR;
     }
-    return instance->deleteGroupRole(isManager, appId, groupId, roleAppId);
+    return instance->deleteGroupRole(osAccuntId, isManager, appId, groupId, roleAppId);
 }
 
-static int32_t GetGroupRolesWithCheck(bool isManager, const char *appId, const char *groupId, char **returnJsonStr,
-    uint32_t *returnSize)
+static int32_t GetGroupRolesWithCheck(int32_t osAccuntId, bool isManager, const char *appId, const char *groupId,
+    char **returnJsonStr, uint32_t *returnSize)
 {
     if ((appId == NULL) || (groupId == NULL) || (returnJsonStr == NULL) || (returnSize == NULL)) {
         LOGE("The input parameters contains NULL value!");
@@ -394,7 +580,7 @@ static int32_t GetGroupRolesWithCheck(bool isManager, const char *appId, const c
         LOGE("The group instance is NULL or its function ptr is NULL!");
         return HC_ERR_NULL_PTR;
     }
-    return instance->getGroupRoles(isManager, appId, groupId, returnJsonStr, returnSize);
+    return instance->getGroupRoles(osAccuntId, isManager, appId, groupId, returnJsonStr, returnSize);
 }
 
 static int32_t GetOpCodeWhenAdd(const CJson *jsonParams)
@@ -414,7 +600,7 @@ static void DoCreateGroup(HcTaskBase *baseTask)
     GroupManagerTask *task = (GroupManagerTask *)baseTask;
     LOGI("[Start]: DoCreateGroup! [ReqId]: %" PRId64, task->reqId);
     char *returnJsonStr = NULL;
-    int32_t result = CreateGroup(task->params, &returnJsonStr);
+    int32_t result = CreateGroup(task->osAccountId, task->params, &returnJsonStr);
     if (result != HC_SUCCESS) {
         ProcessErrorCallback(task->reqId, GROUP_CREATE, result, NULL, task->cb);
     } else {
@@ -432,7 +618,7 @@ static void DoDeleteGroup(HcTaskBase *baseTask)
     GroupManagerTask *task = (GroupManagerTask *)baseTask;
     LOGI("[Start]: DoDeleteGroup! [ReqId]: %" PRId64, task->reqId);
     char *returnJsonStr = NULL;
-    int32_t result = DeleteGroup(task->params, &returnJsonStr);
+    int32_t result = DeleteGroup(task->osAccountId, task->params, &returnJsonStr);
     if (result != HC_SUCCESS) {
         ProcessErrorCallback(task->reqId, GROUP_DISBAND, result, NULL, task->cb);
     } else {
@@ -449,7 +635,7 @@ static void DoAddMember(HcTaskBase *baseTask)
     }
     GroupManagerTask *task = (GroupManagerTask *)baseTask;
     LOGI("[Start]: DoAddMember! [ReqId]: %" PRId64, task->reqId);
-    (void)AddMemberToPeerToPeerGroup(task->reqId, task->params, task->cb);
+    (void)AddMemberToPeerToPeerGroup(task->osAccountId, task->reqId, task->params, task->cb);
 }
 
 static void DoDeleteMember(HcTaskBase *baseTask)
@@ -460,7 +646,7 @@ static void DoDeleteMember(HcTaskBase *baseTask)
     }
     GroupManagerTask *task = (GroupManagerTask *)baseTask;
     LOGI("[Start]: DoDeleteMember! [ReqId]: %" PRId64, task->reqId);
-    (void)DeleteMemberFromPeerToPeerGroup(task->reqId, task->params, task->cb);
+    (void)DeleteMemberFromPeerToPeerGroup(task->osAccountId, task->reqId, task->params, task->cb);
 }
 
 static void DoProcessBindData(HcTaskBase *baseTask)
@@ -496,10 +682,11 @@ static void DoConfirmRequest(HcTaskBase *baseTask)
     OnConfirmed(task->reqId, task->params);
 }
 
-static int32_t RequestCreateGroup(int64_t requestId, const char *appId, const char *createParams)
+static int32_t RequestCreateGroup(int32_t osAccountId, int64_t requestId, const char *appId, const char *createParams)
 {
-    if ((appId == NULL) || (createParams == NULL)) {
-        LOGE("The input parameters contains NULL value!");
+    osAccountId = DevAuthGetRealOsAccountLocalId(osAccountId);
+    if ((appId == NULL) || (createParams == NULL) || (osAccountId == INVALID_OS_ACCOUNT)) {
+        LOGE("Invalid input parameters!");
         return HC_ERR_INVALID_PARAMS;
     }
     LOGI("[Start]: RequestCreateGroup! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
@@ -513,7 +700,7 @@ static int32_t RequestCreateGroup(int64_t requestId, const char *appId, const ch
         FreeJson(params);
         return result;
     }
-    if (InitAndPushGMTask(GROUP_CREATE, requestId, params, DoCreateGroup) != HC_SUCCESS) {
+    if (InitAndPushGMTask(osAccountId, GROUP_CREATE, requestId, params, DoCreateGroup) != HC_SUCCESS) {
         FreeJson(params);
         return HC_ERR_INIT_TASK_FAIL;
     }
@@ -521,10 +708,11 @@ static int32_t RequestCreateGroup(int64_t requestId, const char *appId, const ch
     return HC_SUCCESS;
 }
 
-static int32_t RequestDeleteGroup(int64_t requestId, const char *appId, const char *disbandParams)
+static int32_t RequestDeleteGroup(int32_t osAccountId, int64_t requestId, const char *appId, const char *disbandParams)
 {
-    if ((appId == NULL) || (disbandParams == NULL)) {
-        LOGE("The input parameters contains NULL value!");
+    osAccountId = DevAuthGetRealOsAccountLocalId(osAccountId);
+    if ((appId == NULL) || (disbandParams == NULL) || (osAccountId == INVALID_OS_ACCOUNT)) {
+        LOGE("Invalid input parameters!");
         return HC_ERR_INVALID_PARAMS;
     }
     LOGI("[Start]: RequestDeleteGroup! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
@@ -538,7 +726,7 @@ static int32_t RequestDeleteGroup(int64_t requestId, const char *appId, const ch
         FreeJson(params);
         return result;
     }
-    if (InitAndPushGMTask(GROUP_DISBAND, requestId, params, DoDeleteGroup) != HC_SUCCESS) {
+    if (InitAndPushGMTask(osAccountId, GROUP_DISBAND, requestId, params, DoDeleteGroup) != HC_SUCCESS) {
         FreeJson(params);
         return HC_ERR_INIT_TASK_FAIL;
     }
@@ -546,10 +734,11 @@ static int32_t RequestDeleteGroup(int64_t requestId, const char *appId, const ch
     return HC_SUCCESS;
 }
 
-static int32_t RequestAddMemberToGroup(int64_t requestId, const char *appId, const char *addParams)
+static int32_t RequestAddMemberToGroup(int32_t osAccountId, int64_t requestId, const char *appId, const char *addParams)
 {
-    if ((appId == NULL) || (addParams == NULL)) {
-        LOGE("The input parameters contains NULL value!");
+    osAccountId = DevAuthGetRealOsAccountLocalId(osAccountId);
+    if ((appId == NULL) || (addParams == NULL) || (osAccountId == INVALID_OS_ACCOUNT)) {
+        LOGE("Invalid input parameters!");
         return HC_ERR_INVALID_PARAMS;
     }
     LOGI("[Start]: RequestAddMemberToGroup! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
@@ -564,7 +753,7 @@ static int32_t RequestAddMemberToGroup(int64_t requestId, const char *appId, con
         FreeJson(params);
         return result;
     }
-    if (InitAndPushGMTask(opCode, requestId, params, DoAddMember) != HC_SUCCESS) {
+    if (InitAndPushGMTask(osAccountId, opCode, requestId, params, DoAddMember) != HC_SUCCESS) {
         FreeJson(params);
         return HC_ERR_INIT_TASK_FAIL;
     }
@@ -572,10 +761,12 @@ static int32_t RequestAddMemberToGroup(int64_t requestId, const char *appId, con
     return HC_SUCCESS;
 }
 
-static int32_t RequestDeleteMemberFromGroup(int64_t requestId, const char *appId, const char *deleteParams)
+static int32_t RequestDeleteMemberFromGroup(int32_t osAccountId, int64_t requestId, const char *appId,
+    const char *deleteParams)
 {
-    if ((appId == NULL) || (deleteParams == NULL)) {
-        LOGE("The input parameters contains NULL value!");
+    osAccountId = DevAuthGetRealOsAccountLocalId(osAccountId);
+    if ((appId == NULL) || (deleteParams == NULL) || (osAccountId == INVALID_OS_ACCOUNT)) {
+        LOGE("Invalid input parameters!");
         return HC_ERR_INVALID_PARAMS;
     }
     LOGI("[Start]: RequestDeleteMemberFromGroup! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
@@ -589,7 +780,7 @@ static int32_t RequestDeleteMemberFromGroup(int64_t requestId, const char *appId
         FreeJson(params);
         return result;
     }
-    if (InitAndPushGMTask(MEMBER_DELETE, requestId, params, DoDeleteMember) != HC_SUCCESS) {
+    if (InitAndPushGMTask(osAccountId, MEMBER_DELETE, requestId, params, DoDeleteMember) != HC_SUCCESS) {
         FreeJson(params);
         return HC_ERR_INIT_TASK_FAIL;
     }
@@ -620,7 +811,7 @@ static int32_t RequestProcessBindData(int64_t requestId, const uint8_t *data, ui
         FreeJson(params);
         return HC_ERR_INVALID_PARAMS;
     }
-    if (InitAndPushGMTask(CODE_NULL, requestId, params, DoProcessBindData) != HC_SUCCESS) {
+    if (InitAndPushGMTask(INVALID_OS_ACCOUNT, CODE_NULL, requestId, params, DoProcessBindData) != HC_SUCCESS) {
         FreeJson(params);
         return HC_ERR_INIT_TASK_FAIL;
     }
@@ -628,10 +819,12 @@ static int32_t RequestProcessBindData(int64_t requestId, const uint8_t *data, ui
     return HC_SUCCESS;
 }
 
-static int32_t RequestConfirmRequest(int64_t requestId, const char *appId, const char *confirmParams)
+static int32_t RequestConfirmRequest(int32_t osAccountId, int64_t requestId, const char *appId,
+    const char *confirmParams)
 {
-    if ((appId == NULL) || (confirmParams == NULL)) {
-        LOGE("The input parameters contains NULL value!");
+    osAccountId = DevAuthGetRealOsAccountLocalId(osAccountId);
+    if ((appId == NULL) || (confirmParams == NULL) || (osAccountId == INVALID_OS_ACCOUNT)) {
+        LOGE("Invalid input parameters!");
         return HC_ERR_INVALID_PARAMS;
     }
     LOGI("[Start]: RequestConfirmRequest! [AppId]: %s, [RequestId]: %" PRId64, appId, requestId);
@@ -645,7 +838,7 @@ static int32_t RequestConfirmRequest(int64_t requestId, const char *appId, const
         FreeJson(params);
         return HC_ERR_JSON_FAIL;
     }
-    if (InitAndPushGMTask(CODE_NULL, requestId, params, DoConfirmRequest) != HC_SUCCESS) {
+    if (InitAndPushGMTask(osAccountId, CODE_NULL, requestId, params, DoConfirmRequest) != HC_SUCCESS) {
         FreeJson(params);
         return HC_ERR_INIT_TASK_FAIL;
     }
@@ -679,51 +872,54 @@ static int32_t UnRegListener(const char *appId)
     return RemoveListener(appId);
 }
 
-static int32_t CheckAccessToGroup(const char *appId, const char *groupId)
+static int32_t CheckAccessToGroup(int32_t osAccountId, const char *appId, const char *groupId)
 {
-    if ((appId == NULL) || (groupId == NULL)) {
-        LOGE("The input parameters contains NULL value!");
+    osAccountId = DevAuthGetRealOsAccountLocalId(osAccountId);
+    if ((appId == NULL) || (groupId == NULL) || (osAccountId == INVALID_OS_ACCOUNT)) {
+        LOGE("Invalid input parameters!");
         return HC_ERR_INVALID_PARAMS;
     }
-    if (!IsGroupAccessible(groupId, appId)) {
+    if (!IsGroupAccessible(osAccountId, groupId, appId)) {
         LOGE("You do not have the permission to query the group information!");
         return HC_ERR_ACCESS_DENIED;
     }
     return HC_SUCCESS;
 }
 
-static int32_t GetAccessibleGroupInfoById(const char *appId, const char *groupId, char **returnGroupInfo)
+static int32_t GetAccessibleGroupInfoById(int32_t osAccountId, const char *appId, const char *groupId,
+    char **returnGroupInfo)
 {
-    if ((appId == NULL) || (groupId == NULL) || (returnGroupInfo == NULL)) {
-        LOGE("The input parameters contains NULL value!");
+    osAccountId = DevAuthGetRealOsAccountLocalId(osAccountId);
+    if ((appId == NULL) || (groupId == NULL) || (returnGroupInfo == NULL) || (osAccountId == INVALID_OS_ACCOUNT)) {
+        LOGE("Invalid input parameters!");
         return HC_ERR_INVALID_PARAMS;
     }
-    if (!IsGroupExistByGroupId(groupId)) {
+    if (!IsGroupExistByGroupId(osAccountId, groupId)) {
         LOGE("No group is found based on the query parameters!");
         return HC_ERR_GROUP_NOT_EXIST;
     }
-    if (!IsGroupAccessible(groupId, appId)) {
+    if (!IsGroupAccessible(osAccountId, groupId, appId)) {
         LOGE("You do not have the permission to query the group information!");
         return HC_ERR_ACCESS_DENIED;
     }
-    GroupInfo *groupInfo = CreateGroupInfoStruct();
+    TrustedGroupEntry *groupInfo = CreateGroupEntry();
     if (groupInfo == NULL) {
         LOGE("Failed to allocate groupInfo memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    if (GetGroupInfoById(groupId, groupInfo) != HC_SUCCESS) {
+    if (GetGroupInfoById(osAccountId, groupId, groupInfo) != HC_SUCCESS) {
         LOGE("Failed to obtain the group information from the database!");
-        DestroyGroupInfoStruct(groupInfo);
+        DestroyGroupEntry(groupInfo);
         return HC_ERR_DB;
     }
     CJson *groupInfoJson = CreateJson();
     if (groupInfoJson == NULL) {
         LOGE("Failed to allocate groupInfoJson memory!");
-        DestroyGroupInfoStruct(groupInfo);
+        DestroyGroupEntry(groupInfo);
         return HC_ERR_JSON_FAIL;
     }
     int32_t result = GenerateReturnGroupInfo(groupInfo, groupInfoJson);
-    DestroyGroupInfoStruct(groupInfo);
+    DestroyGroupEntry(groupInfo);
     if (result != HC_SUCCESS) {
         FreeJson(groupInfoJson);
         return result;
@@ -737,11 +933,13 @@ static int32_t GetAccessibleGroupInfoById(const char *appId, const char *groupId
     return HC_SUCCESS;
 }
 
-static int32_t GetAccessibleGroupInfo(const char *appId, const char *queryParams, char **returnGroupVec,
-    uint32_t *groupNum)
+static int32_t GetAccessibleGroupInfo(int32_t osAccountId, const char *appId, const char *queryParams,
+    char **returnGroupVec, uint32_t *groupNum)
 {
-    if ((appId == NULL) || (queryParams == NULL) || (returnGroupVec == NULL) || (groupNum == NULL)) {
-        LOGE("The input parameters contains NULL value!");
+    osAccountId = DevAuthGetRealOsAccountLocalId(osAccountId);
+    if ((appId == NULL) || (queryParams == NULL) || (returnGroupVec == NULL) || (groupNum == NULL) ||
+        (osAccountId == INVALID_OS_ACCOUNT)) {
+        LOGE("Invalid input parameters!");
         return HC_ERR_INVALID_PARAMS;
     }
     CJson *queryParamsJson = CreateJsonFromString(queryParams);
@@ -764,97 +962,100 @@ static int32_t GetAccessibleGroupInfo(const char *appId, const char *queryParams
         FreeJson(queryParamsJson);
         return HC_ERR_INVALID_PARAMS;
     }
-    GroupInfoVec groupInfoVec;
-    CreateGroupInfoVecStruct(&groupInfoVec);
-    int32_t result = GetGroupInfo(groupType, groupId, groupName, groupOwner, &groupInfoVec);
+    GroupEntryVec groupEntryVec = CreateGroupEntryVec();
+    int32_t result = GetGroupInfo(osAccountId, groupType, groupId, groupName, groupOwner, &groupEntryVec);
     FreeJson(queryParamsJson);
     if (result != HC_SUCCESS) {
-        DestroyGroupInfoVecStruct(&groupInfoVec);
+        ClearGroupEntryVec(&groupEntryVec);
         return result;
     }
-    RemoveNoPermissionGroup(&groupInfoVec, appId);
-    result = GenerateReturnGroupVec(&groupInfoVec, returnGroupVec, groupNum);
-    DestroyGroupInfoVecStruct(&groupInfoVec);
+    RemoveNoPermissionGroup(osAccountId, &groupEntryVec, appId);
+    result = GenerateReturnGroupVec(&groupEntryVec, returnGroupVec, groupNum);
+    ClearGroupEntryVec(&groupEntryVec);
     return result;
 }
 
-static int32_t GetAccessibleJoinedGroups(const char *appId, int groupType, char **returnGroupVec, uint32_t *groupNum)
+static int32_t GetAccessibleJoinedGroups(int32_t osAccountId, const char *appId, int groupType,
+    char **returnGroupVec, uint32_t *groupNum)
 {
-    if ((appId == NULL) || (returnGroupVec == NULL) || (groupNum == NULL)) {
-        LOGE("The input parameters contains NULL value!");
+    osAccountId = DevAuthGetRealOsAccountLocalId(osAccountId);
+    if ((appId == NULL) || (returnGroupVec == NULL) || (groupNum == NULL) || (osAccountId == INVALID_OS_ACCOUNT)) {
+        LOGE("Invalid input parameters!");
         return HC_ERR_INVALID_PARAMS;
     }
     if (!IsGroupTypeSupported(groupType)) {
         LOGE("Invalid group type!");
         return HC_ERR_INVALID_PARAMS;
     }
-    GroupInfoVec groupInfoVec;
-    CreateGroupInfoVecStruct(&groupInfoVec);
-    int32_t result = GetJoinedGroups(groupType, &groupInfoVec);
+    GroupEntryVec groupEntryVec = CreateGroupEntryVec();
+    int32_t result = GetJoinedGroups(osAccountId, groupType, &groupEntryVec);
     if (result != HC_SUCCESS) {
-        DestroyGroupInfoVecStruct(&groupInfoVec);
+        ClearGroupEntryVec(&groupEntryVec);
         return result;
     }
-    RemoveNoPermissionGroup(&groupInfoVec, appId);
-    result = GenerateReturnGroupVec(&groupInfoVec, returnGroupVec, groupNum);
-    DestroyGroupInfoVecStruct(&groupInfoVec);
+    RemoveNoPermissionGroup(osAccountId, &groupEntryVec, appId);
+    result = GenerateReturnGroupVec(&groupEntryVec, returnGroupVec, groupNum);
+    ClearGroupEntryVec(&groupEntryVec);
     return result;
 }
 
-static int32_t GetAccessibleRelatedGroups(const char *appId, const char *peerDeviceId, bool isUdid,
+static int32_t GetAccessibleRelatedGroups(int32_t osAccountId, const char *appId, const char *peerDeviceId, bool isUdid,
     char **returnGroupVec, uint32_t *groupNum)
 {
-    if ((appId == NULL) || (peerDeviceId == NULL) || (returnGroupVec == NULL) || (groupNum == NULL)) {
-        LOGE("The input parameters contains NULL value!");
+    osAccountId = DevAuthGetRealOsAccountLocalId(osAccountId);
+    if ((appId == NULL) || (peerDeviceId == NULL) || (returnGroupVec == NULL) || (groupNum == NULL) ||
+        (osAccountId == INVALID_OS_ACCOUNT)) {
+        LOGE("Invalid input parameters!");
         return HC_ERR_INVALID_PARAMS;
     }
     LOGI("Start to get related groups! [AppId]: %s", appId);
-    GroupInfoVec groupInfoVec;
-    CreateGroupInfoVecStruct(&groupInfoVec);
-    int32_t result = GetRelatedGroups(peerDeviceId, isUdid, &groupInfoVec);
+    GroupEntryVec groupEntryVec = CreateGroupEntryVec();
+    int32_t result = GetRelatedGroups(osAccountId, peerDeviceId, isUdid, &groupEntryVec);
     if (result != HC_SUCCESS) {
-        DestroyGroupInfoVecStruct(&groupInfoVec);
+        ClearGroupEntryVec(&groupEntryVec);
         return result;
     }
-    RemoveNoPermissionGroup(&groupInfoVec, appId);
-    result = GenerateReturnGroupVec(&groupInfoVec, returnGroupVec, groupNum);
-    DestroyGroupInfoVecStruct(&groupInfoVec);
+    RemoveNoPermissionGroup(osAccountId, &groupEntryVec, appId);
+    result = GenerateReturnGroupVec(&groupEntryVec, returnGroupVec, groupNum);
+    ClearGroupEntryVec(&groupEntryVec);
     return result;
 }
 
-static int32_t GetAccessibleDeviceInfoById(const char *appId, const char *deviceId, bool isUdid,
+static int32_t GetAccessibleDeviceInfoById(int32_t osAccountId, const char *appId, const char *deviceId, bool isUdid,
     const char *groupId, char **returnDeviceInfo)
 {
-    if ((appId == NULL) || (deviceId == NULL) || (groupId == NULL) || (returnDeviceInfo == NULL)) {
-        LOGE("The input parameters contains NULL value!");
+    osAccountId = DevAuthGetRealOsAccountLocalId(osAccountId);
+    if ((appId == NULL) || (deviceId == NULL) || (groupId == NULL) || (returnDeviceInfo == NULL) ||
+        (osAccountId == INVALID_OS_ACCOUNT)) {
+        LOGE("Invalid input parameters!");
         return HC_ERR_INVALID_PARAMS;
     }
-    if (!IsGroupExistByGroupId(groupId)) {
+    if (!IsGroupExistByGroupId(osAccountId, groupId)) {
         LOGE("No group is found based on the query parameters!");
         return HC_ERR_GROUP_NOT_EXIST;
     }
-    if (!IsGroupAccessible(groupId, appId)) {
+    if (!IsGroupAccessible(osAccountId, groupId, appId)) {
         LOGE("You do not have the permission to query the group information!");
         return HC_ERR_ACCESS_DENIED;
     }
-    DeviceInfo *devInfo = CreateDeviceInfoStruct();
-    if (devInfo == NULL) {
-        LOGE("Failed to allocate devInfo memory!");
+    TrustedDeviceEntry *deviceEntry = CreateDeviceEntry();
+    if (deviceEntry == NULL) {
+        LOGE("Failed to allocate deviceEntry memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    if (GetTrustedDevInfoById(deviceId, isUdid, groupId, devInfo) != HC_SUCCESS) {
+    if (GetTrustedDevInfoById(osAccountId, deviceId, isUdid, groupId, deviceEntry) != HC_SUCCESS) {
         LOGE("No device is found based on the query parameters!");
-        DestroyDeviceInfoStruct(devInfo);
+        DestroyDeviceEntry(deviceEntry);
         return HC_ERR_DEVICE_NOT_EXIST;
     }
     CJson *devInfoJson = CreateJson();
     if (devInfoJson == NULL) {
         LOGE("Failed to allocate devInfoJson memory!");
-        DestroyDeviceInfoStruct(devInfo);
+        DestroyDeviceEntry(deviceEntry);
         return HC_ERR_JSON_FAIL;
     }
-    int32_t result = GenerateReturnDevInfo(devInfo, devInfoJson);
-    DestroyDeviceInfoStruct(devInfo);
+    int32_t result = GenerateReturnDevInfo(deviceEntry, devInfoJson);
+    DestroyDeviceEntry(deviceEntry);
     if (result != HC_SUCCESS) {
         FreeJson(devInfoJson);
         return result;
@@ -868,48 +1069,91 @@ static int32_t GetAccessibleDeviceInfoById(const char *appId, const char *device
     return HC_SUCCESS;
 }
 
-static int32_t GetAccessibleTrustedDevices(const char *appId, const char *groupId,
+static int32_t GetAccessibleTrustedDevices(int32_t osAccountId, const char *appId, const char *groupId,
     char **returnDevInfoVec, uint32_t *deviceNum)
 {
-    if ((appId == NULL) || (groupId == NULL) || (returnDevInfoVec == NULL) || (deviceNum == NULL)) {
-        LOGE("The input parameters contains NULL value!");
+    osAccountId = DevAuthGetRealOsAccountLocalId(osAccountId);
+    if ((appId == NULL) || (groupId == NULL) || (returnDevInfoVec == NULL) || (deviceNum == NULL) ||
+        (osAccountId == INVALID_OS_ACCOUNT)) {
+        LOGE("Invalid input parameters!");
         return HC_ERR_INVALID_PARAMS;
     }
-    if (!IsGroupExistByGroupId(groupId)) {
+    if (!IsGroupExistByGroupId(osAccountId, groupId)) {
         LOGE("No group is found based on the query parameters!");
         return HC_ERR_GROUP_NOT_EXIST;
     }
-    if (!IsGroupAccessible(groupId, appId)) {
+    if (!IsGroupAccessible(osAccountId, groupId, appId)) {
         LOGE("You do not have the permission to query the group information!");
         return HC_ERR_ACCESS_DENIED;
     }
-    DeviceInfoVec deviceInfoVec;
-    CreateDeviceInfoVecStruct(&deviceInfoVec);
-    int32_t result = GetTrustedDevices(groupId, &deviceInfoVec);
+    DeviceEntryVec deviceEntryVec = CreateDeviceEntryVec();
+    int32_t result = GetTrustedDevices(osAccountId, groupId, &deviceEntryVec);
     if (result != HC_SUCCESS) {
-        DestroyDeviceInfoVecStruct(&deviceInfoVec);
+        ClearDeviceEntryVec(&deviceEntryVec);
         return result;
     }
-    result = GenerateReturnDeviceVec(&deviceInfoVec, returnDevInfoVec, deviceNum);
-    DestroyDeviceInfoVecStruct(&deviceInfoVec);
+    result = GenerateReturnDeviceVec(&deviceEntryVec, returnDevInfoVec, deviceNum);
+    ClearDeviceEntryVec(&deviceEntryVec);
     return result;
 }
 
-static bool IsDeviceInAccessibleGroup(const char *appId, const char *groupId, const char *deviceId, bool isUdid)
+static bool IsDeviceInAccessibleGroup(int32_t osAccountId, const char *appId, const char *groupId,
+    const char *deviceId, bool isUdid)
 {
-    if ((appId == NULL) || (groupId == NULL) || (deviceId == NULL)) {
-        LOGE("The input parameters contains NULL value!");
+    osAccountId = DevAuthGetRealOsAccountLocalId(osAccountId);
+    if ((appId == NULL) || (groupId == NULL) || (deviceId == NULL) || (osAccountId == INVALID_OS_ACCOUNT)) {
+        LOGE("Invalid input parameters!");
         return false;
     }
-    if (!IsGroupExistByGroupId(groupId)) {
+    if (!IsGroupExistByGroupId(osAccountId, groupId)) {
         LOGE("No group is found based on the query parameters!");
         return false;
     }
-    if (!IsGroupAccessible(groupId, appId)) {
+    if (!IsGroupAccessible(osAccountId, groupId, appId)) {
         LOGE("You do not have the permission to query the group information!");
         return false;
     }
-    return IsTrustedDeviceInGroup(groupId, deviceId, isUdid);
+    return IsTrustedDeviceInGroup(osAccountId, groupId, deviceId, isUdid);
+}
+
+static int32_t GetPkInfoList(int32_t osAccountId, const char *appId, const char *queryParams,
+    char **returnInfoList, uint32_t *returnInfoNum)
+{
+    LOGI("[Start]: start to get pk list!");
+    osAccountId = DevAuthGetRealOsAccountLocalId(osAccountId);
+    if ((appId == NULL) || (queryParams == NULL) || (returnInfoList == NULL) ||
+        (returnInfoNum == NULL) || (osAccountId == INVALID_OS_ACCOUNT)) {
+        LOGE("Invalid input parameters!");
+        return HC_ERR_INVALID_PARAMS;
+    }
+    CJson *params = CreateJsonFromString(queryParams);
+    if (params == NULL) {
+        LOGE("Failed to create json from string!");
+        return HC_ERR_JSON_CREATE;
+    }
+    CJson *pkInfoList = CreateJsonArray();
+    if (pkInfoList == NULL) {
+        LOGE("Failed to create json array!");
+        FreeJson(params);
+        return HC_ERR_JSON_CREATE;
+    }
+    int32_t res = GeneratePkInfoList(osAccountId, appId, params, pkInfoList);
+    FreeJson(params);
+    if (res != HC_SUCCESS) {
+        FreeJson(pkInfoList);
+        return res;
+    }
+    int32_t pkInfoNum = GetItemNum(pkInfoList);
+    char *pkInfoListStr = PackJsonToString(pkInfoList);
+    FreeJson(pkInfoList);
+    if (pkInfoListStr == NULL) {
+        LOGE("Failed to convert json to string!");
+        return HC_ERR_PACKAGE_JSON_TO_STRING_FAIL;
+    }
+    *returnInfoList = pkInfoListStr;
+    *returnInfoNum = pkInfoNum;
+    LOGI("[End]: Get pk list successfully!");
+    return HC_SUCCESS;
 }
 
 static void DestroyInfo(char **returnInfo)
@@ -943,6 +1187,7 @@ static const GroupImpl g_groupImplInstance = {
     .getAccessibleDeviceInfoById = GetAccessibleDeviceInfoById,
     .getAccessibleTrustedDevices = GetAccessibleTrustedDevices,
     .isDeviceInAccessibleGroup = IsDeviceInAccessibleGroup,
+    .getPkInfoList = GetPkInfoList,
     .destroyInfo = DestroyInfo
 };
 
@@ -954,15 +1199,11 @@ int32_t InitGroupRelatedModule(void)
             return HC_ERR_SERVICE_NEED_RESTART;
         }
     }
-    if (IsAcrossAccountGroupSupported()) {
-        RegGenerateGroupIdFunc(((AcrossAccountGroup *)GetAcrossAccountGroupInstance())->generateGroupId);
-    }
     return HC_SUCCESS;
 }
 
 void DestroyGroupRelatedModule(void)
 {
-    DeregGenerateGroupIdFunc();
     DestroyBroadcastManager();
 }
 

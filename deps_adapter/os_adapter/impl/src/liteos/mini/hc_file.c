@@ -14,67 +14,49 @@
  */
 
 #include "hc_file.h"
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <securec.h>
 #include <stdio.h>
+#include <unistd.h>
 #include "hal_error.h"
 #include "hc_log.h"
 #include "utils_file.h"
 
-#define MAX_FILE_PATH_SIZE 64
 #define MAX_FOLDER_NAME_SIZE 128
 #define GET_FOLDER_OK 0
 #define GET_FOLDER_FAILED (-1)
 #define GET_FILE_OK 1
 #define DEFAULT_FILE_PERMISSION 0666
 
-typedef struct {
-    FileIdEnum fileId;
-    char filePath[MAX_FILE_PATH_SIZE];
-} FileDefInfo;
-
-static FileDefInfo g_fileDefInfo[FILE_ID_LAST] = {
-    { FILE_ID_GROUP, "/data/hcgroup.dat" },
-    { FILE_ID_CRED_DATA, "" }
-};
-
-void SetFilePath(FileIdEnum fileId, const char *path)
-{
-    if (fileId < 0 || fileId >= FILE_ID_LAST || path == NULL) {
-        LOGE("Invalid path param");
-        return;
-    }
-    if (sprintf_s(g_fileDefInfo[fileId].filePath, MAX_FILE_PATH_SIZE, "%s", path) == HAL_FAILED) {
-        LOGE("Set file path failed fileId:%d", fileId);
-    }
-}
-
-int HcFileOpenRead(const char *path)
+static int HcFileOpenRead(const char *path)
 {
     int ret = UtilsFileOpen(path, O_RDONLY, 0);
     LOGI("ret = %d", ret);
     return ret;
 }
 
-int HcFileOpenWrite(const char *path)
+static int HcFileOpenWrite(const char *path)
 {
     int ret = UtilsFileOpen(path, O_RDWR_FS | O_CREAT_FS | O_TRUNC_FS, 0);
     LOGI("ret = %d", ret);
     return ret;
 }
 
-int HcFileOpen(int fileId, int mode, FileHandle *file)
+int HcFileOpen(const char *path, int mode, FileHandle *file)
 {
-    if (fileId < 0 || fileId >= FILE_ID_LAST || file == NULL) {
+    if (path == NULL || file == NULL) {
+        return -1;
+    }
+    if (strcpy_s(file->filePath, MAX_FILE_PATH_SIZE, path) != EOK) {
+        LOGE("Failed to copy filePath!");
         return HAL_FAILED;
     }
     if (mode == MODE_FILE_READ) {
-        file->fileHandle.fd = HcFileOpenRead(g_fileDefInfo[fileId].filePath);
-        file->filePath = g_fileDefInfo[fileId].filePath;
+        file->fileHandle.fd = HcFileOpenRead(path);
     } else {
-        file->fileHandle.fd = HcFileOpenWrite(g_fileDefInfo[fileId].filePath);
-        file->filePath = g_fileDefInfo[fileId].filePath;
+        file->fileHandle.fd = HcFileOpenWrite(path);
     }
     if (file->fileHandle.fd == HAL_FAILED) {
         return HAL_FAILED;
@@ -89,8 +71,6 @@ int HcFileSize(FileHandle file)
     LOGI("ret = %d, fileSize = %d\n", ret, fileSize);
     if (ret == HAL_SUCCESS) {
         return fileSize;
-    } else {
-        return HAL_FAILED;
     }
     return HAL_FAILED;
 }
@@ -127,12 +107,37 @@ void HcFileClose(FileHandle file)
     LOGI("ret = %d", ret);
 }
 
-void HcFileRemove(int fileId)
+void HcFileRemove(const char *path)
 {
-    if (fileId >= FILE_ID_LAST) {
-        LOGE("Invalid fileId:%d", fileId);
+    if (path == NULL) {
+        LOGE("Invalid file path");
         return;
     }
-    int ret = UtilsFileDelete(g_fileDefInfo[fileId].filePath);
+    int ret = UtilsFileDelete(path);
     LOGI("File delete result:%d", ret);
+}
+
+void HcFileGetSubFileName(const char *path, StringVector *nameVec)
+{
+    DIR *dir = NULL;
+    struct dirent *entry = NULL;
+    if ((dir = opendir(path)) == NULL) {
+        LOGI("opendir failed!");
+        return;
+    }
+    while ((entry = readdir(dir)) != NULL) {
+        if ((strcmp(entry->d_name, ".") == 0) || (strcmp(entry->d_name, "..") == 0)) {
+            continue;
+        }
+        HcString subFileName = CreateString();
+        if (!StringSetPointer(&subFileName, entry->d_name)) {
+            LOGE("Failed to copy subFileName!");
+            DeleteString(&subFileName);
+            continue;
+        }
+        if (nameVec->pushBackT(nameVec, subFileName) == NULL) {
+            LOGE("Failed to push path to pathVec!");
+            DeleteString(&subFileName);
+        }
+    }
 }

@@ -113,3 +113,27 @@ int32_t GetInfoHash(const uint8_t *info, uint32_t infoLen, char *str, uint32_t s
     infoHash.val = NULL;
     return res;
 }
+
+int32_t GroupTypeToAuthForm(int32_t groupType)
+{
+    int32_t authForm;
+    switch (groupType) {
+        case PEER_TO_PEER_GROUP:
+            authForm = AUTH_FORM_ACCOUNT_UNRELATED;
+            break;
+        case COMPATIBLE_GROUP:
+            authForm = AUTH_FORM_ACCOUNT_UNRELATED;
+            break;
+        case IDENTICAL_ACCOUNT_GROUP:
+            authForm = AUTH_FORM_IDENTICAL_ACCOUNT;
+            break;
+        case ACROSS_ACCOUNT_AUTHORIZE_GROUP:
+            authForm = AUTH_FORM_ACROSS_ACCOUNT;
+            break;
+        default:
+            LOGE("Invalid group type!");
+            authForm = AUTH_FORM_INVALID_TYPE;
+            break;
+    }
+    return authForm;
+}

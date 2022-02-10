@@ -20,6 +20,7 @@
 #include "das_module_defines.h"
 #include "group_operation_common.h"
 #include "hc_log.h"
+#include "os_account_adapter.h"
 #include "session_manager.h"
 
 static int32_t AddRecvModuleDataToParams(CJson *jsonParams, CJson *moduleParams)
@@ -311,6 +312,49 @@ static int32_t CombineInputData(int operationCode, const CJson *returnData, CJso
     }
 }
 
+static int32_t CheckServerStatusIfNotInvite(int32_t osAccountId, int operationCode, const CJson *jsonParams)
+{
+    if (operationCode == MEMBER_INVITE) {
+        return HC_SUCCESS;
+    }
+    const char *groupId = GetStringFromJson(jsonParams, FIELD_GROUP_ID);
+    if (groupId == NULL) {
+        LOGE("Failed to get groupId from jsonParams!");
+        return HC_ERR_JSON_GET;
+    }
+    const char *appId = GetStringFromJson(jsonParams, FIELD_APP_ID);
+    if (appId == NULL) {
+        LOGE("Failed to get appId from jsonParams!");
+        return HC_ERR_JSON_GET;
+    }
+    const char *peerUdid = GetStringFromJson(jsonParams, FIELD_CONN_DEVICE_ID);
+    if (peerUdid == NULL) {
+        LOGE("Failed to get peerUdid from jsonParams!");
+        return HC_ERR_JSON_GET;
+    }
+    int32_t result = CheckGroupExist(osAccountId, groupId);
+    if (result != HC_SUCCESS) {
+        return result;
+    }
+    if (operationCode == MEMBER_JOIN) {
+        /* The client sends a join request, which is equivalent to the server performing an invitation operation. */
+        result = CheckPermForGroup(osAccountId, MEMBER_INVITE, appId, groupId);
+        if (result != HC_SUCCESS) {
+            return result;
+        }
+        result = CheckDeviceNumLimit(osAccountId, groupId, peerUdid);
+    } else if (operationCode == MEMBER_DELETE) {
+        result = CheckPermForGroup(osAccountId, MEMBER_DELETE, appId, groupId);
+        if (result != HC_SUCCESS) {
+            return result;
+        }
+        if (!IsTrustedDeviceInGroup(osAccountId, groupId, peerUdid, true)) {
+            result = HC_ERR_DEVICE_NOT_EXIST;
+        }
+    }
+    return result;
+}
+
 static int32_t PrepareServer(BindSession *session, CJson *returnData, bool *isNeedInform)
 {
     if ((session->isWaiting) && (!IsAcceptRequest(returnData))) {
@@ -322,7 +366,20 @@ static int32_t PrepareServer(BindSession *session, CJson *returnData, bool *isNe
         LOGE("Received data before request confirmation are lost!");
         return HC_ERR_LOST_DATA;
     }
-    int32_t result = CombineInputData(session->opCode, returnData, jsonParams);
+    int32_t osAccountId = ANY_OS_ACCOUNT;
+    (void)GetIntFromJson(returnData, FIELD_OS_ACCOUNT_ID, &osAccountId);
+    osAccountId = DevAuthGetRealOsAccountLocalId(osAccountId);
+    if (osAccountId == INVALID_OS_ACCOUNT) {
+        FreeJson(jsonParams);
+        return HC_ERR_INVALID_PARAMS;
+    }
+    int32_t result = CheckServerStatusIfNotInvite(osAccountId, session->opCode, jsonParams);
+    if (result != HC_SUCCESS) {
+        FreeJson(jsonParams);
+        return result;
+    }
+    session->osAccountId = osAccountId;
+    result = CombineInputData(session->opCode, returnData, jsonParams);
     /* Release the memory in advance to reduce the memory usage. */
     DeleteAllItem(returnData);
     session->isWaiting = false;
@@ -330,7 +387,7 @@ static int32_t PrepareServer(BindSession *session, CJson *returnData, bool *isNe
         FreeJson(jsonParams);
         return result;
     }
-    result = GenerateBindParams(SERVER, jsonParams, session);
+    result = GenerateBindParams(osAccountId, SERVER, jsonParams, session);
     if (result != HC_SUCCESS) {
         FreeJson(jsonParams);
         return result;

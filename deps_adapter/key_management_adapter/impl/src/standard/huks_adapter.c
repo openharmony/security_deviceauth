@@ -21,6 +21,14 @@
 #include "hks_type.h"
 #include "string_util.h"
 
+#define BASE_IMPORT_PARAMS_LEN 7
+#define EXT_IMPORT_PARAMS_LEN 2
+
+static enum HksKeyPurpose g_purposeToHksKeyPurpose[] = {
+    HKS_KEY_PURPOSE_MAC,
+    HKS_KEY_PURPOSE_DERIVE
+};
+
 static enum HksKeyAlg g_algToHksAlgorithm[] = {
     HKS_ALG_ED25519,
     HKS_ALG_X25519,
@@ -1121,13 +1129,106 @@ static bool CheckDlPublicKey(const Uint8Buff *key, const char *primeHex)
     return true;
 }
 
+static int32_t CheckImportSymmetricKeyParam(const Uint8Buff *keyAlias, const Uint8Buff *authToken)
+{
+    const Uint8Buff *inParams[] = { keyAlias, authToken };
+    const char *paramTags[] = { "keyAlias", "authToken" };
+    return BaseCheckParams(inParams, paramTags, CAL_ARRAY_SIZE(inParams));
+}
+
+static int32_t ConstructImportSymmetricKeyParam(struct HksParamSet **paramSet, uint32_t keyLen, KeyPurpose purpose,
+    const ExtraInfo *exInfo)
+{
+    struct HksParam *importParam = NULL;
+    struct HksBlob authIdBlob = { 0, NULL };
+    union KeyRoleInfoUnion roleInfoUnion;
+    (void)memset_s(&roleInfoUnion, sizeof(roleInfoUnion), 0, sizeof(roleInfoUnion));
+    uint32_t idx = 0;
+    if (exInfo != NULL) {
+        CHECK_PTR_RETURN_HAL_ERROR_CODE(exInfo->authId.val, "authId");
+        CHECK_LEN_ZERO_RETURN_ERROR_CODE(exInfo->authId.length, "authId");
+        CHECK_LEN_HIGHER_RETURN(exInfo->pairType, PAIR_TYPE_END - 1, "pairType");
+        importParam = (struct HksParam *)HcMalloc(sizeof(struct HksParam) *
+            (BASE_IMPORT_PARAMS_LEN + EXT_IMPORT_PARAMS_LEN), 0);
+        if (importParam == NULL) {
+            LOGE("Malloc for importParam failed.");
+            return HAL_ERR_BAD_ALLOC;
+        }
+        authIdBlob.size = exInfo->authId.length;
+        authIdBlob.data = exInfo->authId.val;
+        roleInfoUnion.roleInfoStruct.userType = (uint8_t)exInfo->userType;
+        roleInfoUnion.roleInfoStruct.pairType = (uint8_t)exInfo->pairType;
+        importParam[idx].tag = HKS_TAG_KEY_AUTH_ID;
+        importParam[idx++].blob = authIdBlob;
+        importParam[idx].tag = HKS_TAG_KEY_ROLE;
+        importParam[idx++].uint32Param = roleInfoUnion.roleInfo;
+    } else {
+        importParam = (struct HksParam *)HcMalloc(sizeof(struct HksParam) * BASE_IMPORT_PARAMS_LEN, 0);
+        if (importParam == NULL) {
+            LOGE("Malloc for importParam failed.");
+            return HAL_ERR_BAD_ALLOC;
+        }
+    }
+
+    importParam[idx].tag = HKS_TAG_ALGORITHM;
+    importParam[idx++].uint32Param = HKS_ALG_AES;
+    importParam[idx].tag = HKS_TAG_KEY_SIZE;
+    importParam[idx++].uint32Param = keyLen * BITS_PER_BYTE;
+    importParam[idx].tag = HKS_TAG_PADDING;
+    importParam[idx++].uint32Param = HKS_PADDING_NONE;
+    importParam[idx].tag = HKS_TAG_IS_ALLOWED_WRAP;
+    importParam[idx++].boolParam = false;
+    importParam[idx].tag = HKS_TAG_PURPOSE;
+    importParam[idx++].uint32Param = g_purposeToHksKeyPurpose[purpose];
+    importParam[idx].tag = HKS_TAG_BLOCK_MODE;
+    importParam[idx++].uint32Param = HKS_MODE_GCM;
+    importParam[idx].tag = HKS_TAG_DIGEST;
+    importParam[idx++].uint32Param = HKS_DIGEST_SHA256;
+
+    int ret = ConstructParamSet(paramSet, importParam, idx);
+    if (ret != HAL_SUCCESS) {
+        LOGE("Construct decrypt param set failed, ret = %d.", ret);
+    }
+
+    HcFree(importParam);
+    return ret;
+}
+
+static int32_t ImportSymmetricKey(const Uint8Buff *keyAlias, const Uint8Buff *authToken, KeyPurpose purpose,
+    const ExtraInfo *exInfo)
+{
+    int32_t ret = CheckImportSymmetricKeyParam(keyAlias, authToken);
+    if (ret != HAL_SUCCESS) {
+        return ret;
+    }
+
+    struct HksBlob keyAliasBlob = { keyAlias->length, keyAlias->val };
+    struct HksBlob symKeyBlob = { authToken->length, authToken->val };
+    struct HksParamSet *paramSet = NULL;
+    ret = ConstructImportSymmetricKeyParam(&paramSet, authToken->length, purpose, exInfo);
+    if (ret != HAL_SUCCESS) {
+        LOGE("construct param set failed, ret = %d", ret);
+        return ret;
+    }
+
+    ret = HksImportKey(&keyAliasBlob, paramSet, &symKeyBlob);
+    if (ret != HKS_SUCCESS) {
+        LOGE("HksImportKey failed, ret: %d", ret);
+        HksFreeParamSet(&paramSet);
+        return ret;
+    }
+
+    HksFreeParamSet(&paramSet);
+    return HAL_SUCCESS;
+}
+
 static const AlgLoader g_huksLoader = {
     .initAlg = InitHks,
     .sha256 = Sha256,
     .generateRandom = GenerateRandom,
     .computeHmac = ComputeHmac,
     .computeHkdf = ComputeHkdf,
-    .importSymmetricKey = NULL,
+    .importSymmetricKey = ImportSymmetricKey,
     .checkKeyExist = CheckKeyExist,
     .deleteKey = DeleteKey,
     .aesGcmEncrypt = AesGcmEncrypt,

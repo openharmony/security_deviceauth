@@ -23,9 +23,18 @@
 typedef struct {
     HcTaskBase base;
     int64_t reqId;
+    int32_t osAccountId;
     int32_t opCode;
     CJson *params;
     const DeviceAuthCallback *cb;
 } GroupManagerTask;
+
+typedef struct {
+    int64_t reqId;
+    int32_t osAccountId;
+    int32_t opCode;
+    CJson *params;
+    const DeviceAuthCallback *cb;
+} GMTaskParams;
 
 #endif

@@ -35,7 +35,7 @@ typedef struct DasProtocolEntityT {
 } DasProtocolEntity;
 
 IMPLEMENT_HC_VECTOR(SubTaskVec, void *, 1)
-DECLARE_HC_VECTOR(DasProtocolEntityVec, void *)
+DECLARE_HC_VECTOR(DasProtocolEntityVec, void *);
 IMPLEMENT_HC_VECTOR(DasProtocolEntityVec, void *, 1)
 
 DasProtocolEntityVec g_protocolEntityVec;
@@ -123,7 +123,7 @@ static void DestroyTaskT(Task *task)
             ((SubTaskBase *)(*ptr))->destroyTask((SubTaskBase *)(*ptr));
         }
     }
-    DESTROY_HC_VECTOR(SubTaskVec, &(task->vec))
+    DESTROY_HC_VECTOR(SubTaskVec, &(task->vec));
     HcFree(task);
 }
 
@@ -367,7 +367,7 @@ Task *CreateTaskT(int32_t *taskId, const CJson *in, CJson *out)
         res = HC_ERR_ALLOC_MEMORY;
         goto ERR;
     }
-    task->vec = CREATE_HC_VECTOR(SubTaskVec)
+    task->vec = CREATE_HC_VECTOR(SubTaskVec);
     task->destroyTask = DestroyTaskT;
     task->processTask = ProcessTaskT;
 
@@ -469,6 +469,25 @@ int32_t DeletePeerAuthInfoInTask(const char *pkgName, const char *serviceType, U
     return res;
 }
 
+int32_t GetPublicKeyInTask(const char *pkgName, const char *serviceType, Uint8Buff *authIdPeer, int userTypePeer,
+                           Uint8Buff *returnPk)
+{
+    uint32_t index;
+    void **ptr = NULL;
+    FOR_EACH_HC_VECTOR(g_protocolEntityVec, index, ptr) {
+        if (ptr != NULL && (*ptr) != NULL) {
+            DasProtocolEntity *temp = (DasProtocolEntity *)(*ptr);
+            if ((temp->tokenManagerInstance == NULL) || (temp->tokenManagerInstance->getPublicKey == NULL)) {
+                LOGD("Protocol type: %d, unsupported method!", temp->type);
+                continue;
+            }
+            return temp->tokenManagerInstance->getPublicKey(pkgName, serviceType, authIdPeer, userTypePeer, returnPk);
+        }
+    }
+    LOGE("Failed to find valid protocol!");
+    return HC_ERR_NOT_SUPPORT;
+}
+
 static uint32_t GetPakeAlgInProtocol(int offset)
 {
     uint32_t algInProtocol = PSK_SPEKE;
@@ -484,7 +503,7 @@ static uint32_t GetPakeAlgInProtocol(int offset)
 
 int32_t InitDasProtocolEntities(void)
 {
-    g_protocolEntityVec = CREATE_HC_VECTOR(DasProtocolEntityVec)
+    g_protocolEntityVec = CREATE_HC_VECTOR(DasProtocolEntityVec);
     DasProtocolEntity *protocol = NULL;
     if (IsIsoSupported()) {
         protocol = (DasProtocolEntity *)HcMalloc(sizeof(DasProtocolEntity), 0);
@@ -538,5 +557,5 @@ void DestroyDasProtocolEntities(void)
             *ptr = NULL;
         }
     }
-    DESTROY_HC_VECTOR(DasProtocolEntityVec, &g_protocolEntityVec)
+    DESTROY_HC_VECTOR(DasProtocolEntityVec, &g_protocolEntityVec);
 }

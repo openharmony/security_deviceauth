@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include "database_manager.h"
+#include "data_manager.h"
 
 #include "database_util.h"
 #include "device_auth.h"
@@ -441,7 +441,7 @@ static int32_t GenerateGroupEntryByInfo(const GroupInfo *groupInfo, TrustedGroup
     return HC_SUCCESS;
 }
 
-static int32_t GenerateDeviceEntryByInfo(const DeviceInfo *deviceInfo, const Uint8Buff *ext,
+static int32_t GenerateDeviceEntryByInfo(const TrustedDeviceEntry *deviceInfo, const Uint8Buff *ext,
     TrustedDeviceEntry *deviceEntry)
 {
     deviceEntry->udid = CreateString();
@@ -747,7 +747,7 @@ static int32_t PushGroupInfoToVec(const TrustedGroupEntry *entry, const char *gr
 
 static int32_t PushDevInfoToVec(const TrustedDeviceEntry *entry, const char *groupId, DeviceInfoVec *deviceInfoVec)
 {
-    DeviceInfo *deviceInfo = CreateDeviceInfoStruct();
+    TrustedDeviceEntry *deviceInfo = CreateDeviceInfoStruct();
     if (deviceInfo == NULL) {
         LOGE("[DB]: Failed to allocate deviceInfo memory!");
         return HC_ERR_ALLOC_MEMORY;
@@ -839,7 +839,7 @@ int32_t DelGroupByGroupId(const char *groupId)
     return HC_SUCCESS;
 }
 
-int32_t AddTrustedDevice(const DeviceInfo *deviceInfo, const Uint8Buff *ext)
+int32_t AddTrustedDevice(const TrustedDeviceEntry *deviceInfo, const Uint8Buff *ext)
 {
     LOGI("[DB]: Start to add a trusted device to database!");
     if (deviceInfo == NULL) {
@@ -1253,7 +1253,7 @@ bool IsGroupExistByGroupId(const char *groupId)
     return isExists;
 }
 
-int32_t GetTrustedDevInfoById(const char *deviceId, bool isUdid, const char *groupId, DeviceInfo *deviceInfo)
+int32_t GetTrustedDevInfoById(const char *deviceId, bool isUdid, const char *groupId, TrustedDeviceEntry *deviceInfo)
 {
     if ((deviceId == NULL) || (groupId == NULL) || (deviceInfo == NULL)) {
         LOGE("[DB]: The input parameters contains NULL value!");
@@ -1343,7 +1343,7 @@ void CreateGroupInfoVecStruct(GroupInfoVec *vec)
     if (vec == NULL) {
         return;
     }
-    *vec = CREATE_HC_VECTOR(GroupInfoVec)
+    *vec = CREATE_HC_VECTOR(GroupInfoVec);
 }
 
 void DestroyGroupInfoVecStruct(GroupInfoVec *vec)
@@ -1355,7 +1355,7 @@ void DestroyGroupInfoVecStruct(GroupInfoVec *vec)
             DestroyGroupInfoStruct(*entry);
         }
     }
-    DESTROY_HC_VECTOR(GroupInfoVec, vec)
+    DESTROY_HC_VECTOR(GroupInfoVec, vec);
 }
 
 void CreateDeviceInfoVecStruct(DeviceInfoVec *vec)
@@ -1363,7 +1363,7 @@ void CreateDeviceInfoVecStruct(DeviceInfoVec *vec)
     if (vec == NULL) {
         return;
     }
-    *vec = CREATE_HC_VECTOR(DeviceInfoVec)
+    *vec = CREATE_HC_VECTOR(DeviceInfoVec);
 }
 
 void DestroyDeviceInfoVecStruct(DeviceInfoVec *vec)
@@ -1375,7 +1375,7 @@ void DestroyDeviceInfoVecStruct(DeviceInfoVec *vec)
             DestroyDeviceInfoStruct(*entry);
         }
     }
-    DESTROY_HC_VECTOR(DeviceInfoVec, vec)
+    DESTROY_HC_VECTOR(DeviceInfoVec, vec);
 }
 
 int32_t GetJoinedGroupInfoVecByDevId(const GroupQueryParams *params, GroupInfoVec *vec)

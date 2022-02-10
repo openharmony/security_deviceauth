@@ -156,8 +156,8 @@ void Destroy##ClassName(ClassName* obj) \
 }
 
 /* Use these two macros to create and destroy vector */
-#define CREATE_HC_VECTOR(classname) Create##classname();
-#define DESTROY_HC_VECTOR(classname, obj) Destroy##classname(obj);
+#define CREATE_HC_VECTOR(classname) Create##classname()
+#define DESTROY_HC_VECTOR(classname, obj) Destroy##classname(obj)
 
 #define FOR_EACH_HC_VECTOR(vec, index, iter) for (index = 0; index < (vec).size(&(vec)) && \
     (iter = (vec).getp(&(vec), index)); ++index)
