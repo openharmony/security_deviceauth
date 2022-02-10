@@ -27,7 +27,7 @@ typedef struct {
     DeviceAuthCallback *callback;
 } CallbackEntry;
 
-DECLARE_HC_VECTOR(GMCallbackEntryVec, CallbackEntry)
+DECLARE_HC_VECTOR(GMCallbackEntryVec, CallbackEntry);
 IMPLEMENT_HC_VECTOR(GMCallbackEntryVec, CallbackEntry, 1)
 static GMCallbackEntryVec g_callbackVec;
 static HcMutex *g_callbackMutex = NULL;

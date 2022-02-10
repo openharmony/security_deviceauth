@@ -23,4 +23,6 @@
 void SetClient(bool tag);
 bool GetClient();
 
+const char *GetStorageDirPath(void);
+
 #endif

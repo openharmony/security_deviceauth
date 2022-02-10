@@ -24,34 +24,41 @@ extern "C" {
 #endif
 
 typedef struct {
-    int32_t (*createGroup)(int64_t requestId, const char *appId, const char *createParams);
-    int32_t (*deleteGroup)(int64_t requestId, const char *appId, const char *disbandParams);
-    int32_t (*addMember)(int64_t requestId, const char *appId, const char *addParams);
-    int32_t (*deleteMember)(int64_t requestId, const char *appId, const char *deleteParams);
+    int32_t (*createGroup)(int32_t osAccountId, int64_t requestId, const char *appId, const char *createParams);
+    int32_t (*deleteGroup)(int32_t osAccountId, int64_t requestId, const char *appId, const char *disbandParams);
+    int32_t (*addMember)(int32_t osAccountId, int64_t requestId, const char *appId, const char *addParams);
+    int32_t (*deleteMember)(int32_t osAccountId, int64_t requestId, const char *appId, const char *deleteParams);
     int32_t (*processBindData)(int64_t requestId, const uint8_t *data, uint32_t dataLen);
-    int32_t (*confirmRequest)(int64_t requestId, const char *appId, const char *confirmParams);
+    int32_t (*confirmRequest)(int32_t osAccountId, int64_t requestId, const char *appId, const char *confirmParams);
     int32_t (*generateAccountGroupId)(int32_t groupType, const char *userIdHash, const char *sharedUserIdHash,
         char **returnGroupId);
     int32_t (*syncAcrossAccountGroup)(const char *appId, const char *userIdHash, const char *deviceId,
         const CJson *sharedUserIdHashList);
-    int32_t (*addGroupRole)(bool isManager, const char *appId, const char *groupId, const char *roleAppId);
-    int32_t (*deleteGroupRole)(bool isManager, const char *appId, const char *groupId, const char *roleAppId);
-    int32_t (*getGroupRoles)(bool isManager, const char *appId, const char *groupId, char **returnJsonStr,
-        uint32_t *returnSize);
+    int32_t (*addGroupRole)(int32_t osAccountId, bool isManager, const char *appId, const char *groupId,
+        const char *roleAppId);
+    int32_t (*deleteGroupRole)(int32_t osAccountId, bool isManager, const char *appId, const char *groupId,
+        const char *roleAppId);
+    int32_t (*getGroupRoles)(int32_t osAccuntId, bool isManager, const char *appId, const char *groupId,
+        char **returnJsonStr, uint32_t *returnSize);
     int32_t (*regListener)(const char *appId, const DataChangeListener *listener);
     int32_t (*unRegListener)(const char *appId);
-    int32_t (*checkAccessToGroup)(const char *appId, const char *groupId);
-    int32_t (*getAccessibleGroupInfoById)(const char *appId, const char *groupId, char **returnGroupInfo);
-    int32_t (*getAccessibleGroupInfo)(const char *appId, const char *queryParams, char **returnGroupVec,
-        uint32_t *groupNum);
-    int32_t (*getAccessibleJoinedGroups)(const char *appId, int groupType, char **returnGroupVec, uint32_t *groupNum);
-    int32_t (*getAccessibleRelatedGroups)(const char *appId, const char *peerDeviceId, bool isUdid,
+    int32_t (*checkAccessToGroup)(int32_t osAccountId, const char *appId, const char *groupId);
+    int32_t (*getAccessibleGroupInfoById)(int32_t osAccountId, const char *appId, const char *groupId,
+        char **returnGroupInfo);
+    int32_t (*getAccessibleGroupInfo)(int32_t osAccountId, const char *appId, const char *queryParams,
         char **returnGroupVec, uint32_t *groupNum);
-    int32_t (*getAccessibleDeviceInfoById)(const char *appId, const char *deviceId, bool isUdid,
+    int32_t (*getAccessibleJoinedGroups)(int32_t osAccountId, const char *appId, int groupType,
+        char **returnGroupVec, uint32_t *groupNum);
+    int32_t (*getAccessibleRelatedGroups)(int32_t osAccountId, const char *appId, const char *peerDeviceId, bool isUdid,
+        char **returnGroupVec, uint32_t *groupNum);
+    int32_t (*getAccessibleDeviceInfoById)(int32_t osAccountId, const char *appId, const char *deviceId, bool isUdid,
         const char *groupId, char **returnDeviceInfo);
-    int32_t (*getAccessibleTrustedDevices)(const char *appId, const char *groupId,
+    int32_t (*getAccessibleTrustedDevices)(int32_t osAccountId, const char *appId, const char *groupId,
         char **returnDevInfoVec, uint32_t *deviceNum);
-    bool (*isDeviceInAccessibleGroup)(const char *appId, const char *groupId, const char *deviceId, bool isUdid);
+    bool (*isDeviceInAccessibleGroup)(int32_t osAccountId, const char *appId, const char *groupId,
+        const char *deviceId, bool isUdid);
+    int32_t (*getPkInfoList)(int32_t osAccountId, const char *appId, const char *queryParams, char **returnInfoList,
+        uint32_t *returnInfoNum);
     void (*destroyInfo)(char **returnInfo);
 } GroupImpl;
 

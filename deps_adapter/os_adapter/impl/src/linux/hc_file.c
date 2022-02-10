@@ -14,9 +14,10 @@
  */
 
 #include "hc_file.h"
+#include <dirent.h>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
 #include <unistd.h>
 #include "securec.h"
 #include "hc_log.h"
@@ -28,29 +29,6 @@ extern "C" {
 
 #define MAX_FILE_PATH_SIZE 256
 #define MAX_FOLDER_NAME_SIZE 128
-
-typedef struct {
-    FileIdEnum fileId;
-    const char *filePath;
-} FileDefInfo;
-
-static char g_groupPath[MAX_FILE_PATH_SIZE] = { 0 };
-
-static FileDefInfo g_fileDefInfo[FILE_ID_LAST] = {
-    { FILE_ID_GROUP, "/data/data/deviceauth/hcgroup.dat" },
-    { FILE_ID_CRED_DATA, "" }
-};
-
-void SetFilePath(FileIdEnum fileId, const char *path)
-{
-    if (path == NULL) {
-        LOGE("Invalid path param");
-        return;
-    }
-    if (sprintf_s(g_groupPath, MAX_FILE_PATH_SIZE, "%s", path) != -1) {
-        g_fileDefInfo[fileId].filePath = g_groupPath;
-    }
-}
 
 static int32_t CreateDirectory(const char *filePath)
 {
@@ -84,15 +62,13 @@ static int32_t CreateDirectory(const char *filePath)
     return 0;
 }
 
-static FILE *HcFileOpenRead(int fileId, const char *path)
+static FILE *HcFileOpenRead(const char *path)
 {
-    (void)fileId;
     return fopen(path, "rb");
 }
 
-static FILE *HcFileOpenWrite(int32_t fileId, const char *path)
+static FILE *HcFileOpenWrite(const char *path)
 {
-    (void)fileId;
     if (access(path, F_OK) != 0) {
         int32_t ret = CreateDirectory(path);
         if (ret != 0) {
@@ -102,15 +78,15 @@ static FILE *HcFileOpenWrite(int32_t fileId, const char *path)
     return fopen(path, "w+");
 }
 
-int HcFileOpen(int fileId, int mode, FileHandle *file)
+int HcFileOpen(const char *path, int mode, FileHandle *file)
 {
-    if (fileId < 0 || fileId >= FILE_ID_LAST || file == NULL) {
+    if (path == NULL || file == NULL) {
         return -1;
     }
     if (mode == MODE_FILE_READ) {
-        file->pfd = HcFileOpenRead(fileId, g_fileDefInfo[fileId].filePath);
+        file->pfd = HcFileOpenRead(path);
     } else {
-        file->pfd = HcFileOpenWrite(fileId, g_fileDefInfo[fileId].filePath);
+        file->pfd = HcFileOpenWrite(path);
     }
     if (file->pfd == NULL) {
         return -1;
@@ -185,16 +161,41 @@ void HcFileClose(FileHandle file)
         return;
     }
 
-    fclose(fp);
+    (void)fclose(fp);
 }
 
-void HcFileRemove(int fileId)
+void HcFileRemove(const char *path)
 {
-    if (fileId >= FILE_ID_LAST) {
-        LOGE("Invalid fileId:%d", fileId);
+    if (path == NULL) {
+        LOGE("Invalid file path");
         return;
     }
-    unlink(g_fileDefInfo[fileId].filePath);
+    (void)remove(path);
+}
+
+void HcFileGetSubFileName(const char *path, StringVector *nameVec)
+{
+    DIR *dir = NULL;
+    struct dirent *entry = NULL;
+    if ((dir = opendir(path)) == NULL) {
+        LOGI("opendir failed!");
+        return;
+    }
+    while ((entry = readdir(dir)) != NULL) {
+        if ((strcmp(entry->d_name, ".") == 0) || (strcmp(entry->d_name, "..") == 0)) {
+            continue;
+        }
+        HcString subFileName = CreateString();
+        if (!StringSetPointer(&subFileName, entry->d_name)) {
+            LOGE("Failed to copy subFileName!");
+            DeleteString(&subFileName);
+            continue;
+        }
+        if (nameVec->pushBackT(nameVec, subFileName) == NULL) {
+            LOGE("Failed to push path to pathVec!");
+            DeleteString(&subFileName);
+        }
+    }
 }
 
 #ifdef __cplusplus

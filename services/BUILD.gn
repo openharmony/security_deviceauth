@@ -139,6 +139,8 @@ if (defined(ohos_lite)) {
       "//foundation/communication/dsoftbus/interfaces/kits/common",
       "//foundation/communication/dsoftbus/interfaces/kits/transport",
       "//foundation/communication/dsoftbus/interfaces/inner_kits/transport",
+      "//third_party/json/include",
+      "//base/account/os_account/interfaces/innerkits/osaccount/native/include",
     ]
 
     sources = deviceauth_files
@@ -158,6 +160,7 @@ if (defined(ohos_lite)) {
     external_deps = [
       "dsoftbus_standard:softbus_client",
       "hiviewdfx_hilog_native:libhilog",
+      "os_account_standard:os_account_innerkits",
     ]
   }
 

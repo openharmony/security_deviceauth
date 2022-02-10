@@ -29,7 +29,7 @@ void DestroyGroupManagerTask(HcTaskBase *task);
 int32_t BindCallbackToTask(GroupManagerTask *task, const CJson *jsonParams);
 int32_t AddReqInfoToJson(int64_t requestId, const char *appId, CJson *jsonParams);
 int32_t AddBindParamsToJson(int operationCode, int64_t requestId, const char *appId, CJson *jsonParams);
-int32_t InitAndPushGMTask(int32_t opCode, int64_t reqId, CJson *params, TaskFunc func);
+int32_t InitAndPushGMTask(int32_t osAccountId, int32_t opCode, int64_t reqId, CJson *params, TaskFunc func);
 
 #ifdef __cplusplus
 }

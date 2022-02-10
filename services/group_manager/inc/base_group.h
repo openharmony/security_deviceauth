@@ -21,8 +21,8 @@
 
 typedef struct {
     int type;
-    int32_t (*createGroup)(CJson *jsonParams, char **returnJsonStr);
-    int32_t (*deleteGroup)(CJson *jsonParams, char **returnJsonStr);
+    int32_t (*createGroup)(int32_t osAccountId, CJson *jsonParams, char **returnJsonStr);
+    int32_t (*deleteGroup)(int32_t osAccountId, CJson *jsonParams, char **returnJsonStr);
 } BaseGroup;
 
 #endif

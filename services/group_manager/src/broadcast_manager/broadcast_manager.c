@@ -28,19 +28,19 @@ typedef struct {
     DataChangeListener *listener;
 } ListenerEntry;
 
-DECLARE_HC_VECTOR(ListenerEntryVec, ListenerEntry)
-IMPLEMENT_HC_VECTOR(ListenerEntryVec, ListenerEntry, 1)
+DECLARE_HC_VECTOR(ListenerEntryVec, ListenerEntry);
+IMPLEMENT_HC_VECTOR(ListenerEntryVec, ListenerEntry, 1);
 static ListenerEntryVec g_listenerEntryVec;
 static HcMutex *g_broadcastMutex = NULL;
 
-static int32_t GenerateMessage(const GroupInfo *groupInfo, char **returnGroupInfo)
+static int32_t GenerateMessage(const TrustedGroupEntry *groupEntry, char **returnGroupInfo)
 {
     CJson *message = CreateJson();
     if (message == NULL) {
         LOGE("Failed to allocate message memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    int32_t result = GenerateReturnGroupInfo(groupInfo, message);
+    int32_t result = GenerateReturnGroupInfo(groupEntry, message);
     if (result != HC_SUCCESS) {
         FreeJson(message);
         return result;
@@ -55,14 +55,14 @@ static int32_t GenerateMessage(const GroupInfo *groupInfo, char **returnGroupInf
     return HC_SUCCESS;
 }
 
-static void PostOnGroupCreated(const GroupInfo *groupInfo)
+static void PostOnGroupCreated(const TrustedGroupEntry *groupEntry)
 {
-    if (groupInfo == NULL) {
+    if (groupEntry == NULL) {
         LOGE("The groupEntry is NULL!");
         return;
     }
     char *messageStr = NULL;
-    if (GenerateMessage(groupInfo, &messageStr) != HC_SUCCESS) {
+    if (GenerateMessage(groupEntry, &messageStr) != HC_SUCCESS) {
         return;
     }
     uint32_t index;
@@ -78,14 +78,14 @@ static void PostOnGroupCreated(const GroupInfo *groupInfo)
     g_broadcastMutex->unlock(g_broadcastMutex);
 }
 
-static void PostOnGroupDeleted(const GroupInfo *groupInfo)
+static void PostOnGroupDeleted(const TrustedGroupEntry *groupEntry)
 {
-    if (groupInfo == NULL) {
+    if (groupEntry == NULL) {
         LOGE("The groupEntry is NULL!");
         return;
     }
     char *messageStr = NULL;
-    if (GenerateMessage(groupInfo, &messageStr) != HC_SUCCESS) {
+    if (GenerateMessage(groupEntry, &messageStr) != HC_SUCCESS) {
         return;
     }
     uint32_t index;
@@ -101,14 +101,14 @@ static void PostOnGroupDeleted(const GroupInfo *groupInfo)
     g_broadcastMutex->unlock(g_broadcastMutex);
 }
 
-static void PostOnDeviceBound(const char *peerUdid, const GroupInfo *groupInfo)
+static void PostOnDeviceBound(const char *peerUdid, const TrustedGroupEntry *groupEntry)
 {
-    if ((peerUdid == NULL) || (groupInfo == NULL)) {
+    if ((peerUdid == NULL) || (groupEntry == NULL)) {
         LOGE("The peerUdid or groupEntry is NULL!");
         return;
     }
     char *messageStr = NULL;
-    if (GenerateMessage(groupInfo, &messageStr) != HC_SUCCESS) {
+    if (GenerateMessage(groupEntry, &messageStr) != HC_SUCCESS) {
         return;
     }
     uint32_t index;
@@ -124,14 +124,14 @@ static void PostOnDeviceBound(const char *peerUdid, const GroupInfo *groupInfo)
     g_broadcastMutex->unlock(g_broadcastMutex);
 }
 
-static void PostOnDeviceUnBound(const char *peerUdid, const GroupInfo *groupInfo)
+static void PostOnDeviceUnBound(const char *peerUdid, const TrustedGroupEntry *groupEntry)
 {
-    if ((peerUdid == NULL) || (groupInfo == NULL)) {
+    if ((peerUdid == NULL) || (groupEntry == NULL)) {
         LOGE("The peerUdid or groupEntry is NULL!");
         return;
     }
     char *messageStr = NULL;
-    if (GenerateMessage(groupInfo, &messageStr) != HC_SUCCESS) {
+    if (GenerateMessage(groupEntry, &messageStr) != HC_SUCCESS) {
         return;
     }
     uint32_t index;
@@ -284,7 +284,7 @@ int32_t InitBroadcastManager(void)
             return HC_ERROR;
         }
     }
-    g_listenerEntryVec = CREATE_HC_VECTOR(ListenerEntryVec)
+    g_listenerEntryVec = CREATE_HC_VECTOR(ListenerEntryVec);
     LOGI("[Broadcaster]: Init broadcast manager module successfully!");
     return HC_SUCCESS;
 }
@@ -300,7 +300,7 @@ void DestroyBroadcastManager(void)
             HcFree(entry->listener);
         }
     }
-    DESTROY_HC_VECTOR(ListenerEntryVec, &g_listenerEntryVec)
+    DESTROY_HC_VECTOR(ListenerEntryVec, &g_listenerEntryVec);
     g_broadcastMutex->unlock(g_broadcastMutex);
     if (g_broadcastMutex != NULL) {
         DestroyHcMutex(g_broadcastMutex);

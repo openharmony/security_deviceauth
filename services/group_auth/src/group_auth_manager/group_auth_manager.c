@@ -15,7 +15,6 @@
 
 #include "group_auth_manager.h"
 #include "common_defs.h"
-#include "database_manager.h"
 #include "dev_auth_module_manager.h"
 #include "device_auth_defines.h"
 #include "hc_log.h"
@@ -59,12 +58,14 @@ bool IsTrustedDevice(const char *udid)
         LOGE("Invalid params in IsTrustedDevice");
         return false;
     }
-    return IsTrustedDeviceExist(udid);
+    LOGE("Group auth do not support func currently: %s!", __func__);
+    return false;
 }
 
 int32_t QueryTrustedDeviceNum(void)
 {
-    return GetTrustedDevNumber();
+    LOGE("Group auth do not support func currently: %s!", __func__);
+    return HC_ERR_NOT_SUPPORT;
 }
 
 void DoAuthDevice(HcTaskBase *task)
