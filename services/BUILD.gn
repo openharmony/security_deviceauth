@@ -45,7 +45,9 @@ if (defined(ohos_lite)) {
     defines = [ "HILOG_ENABLE" ]
     defines += deviceauth_defines
     cflags = build_flags
-
+    cflags += [
+      "-DHICHAIN_THREAD_STACK_SIZE = ${deviceauth_hichain_thread_stack_size}",
+    ]
     if (ohos_kernel_type == "linux" || ohos_kernel_type == "liteos_a") {
       include_dirs +=
           [ "//base/hiviewdfx/hilog_lite/interfaces/native/innerkits/hilog" ]

@@ -38,12 +38,12 @@ int32_t HcGetUdid(uint8_t *udid, int32_t udidLen)
 
 const char *GetStoragePath(void)
 {
-    return "hcgroup.dat";
+    return AUTH_STORAGE_PATH "hcgroup.dat";
 }
 
 const char *GetStorageDirPath(void)
 {
-    return "";
+    return AUTH_STORAGE_PATH;
 }
 
 #ifdef __cplusplus

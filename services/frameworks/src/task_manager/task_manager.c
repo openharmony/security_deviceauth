@@ -18,7 +18,9 @@
 #include "device_auth_defines.h"
 #include "hc_log.h"
 
-#define STACK_SIZE 4096
+#ifndef HICHAIN_THREAD_STACK_SIZE
+#define HICHAIN_THREAD_STACK_SIZE 4096
+#endif
 
 static HcTaskThread *g_taskThread = NULL;
 
@@ -42,7 +44,7 @@ int32_t InitTaskManager(void)
     if (g_taskThread == NULL) {
         return HC_ERR_ALLOC_MEMORY;
     }
-    int32_t res = InitHcTaskThread(g_taskThread, STACK_SIZE, "HichainThread");
+    int32_t res = InitHcTaskThread(g_taskThread, HICHAIN_THREAD_STACK_SIZE, "HichainThread");
     if (res != HC_SUCCESS) {
         LOGE("Failed to init task thread! res: %d", res);
         HcFree(g_taskThread);
