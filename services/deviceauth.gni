@@ -21,7 +21,9 @@ dev_frameworks_path = "${services_path}/frameworks"
 group_manager_path = "${services_path}/group_manager"
 
 enable_broadcast = true
-
+declare_args() {
+  deviceauth_hichain_thread_stack_size = 4096
+}
 deviceauth_defines = []
 
 inc_path = [
