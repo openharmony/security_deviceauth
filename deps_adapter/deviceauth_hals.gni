@@ -13,6 +13,10 @@
 
 import("//base/security/deviceauth/deviceauth_env.gni")
 
+declare_args() {
+  deviceauth_storage_path = ""
+}
+
 if (target_os == "liteos" ||
     (defined(ohos_lite) && ohos_kernel_type == "liteos_m")) {
   hals_inc_path = [
