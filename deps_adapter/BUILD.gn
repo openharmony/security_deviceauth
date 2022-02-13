@@ -43,6 +43,7 @@ if (defined(ohos_lite)) {
       ]
 
       cflags = [ "-DHILOG_ENABLE" ]
+      cflags += [ "-DAUTH_STORAGE_PATH = \"${deviceauth_storage_path}\"" ]
       deps = [
         "//base/hiviewdfx/hilog_lite/frameworks/mini:hilog_lite",
         "//base/security/huks/interfaces/innerkits/huks_lite:huks_3.0_sdk",
