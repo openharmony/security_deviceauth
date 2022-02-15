@@ -71,6 +71,7 @@
 #define FIELD_NONCE "nonce"
 #define FIELD_OPERATION_CODE "operationCode"
 #define FIELD_OPERATION_PARAMS "operationParams"
+#define FIELD_OS_ACCOUNT_ID "osAccountId"
 #define FIELD_OWNER_ID "ownerId"
 #define FIELD_OWNER_NAME "ownerName"
 #define FIELD_PERMISSION "Permission"
@@ -219,7 +220,5 @@ typedef enum {
     REGISTER = 7,
     SECURE_CLONE = 8,
 } OperationCode;
-
-DECLARE_HC_VECTOR(StringVector, HcString)
 
 #endif

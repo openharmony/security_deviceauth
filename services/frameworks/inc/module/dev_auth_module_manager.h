@@ -31,6 +31,13 @@ typedef struct AuthModuleBaseT {
     void (*destroyModule)(struct AuthModuleBaseT *module);
 } AuthModuleBase;
 
+typedef struct {
+    const char *pkgName;
+    const char *serviceType;
+    Uint8Buff *authId;
+    int userType;
+} AuthModuleParams;
+
 int32_t InitModules(void);
 void DestroyModules(void);
 
@@ -46,6 +53,7 @@ int32_t UnregisterLocalIdentity(const char *pkgName, const char *serviceType, Ui
     int moduleType);
 int32_t DeletePeerAuthInfo(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType,
     int moduleType);
+int32_t GetPublicKey(int moduleType, AuthModuleParams *params, Uint8Buff *returnPk);
 
 // for ACCOUNT
 int32_t ProcessCredentials(int credentialOpCode, const CJson *in, CJson *out, int moduleType);

@@ -20,14 +20,15 @@
 #include "callback_manager.h"
 #include "task_manager.h"
 
-static int32_t InitGroupManagerTask(GroupManagerTask *task, int32_t opCode, int64_t reqId, CJson *params, TaskFunc func)
+static int32_t InitGroupManagerTask(GroupManagerTask *task, GMTaskParams *taskParams, TaskFunc func)
 {
     task->base.doAction = func;
     task->base.destroy = DestroyGroupManagerTask;
-    task->opCode = opCode;
-    task->reqId = reqId;
-    task->params = params;
-    return BindCallbackToTask(task, params);
+    task->osAccountId = taskParams->osAccountId;
+    task->opCode = taskParams->opCode;
+    task->reqId = taskParams->reqId;
+    task->params = taskParams->params;
+    return BindCallbackToTask(task, taskParams->params);
 }
 
 int32_t AddReqInfoToJson(int64_t requestId, const char *appId, CJson *jsonParams)
@@ -76,14 +77,19 @@ int32_t AddBindParamsToJson(int operationCode, int64_t requestId, const char *ap
     return AddReqInfoToJson(requestId, appId, jsonParams);
 }
 
-int32_t InitAndPushGMTask(int32_t opCode, int64_t reqId, CJson *params, TaskFunc func)
+int32_t InitAndPushGMTask(int32_t osAccountId, int32_t opCode, int64_t reqId, CJson *params, TaskFunc func)
 {
     GroupManagerTask *task = (GroupManagerTask *)HcMalloc(sizeof(GroupManagerTask), 0);
     if (task == NULL) {
         LOGE("Failed to allocate task memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    if (InitGroupManagerTask(task, opCode, reqId, params, func) != HC_SUCCESS) {
+    GMTaskParams taskParams;
+    taskParams.osAccountId = osAccountId;
+    taskParams.opCode = opCode;
+    taskParams.reqId = reqId;
+    taskParams.params = params;
+    if (InitGroupManagerTask(task, &taskParams, func) != HC_SUCCESS) {
         HcFree(task);
         return HC_ERR_INIT_TASK_FAIL;
     }

@@ -82,10 +82,13 @@ BindSession *CreateBaseBindSession(int32_t sessionType, int32_t opCode, const CJ
         HcFree(session);
         return NULL;
     }
+    int32_t osAccountId = 0;
+    (void)GetIntFromJson(params, FIELD_OS_ACCOUNT_ID, &osAccountId);
     session->base.type = sessionType;
     session->base.process = func;
     session->base.destroy = DestroyBindSession;
     session->base.callback = callback;
+    session->osAccountId = osAccountId;
     session->curTaskId = 0;
     session->opCode = opCode;
     session->moduleType = DAS_MODULE;

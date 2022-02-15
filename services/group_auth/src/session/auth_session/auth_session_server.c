@@ -23,6 +23,7 @@
 #include "device_auth_defines.h"
 #include "hc_log.h"
 #include "hc_types.h"
+#include "os_account_adapter.h"
 #include "session_common.h"
 
 static int32_t ProcessServerAuthSession(Session *session, CJson *in);
@@ -33,6 +34,16 @@ static int32_t CombineServerParams(const CJson *confirmationJson, CJson *dataFro
     if (GetIntFromJson(dataFromClient, FIELD_AUTH_FORM, &authForm) != HC_SUCCESS) {
         LOGE("Failed to get auth form in data sent by client for the first time!");
         return HC_ERR_JSON_GET;
+    }
+    int32_t osAccountId = ANY_OS_ACCOUNT;
+    (void)GetIntFromJson(confirmationJson, FIELD_OS_ACCOUNT_ID, &osAccountId);
+    osAccountId = DevAuthGetRealOsAccountLocalId(osAccountId);
+    if (osAccountId == INVALID_OS_ACCOUNT) {
+        return HC_ERR_INVALID_PARAMS;
+    }
+    if (AddIntToJson(dataFromClient, FIELD_OS_ACCOUNT_ID, osAccountId) != HC_SUCCESS) {
+        LOGE("Failed to add os accountId for server in onRequest confirm!");
+        return HC_ERR_JSON_ADD;
     }
     int32_t groupAuthType = GetGroupAuthType(authForm);
     BaseGroupAuth *groupAuthHandle = GetGroupAuth(groupAuthType);

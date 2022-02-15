@@ -20,7 +20,7 @@
 
 int32_t AddInfoToSendData(bool isNeedCompatibleInfo, const BindSession *session, CJson *data);
 int32_t GenerateBasicModuleParams(bool isClient, BindSession *session, CJson *moduleParams);
-int32_t GenerateBindParams(int isClient, const CJson *jsonParams, BindSession *session);
+int32_t GenerateBindParams(int32_t osAccountId, int isClient, const CJson *jsonParams, BindSession *session);
 bool NeedCreateGroup(int isClient, int operationCode);
 bool NeedForceDelete(const BindSession *session);
 int32_t ForceUnbindDevice(const BindSession *session);

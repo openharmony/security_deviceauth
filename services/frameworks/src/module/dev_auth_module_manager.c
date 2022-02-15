@@ -21,7 +21,7 @@
 #include "account_module.h"
 #include "version_util.h"
 
-DECLARE_HC_VECTOR(AuthModuleVec, void *)
+DECLARE_HC_VECTOR(AuthModuleVec, void *);
 IMPLEMENT_HC_VECTOR(AuthModuleVec, void *, 1)
 
 static AuthModuleVec g_authModuleVec;
@@ -146,6 +146,29 @@ int32_t DeletePeerAuthInfo(const char *pkgName, const char *serviceType, Uint8Bu
     return HC_SUCCESS;
 }
 
+int32_t GetPublicKey(int moduleType, AuthModuleParams *params, Uint8Buff *returnPk)
+{
+    if (params == NULL || returnPk == NULL ||
+        !IsParamsForDasTokenManagerValid(params->pkgName, params->serviceType,
+        params->authId, params->userType, moduleType)) {
+        LOGE("Params for GetPublicKey is invalid.");
+        return HC_ERR_INVALID_PARAMS;
+    }
+    AuthModuleBase *module = GetModule(moduleType);
+    if (module == NULL) {
+        LOGE("Failed to get module for das.");
+        return HC_ERR_MODULE_NOT_FOUNT;
+    }
+    DasAuthModule *dasModule = (DasAuthModule *)module;
+    int32_t res = dasModule->getPublicKey(params->pkgName, params->serviceType,
+        params->authId, params->userType, returnPk);
+    if (res != HC_SUCCESS) {
+        LOGE("Get public key failed, res: %d", res);
+        return res;
+    }
+    return HC_SUCCESS;
+}
+
 int32_t ProcessTask(int taskId, const CJson *in, CJson *out, int32_t *status, int moduleType)
 {
     if (in == NULL || out == NULL || status == NULL) {
@@ -236,7 +259,7 @@ static int32_t InitAccountModule(void)
 
 int32_t InitModules(void)
 {
-    g_authModuleVec = CREATE_HC_VECTOR(AuthModuleVec)
+    g_authModuleVec = CREATE_HC_VECTOR(AuthModuleVec);
     InitGroupAndModuleVersion(&g_version);
     int res;
     if (IsDasSupported()) {
@@ -270,7 +293,7 @@ void DestroyModules(void)
             ((AuthModuleBase *)(*module))->destroyModule((AuthModuleBase *)*module);
         }
     }
-    DESTROY_HC_VECTOR(AuthModuleVec, &g_authModuleVec)
+    DESTROY_HC_VECTOR(AuthModuleVec, &g_authModuleVec);
     (void)memset_s(&g_version, sizeof(VersionStruct), 0, sizeof(VersionStruct));
 }
 

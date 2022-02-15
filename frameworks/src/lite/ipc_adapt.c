@@ -1535,7 +1535,7 @@ static bool IsTypeForSettingPtr(int32_t type)
 static bool IsTypeForCpyData(int32_t type)
 {
     int32_t typeList[] = {
-        PARAM_TYPE_REQID, PARAM_TYPE_GROUP_TYPE, PARAM_TYPE_OPCODE, PARAM_TYPE_ERRCODE
+        PARAM_TYPE_REQID, PARAM_TYPE_GROUP_TYPE, PARAM_TYPE_OPCODE, PARAM_TYPE_ERRCODE, PARAM_TYPE_OS_ACCOUNT_ID
     };
     int32_t i;
     int32_t n = sizeof(typeList) / sizeof(typeList[0]);

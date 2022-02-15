@@ -21,6 +21,7 @@
 #include "hc_types.h"
 #include "json_utils.h"
 #include "session_common.h"
+#include "string_util.h"
 
 static int32_t ProcessClientAuthSession(Session *session, CJson *in);
 
@@ -106,6 +107,20 @@ int32_t CheckClientGroupAuthMsg(AuthSession *session, const CJson *in)
     return HC_ERR_PEER_ERROR;
 }
 
+static void PrintErrorInputInfo(const CJson *param)
+{
+    const char *peerUdid = GetStringFromJson(param, FIELD_PEER_CONN_DEVICE_ID);
+    const char *peerAuthId = GetStringFromJson(param, FIELD_PEER_AUTH_ID);
+    char *anonyPeerUdid = NULL;
+    char *anonyPeerAuthId = NULL;
+    ConvertToAnonymousStr(peerUdid, &anonyPeerUdid);
+    ConvertToAnonymousStr(peerAuthId, &anonyPeerAuthId);
+    LOGE("[PrintErrorInputInfo] [peerUdid]: %s", ((anonyPeerUdid == NULL) ? "NULL" : anonyPeerUdid));
+    LOGE("[PrintErrorInputInfo] [peerAuthId]: %s", ((anonyPeerAuthId == NULL) ? "NULL" : anonyPeerAuthId));
+    HcFree(anonyPeerUdid);
+    HcFree(anonyPeerAuthId);
+}
+
 static int32_t ProcessClientAuthSession(Session *session, CJson *in)
 {
     LOGI("Begin process client authSession.");
@@ -141,15 +156,16 @@ static int32_t ProcessClientAuthSession(Session *session, CJson *in)
     return res;
 }
 
-static Session *CreateClientAuthSessionInner(CJson *param, const DeviceAuthCallback *callback)
+static Session *CreateClientAuthSessionInner(int32_t osAccountId, CJson *param, const DeviceAuthCallback *callback)
 {
     ParamsVec authParamsVec;
     CreateAuthParamsVec(&authParamsVec);
-    int32_t res = GetAuthParamsList(param, &authParamsVec);
+    int32_t res = GetAuthParamsList(osAccountId, param, &authParamsVec);
     if ((res != HC_SUCCESS) || (authParamsVec.size(&authParamsVec) == 0)) {
         LOGE("Failed to get auth param list, candidate group = %u!", authParamsVec.size(&authParamsVec));
         DestroyAuthParamsVec(&authParamsVec);
         InformLocalAuthError(param, callback);
+        PrintErrorInputInfo(param);
         return NULL;
     }
 
@@ -195,7 +211,13 @@ Session *CreateClientAuthSession(CJson *param, const DeviceAuthCallback *callbac
         InformLocalAuthError(param, callback);
         return NULL;
     }
-    session = CreateClientAuthSessionInner(param, callback);
+    int32_t osAccountId = INVALID_OS_ACCOUNT;
+    if (GetIntFromJson(param, FIELD_OS_ACCOUNT_ID, &osAccountId) != HC_SUCCESS) {
+        LOGE("Failed to get osAccountId for create client session!");
+        InformLocalAuthError(param, callback);
+        return NULL;
+    }
+    session = CreateClientAuthSessionInner(osAccountId, param, callback);
     if (session == NULL) {
         LOGE("Failed to create client auth session!");
         return NULL;

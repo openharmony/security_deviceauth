@@ -29,8 +29,8 @@ typedef struct {
     IpcServiceCall method;
     int32_t methodId;
 } IpcServiceCallMap;
-#define MAX_CALLMAP_SIZE 32
-#define MAX_CBSTUB_SIZE 32
+#define MAX_CALLMAP_SIZE 64
+#define MAX_CBSTUB_SIZE 64
 
 typedef LiteIpcCallService DevAuthService;
 

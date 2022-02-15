@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Huawei Device Co., Ltd.
+ * Copyright (C) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,25 +13,17 @@
  * limitations under the License.
  */
 
-#ifndef ACCOUNT_RELATED_GROUP_AUTH_H
-#define ACCOUNT_RELATED_GROUP_AUTH_H
+#ifndef OS_ACCOUNT_ADAPTER_H
+#define OS_ACCOUNT_ADAPTER_H
 
 #include <stdint.h>
-#include "base_group_auth.h"
-#include "data_manager.h"
-
-typedef void (*GetAccountCandidateGroupFunc)(const CJson *param, const QueryGroupParams *queryParams,
-    GroupEntryVec *vec);
-
-typedef struct {
-    BaseGroupAuth base;
-    GetAccountCandidateGroupFunc getAccountCandidateGroup;
-} AccountRelatedGroupAuth;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-BaseGroupAuth *GetAccountRelatedGroupAuth(void);
+
+int32_t DevAuthGetRealOsAccountLocalId(int32_t inputId);
+
 #ifdef __cplusplus
 }
 #endif
