@@ -24,5 +24,5 @@ BaseGroup *GetPeerToPeerGroupInstance(void)
 
 bool IsPeerToPeerGroupSupported(void)
 {
-    return false;
+    return true;
 }

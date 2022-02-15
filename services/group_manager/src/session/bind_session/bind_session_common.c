@@ -17,7 +17,7 @@
 #include "bind_session_common_util.h"
 #include "callback_manager.h"
 #include "channel_manager.h"
-#include "database_manager.h"
+#include "data_manager.h"
 #include "dev_auth_module_manager.h"
 #include "group_operation_common.h"
 #include "hc_dev_info.h"
@@ -98,8 +98,10 @@ static int32_t AddRequestInfoToSendData(const BindSession *session, CJson *data)
 
 static int32_t GenerateCompatibleInfo(CJson *groupInfo)
 {
-    const char *udid = GetLocalDevUdid();
-    if (udid == NULL) {
+    char udid[INPUT_UDID_LEN] = { 0 };
+    int32_t res = HcGetUdid((uint8_t *)udid, INPUT_UDID_LEN);
+    if (res != HC_SUCCESS) {
+        LOGE("Failed to get local udid! res: %d", res);
         return HC_ERR_DB;
     }
     if (AddStringToJson(groupInfo, FIELD_DEVICE_ID, udid) != HC_SUCCESS) {
@@ -279,7 +281,7 @@ static int32_t TryAddPeerUserTypeToParams(const CJson *jsonParams, BindSession *
     return HC_SUCCESS;
 }
 
-static int32_t AddGroupInfoToParams(const GroupInfo *entry, CJson *params)
+static int32_t AddGroupInfoToParams(const TrustedGroupEntry *entry, CJson *params)
 {
     if (AddStringToJson(params, FIELD_GROUP_ID, StringGet(&entry->id)) != HC_SUCCESS) {
         LOGE("Failed to add groupId to json!");
@@ -296,7 +298,7 @@ static int32_t AddGroupInfoToParams(const GroupInfo *entry, CJson *params)
     return HC_SUCCESS;
 }
 
-static int32_t AddDevInfoToParams(const DeviceInfo *devAuthParams, CJson *params)
+static int32_t AddDevInfoToParams(const TrustedDeviceEntry *devAuthParams, CJson *params)
 {
     if (AddStringToJson(params, FIELD_AUTH_ID, StringGet(&devAuthParams->authId)) != HC_SUCCESS) {
         LOGE("Failed to add authId to params!");
@@ -313,47 +315,49 @@ static int32_t AddDevInfoToParams(const DeviceInfo *devAuthParams, CJson *params
     return HC_SUCCESS;
 }
 
-static int32_t AddGroupInfoByDatabase(const char *groupId, CJson *params)
+static int32_t AddGroupInfoByDatabase(int32_t osAccountId, const char *groupId, CJson *params)
 {
-    GroupInfo *entry = CreateGroupInfoStruct();
+    TrustedGroupEntry *entry = CreateGroupEntry();
     if (entry == NULL) {
         LOGE("Failed to allocate groupEntry memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    if (GetGroupInfoById(groupId, entry) != HC_SUCCESS) {
+    if (GetGroupInfoById(osAccountId, groupId, entry) != HC_SUCCESS) {
         LOGE("Failed to obtain the group information from the database!");
-        DestroyGroupInfoStruct(entry);
+        DestroyGroupEntry(entry);
         return HC_ERR_DB;
     }
     if (AddGroupInfoToParams(entry, params) != HC_SUCCESS) {
-        DestroyGroupInfoStruct(entry);
+        DestroyGroupEntry(entry);
         return HC_ERR_JSON_FAIL;
     }
-    DestroyGroupInfoStruct(entry);
+    DestroyGroupEntry(entry);
     return HC_SUCCESS;
 }
 
-static int32_t AddDevInfoByDatabase(const char *groupId, CJson *params)
+static int32_t AddDevInfoByDatabase(int32_t osAccountId, const char *groupId, CJson *params)
 {
-    const char *udid = GetLocalDevUdid();
-    if (udid == NULL) {
+    char udid[INPUT_UDID_LEN] = { 0 };
+    int32_t res = HcGetUdid((uint8_t *)udid, INPUT_UDID_LEN);
+    if (res != HC_SUCCESS) {
+        LOGE("Failed to get local udid! res: %d", res);
         return HC_ERR_DB;
     }
-    DeviceInfo *devAuthParams = CreateDeviceInfoStruct();
+    TrustedDeviceEntry *devAuthParams = CreateDeviceEntry();
     if (devAuthParams == NULL) {
         LOGE("Failed to allocate devEntry memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    if (GetTrustedDevInfoById(udid, true, groupId, devAuthParams) != HC_SUCCESS) {
+    if (GetTrustedDevInfoById(osAccountId, udid, true, groupId, devAuthParams) != HC_SUCCESS) {
         LOGE("Failed to obtain the device information from the database!");
-        DestroyDeviceInfoStruct(devAuthParams);
+        DestroyDeviceEntry(devAuthParams);
         return HC_ERR_DB;
     }
     if (AddDevInfoToParams(devAuthParams, params) != HC_SUCCESS) {
-        DestroyDeviceInfoStruct(devAuthParams);
+        DestroyDeviceEntry(devAuthParams);
         return HC_ERR_JSON_FAIL;
     }
-    DestroyDeviceInfoStruct(devAuthParams);
+    DestroyDeviceEntry(devAuthParams);
     return HC_SUCCESS;
 }
 
@@ -440,37 +444,40 @@ static int32_t AddExpireTimeIfValidOrDefault(const CJson *jsonParams, CJson *par
     return HC_SUCCESS;
 }
 
-static int32_t CheckAuthIdAndUserTypeValid(int userType, const char *groupId, const char *authId)
+static int32_t CheckAuthIdAndUserTypeValid(int32_t osAccountId, int userType, const char *groupId, const char *authId)
 {
-    if (!IsGroupExistByGroupId(groupId)) {
+    if (!IsGroupExistByGroupId(osAccountId, groupId)) {
         return HC_SUCCESS;
     }
-    const char *udid = GetLocalDevUdid();
-    if (udid == NULL) {
+    char udid[INPUT_UDID_LEN] = { 0 };
+    int32_t res = HcGetUdid((uint8_t *)udid, INPUT_UDID_LEN);
+    if (res != HC_SUCCESS) {
+        LOGE("Failed to get local udid! res: %d", res);
         return HC_ERR_DB;
     }
-    DeviceInfo *deviceInfo = CreateDeviceInfoStruct();
+    TrustedDeviceEntry *deviceInfo = CreateDeviceEntry();
     if (deviceInfo == NULL) {
         LOGE("Failed to allocate deviceInfo memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    int32_t result = GetTrustedDevInfoById(udid, true, groupId, deviceInfo);
+    int32_t result = GetTrustedDevInfoById(osAccountId, udid, true, groupId, deviceInfo);
     if (result != HC_SUCCESS) {
         LOGE("Failed to obtain the local device information from the database!");
-        DestroyDeviceInfoStruct(deviceInfo);
+        DestroyDeviceEntry(deviceInfo);
         return result;
     }
     const char *oriAuthId = StringGet(&deviceInfo->authId);
     if ((deviceInfo->devType != userType) || ((oriAuthId != NULL) && (strcmp(oriAuthId, authId) != 0))) {
         LOGE("Once a group is created, the service cannot change the local authId and userType used in the group!");
-        DestroyDeviceInfoStruct(deviceInfo);
+        DestroyDeviceEntry(deviceInfo);
         return HC_ERR_INVALID_PARAMS;
     }
-    DestroyDeviceInfoStruct(deviceInfo);
+    DestroyDeviceEntry(deviceInfo);
     return HC_SUCCESS;
 }
 
-static int32_t AddAuthIdAndUserTypeIfValidOrDefault(const char *groupId, const CJson *jsonParams, CJson *params)
+static int32_t AddAuthIdAndUserTypeIfValidOrDefault(int32_t osAccountId, const char *groupId, const CJson *jsonParams,
+    CJson *params)
 {
     int32_t userType = DEVICE_TYPE_ACCESSORY;
     (void)GetIntFromJson(jsonParams, FIELD_USER_TYPE, &userType);
@@ -481,12 +488,18 @@ static int32_t AddAuthIdAndUserTypeIfValidOrDefault(const char *groupId, const C
     const char *authId = GetStringFromJson(jsonParams, FIELD_DEVICE_ID);
     if (authId == NULL) {
         LOGD("No authId is found. The default value is udid!");
-        authId = GetLocalDevUdid();
+        char udid[INPUT_UDID_LEN] = { 0 };
+        int32_t res = HcGetUdid((uint8_t *)udid, INPUT_UDID_LEN);
+        if (res != HC_SUCCESS) {
+            LOGE("Failed to get local udid! res: %d", res);
+            return HC_ERR_DB;
+        }
+        authId = udid;
         if (authId == NULL) {
             return HC_ERR_DB;
         }
     }
-    int32_t result = CheckAuthIdAndUserTypeValid(userType, groupId, authId);
+    int32_t result = CheckAuthIdAndUserTypeValid(osAccountId, userType, groupId, authId);
     if (result != HC_SUCCESS) {
         return result;
     }
@@ -503,8 +516,10 @@ static int32_t AddAuthIdAndUserTypeIfValidOrDefault(const char *groupId, const C
 
 static int32_t AddUdid(CJson *params)
 {
-    const char *udid = GetLocalDevUdid();
-    if (udid == NULL) {
+    char udid[INPUT_UDID_LEN] = { 0 };
+    int32_t res = HcGetUdid((uint8_t *)udid, INPUT_UDID_LEN);
+    if (res != HC_SUCCESS) {
+        LOGE("Failed to get local udid! res: %d", res);
         return HC_ERR_DB;
     }
     if (AddStringToJson(params, FIELD_CONN_DEVICE_ID, udid) != HC_SUCCESS) {
@@ -543,10 +558,11 @@ static int32_t AddGroupInfoToSessionParams(const char *groupId, const CJson *jso
     return HC_SUCCESS;
 }
 
-static int32_t AddDevInfoToSessionParams(const char *groupId, const CJson *jsonParams, CJson *params)
+static int32_t AddDevInfoToSessionParams(int32_t osAccountId, const char *groupId, const CJson *jsonParams,
+    CJson *params)
 {
     int32_t result;
-    if (((result = AddAuthIdAndUserTypeIfValidOrDefault(groupId, jsonParams, params)) != HC_SUCCESS) ||
+    if (((result = AddAuthIdAndUserTypeIfValidOrDefault(osAccountId, groupId, jsonParams, params)) != HC_SUCCESS) ||
         ((result = AddUdid(params)) != HC_SUCCESS) ||
         ((result = AddUserTypeIfValidOrDefault(jsonParams, params)) != HC_SUCCESS)) {
         return result;
@@ -554,22 +570,22 @@ static int32_t AddDevInfoToSessionParams(const char *groupId, const CJson *jsonP
     return HC_SUCCESS;
 }
 
-static int32_t GenerateParamsByInput(const char *groupId, const CJson *jsonParams, CJson *params)
+static int32_t GenerateParamsByInput(int32_t osAccountId, const char *groupId, const CJson *jsonParams, CJson *params)
 {
     int32_t result = AddGroupInfoToSessionParams(groupId, jsonParams, params);
     if (result != HC_SUCCESS) {
         return result;
     }
-    return AddDevInfoToSessionParams(groupId, jsonParams, params);
+    return AddDevInfoToSessionParams(osAccountId, groupId, jsonParams, params);
 }
 
-static int32_t GenerateParamsByDatabase(const char *groupId, CJson *params)
+static int32_t GenerateParamsByDatabase(int32_t osAccountId, const char *groupId, CJson *params)
 {
-    int32_t result = AddGroupInfoByDatabase(groupId, params);
+    int32_t result = AddGroupInfoByDatabase(osAccountId, groupId, params);
     if (result != HC_SUCCESS) {
         return result;
     }
-    return AddDevInfoByDatabase(groupId, params);
+    return AddDevInfoByDatabase(osAccountId, groupId, params);
 }
 
 static int32_t AddIsForceDeleteIfNeed(int isClient, const CJson *jsonParams, BindSession *session)
@@ -664,21 +680,21 @@ static int32_t AddPeerUserTypeIfDelete(BindSession *session)
         LOGE("Failed to get groupId from params!");
         return HC_ERR_JSON_GET;
     }
-    DeviceInfo *devAuthParams = CreateDeviceInfoStruct();
+    TrustedDeviceEntry *devAuthParams = CreateDeviceEntry();
     if (devAuthParams == NULL) {
         LOGE("Failed to allocate devEntry memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    if (GetTrustedDevInfoById(peerAuthId, false, groupId, devAuthParams) != HC_SUCCESS) {
+    if (GetTrustedDevInfoById(session->osAccountId, peerAuthId, false, groupId, devAuthParams) != HC_SUCCESS) {
         LOGE("Failed to obtain the device information from the database!");
-        DestroyDeviceInfoStruct(devAuthParams);
+        DestroyDeviceEntry(devAuthParams);
         return HC_ERR_DB;
     }
     if (AddIntToJson(session->params, FIELD_PEER_USER_TYPE, devAuthParams->devType) != HC_SUCCESS) {
-        DestroyDeviceInfoStruct(devAuthParams);
+        DestroyDeviceEntry(devAuthParams);
         return HC_ERR_JSON_FAIL;
     }
-    DestroyDeviceInfoStruct(devAuthParams);
+    DestroyDeviceEntry(devAuthParams);
     return HC_SUCCESS;
 }
 
@@ -694,7 +710,7 @@ static int32_t AddPeerDevInfoIfNeed(bool isClient, const CJson *jsonParams, Bind
     return AddPeerAuthIdAndUdidIfExist(jsonParams, session);
 }
 
-static int32_t AddGroupAndDevInfo(int isClient, const CJson *jsonParams, BindSession *session)
+static int32_t AddGroupAndDevInfo(int32_t osAccountId, int isClient, const CJson *jsonParams, BindSession *session)
 {
     const char *groupId = GetStringFromJson(jsonParams, FIELD_GROUP_ID);
     if (groupId == NULL) {
@@ -702,9 +718,9 @@ static int32_t AddGroupAndDevInfo(int isClient, const CJson *jsonParams, BindSes
         return HC_ERR_JSON_GET;
     }
     if (NeedCreateGroup(isClient, session->opCode)) {
-        return GenerateParamsByInput(groupId, jsonParams, session->params);
+        return GenerateParamsByInput(osAccountId, groupId, jsonParams, session->params);
     } else {
-        return GenerateParamsByDatabase(groupId, session->params);
+        return GenerateParamsByDatabase(session->osAccountId, groupId, session->params);
     }
 }
 
@@ -752,7 +768,7 @@ static int32_t InformSelfUnbindSuccess(const char *peerAuthId, const char *group
     return HC_SUCCESS;
 }
 
-static int32_t SetGroupId(const CJson *params, GroupInfo *groupParams)
+static int32_t SetGroupId(const CJson *params, TrustedGroupEntry *groupParams)
 {
     const char *groupId = GetStringFromJson(params, FIELD_GROUP_ID);
     if (groupId == NULL) {
@@ -766,7 +782,7 @@ static int32_t SetGroupId(const CJson *params, GroupInfo *groupParams)
     return HC_SUCCESS;
 }
 
-static int32_t SetGroupName(const CJson *params, GroupInfo *groupParams)
+static int32_t SetGroupName(const CJson *params, TrustedGroupEntry *groupParams)
 {
     const char *groupName = GetStringFromJson(params, FIELD_GROUP_NAME);
     if (groupName == NULL) {
@@ -780,27 +796,29 @@ static int32_t SetGroupName(const CJson *params, GroupInfo *groupParams)
     return HC_SUCCESS;
 }
 
-static int32_t SetGroupOwner(const char *ownerAppId, GroupInfo *groupParams)
+static int32_t SetGroupOwner(const char *ownerAppId, TrustedGroupEntry *groupParams)
 {
-    if (!StringSetPointer(&groupParams->ownerName, ownerAppId)) {
+    HcString ownerName = CreateString();
+    if (!StringSetPointer(&ownerName, ownerAppId)) {
         LOGE("Failed to copy groupOwner!");
+        return HC_ERR_MEMORY_COPY;
+    }
+    if (groupParams->managers.pushBackT(&groupParams->managers, ownerName) == NULL) {
+        LOGE("Failed to push owner to vec!");
         return HC_ERR_MEMORY_COPY;
     }
     return HC_SUCCESS;
 }
 
-static int32_t SetGroupType(const CJson *params, GroupInfo *groupParams)
+static int32_t SetGroupType(const CJson *params, TrustedGroupEntry *groupParams)
 {
-    int32_t groupType = PEER_TO_PEER_GROUP;
-    if (GetIntFromJson(params, FIELD_GROUP_TYPE, &groupType) != HC_SUCCESS) {
-        LOGE("Failed to get groupType from params!");
-        return HC_ERR_JSON_GET;
-    }
-    groupParams->type = groupType;
+    /* Currently, only peer to peer group is supported. */
+    (void)params;
+    groupParams->type = PEER_TO_PEER_GROUP;
     return HC_SUCCESS;
 }
 
-static int32_t SetGroupVisibility(const CJson *params, GroupInfo *groupParams)
+static int32_t SetGroupVisibility(const CJson *params, TrustedGroupEntry *groupParams)
 {
     int32_t groupVisibility = GROUP_VISIBILITY_PUBLIC;
     (void)GetIntFromJson(params, FIELD_GROUP_VISIBILITY, &groupVisibility);
@@ -808,7 +826,7 @@ static int32_t SetGroupVisibility(const CJson *params, GroupInfo *groupParams)
     return HC_SUCCESS;
 }
 
-static int32_t SetGroupExpireTime(const CJson *params, GroupInfo *groupParams)
+static int32_t SetGroupExpireTime(const CJson *params, TrustedGroupEntry *groupParams)
 {
     int32_t expireTime = DEFAULT_EXPIRE_TIME;
     (void)GetIntFromJson(params, FIELD_EXPIRE_TIME, &expireTime);
@@ -839,7 +857,7 @@ static int32_t ForceDeletePeerKey(CJson *params)
     return DeletePeerAuthInfo(appId, groupId, &peerAuthIdBuff, peerUserType, DAS_MODULE);
 }
 
-static int32_t GenerateGroupParams(const BindSession *session, GroupInfo *groupParams)
+static int32_t GenerateGroupParams(const BindSession *session, TrustedGroupEntry *groupParams)
 {
     int32_t result;
     if (((result = SetGroupId(session->params, groupParams)) != HC_SUCCESS) ||
@@ -855,7 +873,7 @@ static int32_t GenerateGroupParams(const BindSession *session, GroupInfo *groupP
 
 static int32_t AddGroupToDatabase(const BindSession *session)
 {
-    GroupInfo *groupParams = CreateGroupInfoStruct();
+    TrustedGroupEntry *groupParams = CreateGroupEntry();
     if (groupParams == NULL) {
         LOGE("Failed to allocate groupParams memory!");
         return HC_ERR_ALLOC_MEMORY;
@@ -863,11 +881,11 @@ static int32_t AddGroupToDatabase(const BindSession *session)
     int32_t result = GenerateGroupParams(session, groupParams);
     if (result != HC_SUCCESS) {
         LOGE("Failed to generate groupParams!");
-        DestroyGroupInfoStruct(groupParams);
+        DestroyGroupEntry(groupParams);
         return HC_ERR_DB;
     }
-    result = AddGroup(groupParams);
-    DestroyGroupInfoStruct(groupParams);
+    result = AddGroup(session->osAccountId, groupParams);
+    DestroyGroupEntry(groupParams);
     if (result != HC_SUCCESS) {
         LOGE("Failed to add the group to the database!");
         return HC_ERR_DB;
@@ -876,7 +894,7 @@ static int32_t AddGroupToDatabase(const BindSession *session)
 }
 
 static int32_t GenerateDevAuthParams(const char *authId, const char *udid, const char *groupId,
-    int userType, DeviceInfo *devAuthParams)
+    int userType, TrustedDeviceEntry *devAuthParams)
 {
     devAuthParams->devType = userType;
     StringSetPointer(&(devAuthParams->authId), authId);
@@ -886,9 +904,10 @@ static int32_t GenerateDevAuthParams(const char *authId, const char *udid, const
     return HC_SUCCESS;
 }
 
-static int32_t AddTrustDevToDatabase(const char *authId, const char *udid, const char *groupId, int userType)
+static int32_t AddTrustDevToDatabase(int32_t osAccountId, const char *authId, const char *udid, const char *groupId,
+    int userType)
 {
-    DeviceInfo *devAuthParams = CreateDeviceInfoStruct();
+    TrustedDeviceEntry *devAuthParams = CreateDeviceEntry();
     if (devAuthParams == NULL) {
         LOGE("Failed to allocate devAuthParams memory!");
         return HC_ERR_ALLOC_MEMORY;
@@ -896,11 +915,11 @@ static int32_t AddTrustDevToDatabase(const char *authId, const char *udid, const
     int32_t result = GenerateDevAuthParams(authId, udid, groupId, userType, devAuthParams);
     if (result != HC_SUCCESS) {
         LOGE("Failed to generate devAuthParams!");
-        DestroyDeviceInfoStruct(devAuthParams);
+        DestroyDeviceEntry(devAuthParams);
         return result;
     }
-    result = AddTrustedDevice(devAuthParams, NULL);
-    DestroyDeviceInfoStruct(devAuthParams);
+    result = AddTrustedDevice(osAccountId, devAuthParams);
+    DestroyDeviceEntry(devAuthParams);
     if (result != HC_SUCCESS) {
         LOGE("Failed to add the trusted devices to the database!");
         return HC_ERR_DB;
@@ -910,34 +929,39 @@ static int32_t AddTrustDevToDatabase(const char *authId, const char *udid, const
 
 static int32_t AddGroupAndLocalDevIfNotExist(const char *groupId, const BindSession *session)
 {
-    int32_t result = HC_SUCCESS;
-    if (!IsGroupExistByGroupId(groupId)) {
-        const char *udid = GetLocalDevUdid();
-        if (udid == NULL) {
-            return HC_ERR_DB;
-        }
-        result = AddGroupToDatabase(session);
-        if (result != HC_SUCCESS) {
-            return result;
-        }
-        const char *authId = GetStringFromJson(session->params, FIELD_AUTH_ID);
-        if (authId == NULL) {
-            LOGI("No authId is found. The default value is udid!");
-            authId = udid;
-        }
-        int32_t userType = DEVICE_TYPE_ACCESSORY;
-        (void)GetIntFromJson(session->params, FIELD_USER_TYPE, &userType);
-        return AddTrustDevToDatabase(authId, udid, groupId, userType);
+    if (IsGroupExistByGroupId(session->osAccountId, groupId)) {
+        return HC_SUCCESS;
     }
-    return result;
+    int32_t result = HC_SUCCESS;
+    char udid[INPUT_UDID_LEN] = { 0 };
+    result = HcGetUdid((uint8_t *)udid, INPUT_UDID_LEN);
+    if (result != HC_SUCCESS) {
+        LOGE("Failed to get local udid! res: %d", result);
+        return HC_ERR_DB;
+    }
+    result = AddGroupToDatabase(session);
+    if (result != HC_SUCCESS) {
+        return result;
+    }
+    const char *authId = GetStringFromJson(session->params, FIELD_AUTH_ID);
+    if (authId == NULL) {
+        LOGI("No authId is found. The default value is udid!");
+        authId = udid;
+    }
+    int32_t userType = DEVICE_TYPE_ACCESSORY;
+    (void)GetIntFromJson(session->params, FIELD_USER_TYPE, &userType);
+    return AddTrustDevToDatabase(session->osAccountId, authId, udid, groupId, userType);
 }
 
 static int32_t AddPeerDevToGroup(const char *peerAuthId, const char *peerUdid,
     const char *groupId, const BindSession *session)
 {
-    if (IsTrustedDeviceInGroup(groupId, peerAuthId, false)) {
+    if (IsTrustedDeviceInGroup(session->osAccountId, groupId, peerUdid, true)) {
         LOGI("The peer device already exists in the group! RequestId: %" PRId64, session->reqId);
-        if (DelTrustedDevice(peerAuthId, false, groupId) != HC_SUCCESS) {
+        QueryDeviceParams params = InitQueryDeviceParams();
+        params.groupId = groupId;
+        params.udid = peerUdid;
+        if (DelTrustedDevice(session->osAccountId, &params) != HC_SUCCESS) {
             LOGE("Failed to delete the original data! RequestId: %" PRId64, session->reqId);
             return HC_ERR_DB;
         }
@@ -945,7 +969,7 @@ static int32_t AddPeerDevToGroup(const char *peerAuthId, const char *peerUdid,
     }
     int32_t peerUserType = DEVICE_TYPE_ACCESSORY;
     (void)GetIntFromJson(session->params, FIELD_PEER_USER_TYPE, &peerUserType);
-    int32_t result = AddTrustDevToDatabase(peerAuthId, peerUdid, groupId, peerUserType);
+    int32_t result = AddTrustDevToDatabase(session->osAccountId, peerAuthId, peerUdid, groupId, peerUserType);
     if (result != HC_SUCCESS) {
         LOGE("Failed to update the peer trusted device information! RequestId: %" PRId64, session->reqId);
         return result;
@@ -961,7 +985,11 @@ static int32_t AddGroupAndDev(const char *peerAuthId, const char *peerUdid,
     if (result != HC_SUCCESS) {
         return result;
     }
-    return AddPeerDevToGroup(peerAuthId, peerUdid, groupId, session);
+    result = AddPeerDevToGroup(peerAuthId, peerUdid, groupId, session);
+    if (result != HC_SUCCESS) {
+        return result;
+    }
+    return SaveOsAccountDb(session->osAccountId);
 }
 
 static int32_t HandleBindSuccess(const char *peerAuthId, const char *peerUdid,
@@ -976,8 +1004,12 @@ static int32_t HandleBindSuccess(const char *peerAuthId, const char *peerUdid,
 
 static int32_t HandleUnbindSuccess(const char *peerAuthId, const char *groupId, const BindSession *session)
 {
-    if (IsGroupExistByGroupId(groupId)) {
-        if (DelTrustedDevice(peerAuthId, false, groupId) != HC_SUCCESS) {
+    if (IsGroupExistByGroupId(session->osAccountId, groupId)) {
+        QueryDeviceParams params = InitQueryDeviceParams();
+        params.groupId = groupId;
+        params.authId = peerAuthId;
+        if (DelTrustedDevice(session->osAccountId, &params) != HC_SUCCESS ||
+            SaveOsAccountDb(session->osAccountId) != HC_SUCCESS) {
             LOGE("Failed to unbind device from database!");
             return HC_ERR_DB;
         }
@@ -1136,16 +1168,19 @@ int32_t ForceUnbindDevice(const BindSession *session)
         LOGE("Failed to get groupId from jsonParams!");
         return HC_ERR_JSON_GET;
     }
-    int32_t result = DelTrustedDevice(peerAuthId, false, groupId);
-    if (result != HC_SUCCESS) {
+    QueryDeviceParams queryDeviceParams = InitQueryDeviceParams();
+    queryDeviceParams.groupId = groupId;
+    queryDeviceParams.authId = peerAuthId;
+    if (DelTrustedDevice(session->osAccountId, &queryDeviceParams) != HC_SUCCESS ||
+        SaveOsAccountDb(session->osAccountId) != HC_SUCCESS) {
         LOGE("Failed to delete trust device from database!");
-        return result;
+        return HC_ERR_DB;
     }
     /*
      * If the trusted device has been deleted from the database but the peer key fails to be deleted,
      * the forcible unbinding is still considered successful. Only logs need to be printed.
      */
-    result = ForceDeletePeerKey(session->params);
+    int32_t result = ForceDeletePeerKey(session->params);
     if (result != HC_SUCCESS) {
         LOGE("Failed to delete peer key!");
     }
@@ -1160,7 +1195,7 @@ int32_t ForceUnbindDevice(const BindSession *session)
     return HC_SUCCESS;
 }
 
-int32_t GenerateBindParams(int isClient, const CJson *jsonParams, BindSession *session)
+int32_t GenerateBindParams(int32_t osAccountId, int isClient, const CJson *jsonParams, BindSession *session)
 {
     if (session->params == NULL) {
         session->params = CreateJson();
@@ -1174,7 +1209,7 @@ int32_t GenerateBindParams(int isClient, const CJson *jsonParams, BindSession *s
     if (((result = AddIsForceDeleteIfNeed(isClient, jsonParams, session)) != HC_SUCCESS) ||
         ((result = AddChannelIdIfNeed(isClient, jsonParams, session)) != HC_SUCCESS) ||
         ((result = AddPinCodeIfNeed(jsonParams, session)) != HC_SUCCESS) ||
-        ((result = AddGroupAndDevInfo(isClient, jsonParams, session)) != HC_SUCCESS) ||
+        ((result = AddGroupAndDevInfo(osAccountId, isClient, jsonParams, session)) != HC_SUCCESS) ||
         ((result = AddPeerDevInfoIfNeed(isClient, jsonParams, session)) != HC_SUCCESS)) {
         return result;
     }

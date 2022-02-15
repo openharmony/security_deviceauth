@@ -37,7 +37,7 @@ typedef struct {
     int64_t channelId;
 } ChannelEntry;
 
-DECLARE_HC_VECTOR(ChannelEntryVec, ChannelEntry)
+DECLARE_HC_VECTOR(ChannelEntryVec, ChannelEntry);
 IMPLEMENT_HC_VECTOR(ChannelEntryVec, ChannelEntry, 1)
 static ChannelEntryVec g_channelVec;
 static HcMutex *g_channelMutex = NULL;
@@ -284,7 +284,7 @@ int32_t InitSoftBusChannelModule(void)
             return HC_ERR_INIT_FAILED;
         }
     }
-    g_channelVec = CREATE_HC_VECTOR(ChannelEntryVec)
+    g_channelVec = CREATE_HC_VECTOR(ChannelEntryVec);
     ISessionListener softBusListener = {
         .OnSessionOpened = OnChannelOpenedCb,
         .OnSessionClosed = OnChannelClosedCb,
@@ -300,7 +300,7 @@ int32_t InitSoftBusChannelModule(void)
 void DestroySoftBusChannelModule(void)
 {
     g_channelMutex->lock(g_channelMutex);
-    DESTROY_HC_VECTOR(ChannelEntryVec, &g_channelVec)
+    DESTROY_HC_VECTOR(ChannelEntryVec, &g_channelVec);
     g_channelMutex->unlock(g_channelMutex);
     if (g_channelMutex != NULL) {
         DestroyHcMutex(g_channelMutex);

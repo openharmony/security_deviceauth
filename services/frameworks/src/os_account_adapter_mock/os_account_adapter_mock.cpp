@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Huawei Device Co., Ltd.
+ * Copyright (C) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,25 +13,11 @@
  * limitations under the License.
  */
 
-#ifndef AUTH_SESSION_UTIL_H
-#define AUTH_SESSION_UTIL_H
-
-#include <stdint.h>
-#include "base_group_auth.h"
+#include "os_account_adapter.h"
 #include "device_auth.h"
-#include "json_utils.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-BaseGroupAuth *GetGroupAuth(int32_t groupAuthType);
-int32_t GetAuthModuleType(const CJson *in);
-int32_t GetInfoHash(const uint8_t *info, uint32_t infoLen, char *str, uint32_t strLen);
-bool IsBleAuthForAcrossAccount(const CJson *authParam);
-int32_t GroupTypeToAuthForm(int32_t groupType);
-
-#ifdef __cplusplus
+int32_t DevAuthGetRealOsAccountLocalId(int32_t inputId)
+{
+    (void)inputId;
+    return DEFAULT_OS_ACCOUNT;
 }
-#endif
-#endif

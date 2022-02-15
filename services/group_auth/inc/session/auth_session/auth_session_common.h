@@ -25,7 +25,7 @@ extern "C" {
 void InformLocalAuthError(const CJson *param, const DeviceAuthCallback *callback);
 void InformPeerAuthError(const CJson *param, const DeviceAuthCallback *callback);
 int32_t InformAuthError(AuthSession *session, const CJson *out, int errorCode);
-int32_t GetAuthParamsList(const CJson *param, ParamsVec *authParamsVec);
+int32_t GetAuthParamsList(int32_t osAccountId, const CJson *param, ParamsVec *authParamsVec);
 int32_t ProcessTaskStatusForAuth(const AuthSession *session, const CJson *param, CJson *out, int32_t status);
 int32_t CreateAndProcessTask(AuthSession *session, CJson *paramInSession, CJson *out, int32_t *status);
 void ProcessDeviceLevel(const CJson *receiveData, CJson *authParam);

@@ -84,7 +84,7 @@ static int32_t InitHks(void)
 
     LOGD("Hks: The local hks file needs to be refreshed!");
     LOGI("Start to delete local database file!");
-    HcFileRemove(FILE_ID_GROUP);
+    HcFileRemove(GetStoragePath());
     LOGI("Delete local database file successfully!");
     res = HksRefreshKeyInfo();
     if (res != HKS_SUCCESS) {
