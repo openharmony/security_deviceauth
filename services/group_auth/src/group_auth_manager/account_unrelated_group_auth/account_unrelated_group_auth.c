@@ -18,13 +18,16 @@
 #include "auth_session_common_util.h"
 #include "common_defs.h"
 #include "device_auth_defines.h"
+#include "group_auth_data_operation.h"
 #include "hc_log.h"
 #include "hc_types.h"
 #include "json_utils.h"
+#include "os_account_adapter.h"
 
 static void OnDasFinish(int64_t requestId, const CJson *authParam, const CJson *out,
     const DeviceAuthCallback *callback);
-static int32_t FillNonAccountAuthInfo(const GroupInfo *entry, const DeviceInfo *localAuthInfo, CJson *paramsData);
+static int32_t FillNonAccountAuthInfo(int32_t osAccountId, const TrustedGroupEntry *entry,
+    const TrustedDeviceEntry *localAuthInfo, CJson *paramsData);
 static void OnDasError(int64_t requestId, const AuthSession *session, int errorCode);
 static int32_t GetDasAuthParamForServer(const CJson *dataFromClient, ParamsVec *authParamsVec);
 static int32_t GetDasReqParams(const CJson *receiveData, CJson *reqParam);
@@ -228,26 +231,34 @@ static int32_t DasOnFinishToSelf(int64_t requestId, const CJson *authParam, cons
     return res;
 }
 
-static int32_t AddNonAccountPkgName(const GroupInfo *entry, CJson *paramsData)
+static int32_t AddNonAccountPkgName(const TrustedGroupEntry *entry, CJson *paramsData)
 {
-    int32_t res = HC_SUCCESS;
     int32_t groupType = entry->type;
     if (groupType == COMPATIBLE_GROUP) {
-        if (AddStringToJson(paramsData, FIELD_SERVICE_PKG_NAME, StringGet(&entry->ownerName))
-            != HC_SUCCESS) {
+        if ((entry->managers).size(&(entry->managers)) == 0) {
+            LOGE("The manager size is 0!");
+            return HC_ERR_DB;
+        }
+        HcString ownerName = (entry->managers).get(&(entry->managers), 0);
+        const char *ownerNameStr = StringGet(&ownerName);
+        if (ownerNameStr == NULL) {
+            LOGE("Failed to get ownerName!");
+            return HC_ERR_DB;
+        }
+        if (AddStringToJson(paramsData, FIELD_SERVICE_PKG_NAME, ownerNameStr) != HC_SUCCESS) {
             LOGE("Failed to add ownerName to json!");
-            res = HC_ERR_JSON_FAIL;
+            return HC_ERR_JSON_FAIL;
         }
     } else {
         if (AddStringToJson(paramsData, FIELD_SERVICE_PKG_NAME, GROUP_MANAGER_PACKAGE_NAME) != HC_SUCCESS) {
             LOGE("Failed to add group manager name to json!");
-            res = HC_ERR_JSON_FAIL;
+            return HC_ERR_JSON_FAIL;
         }
     }
-    return res;
+    return HC_SUCCESS;
 }
 
-static int32_t AddNonAccountAuthInfo(const DeviceInfo *localAuthInfo, const DeviceInfo *peerAuthInfo,
+static int32_t AddNonAccountAuthInfo(const TrustedDeviceEntry *localAuthInfo, const TrustedDeviceEntry *peerAuthInfo,
     CJson *paramsData)
 {
     int32_t keyLen = DEFAULT_RETURN_KEY_LENGTH;
@@ -327,11 +338,12 @@ static void OnDasError(int64_t requestId, const AuthSession *session, int errorC
     FreeJsonString(returnStr);
 }
 
-static int32_t FillNonAccountAuthInfo(const GroupInfo *entry, const DeviceInfo *localAuthInfo, CJson *paramsData)
+static int32_t FillNonAccountAuthInfo(int32_t osAccountId, const TrustedGroupEntry *entry,
+    const TrustedDeviceEntry *localAuthInfo, CJson *paramsData)
 {
     int32_t res;
     const char *groupId = StringGet(&entry->id);
-    DeviceInfo *peerAuthInfo = CreateDeviceInfoStruct();
+    TrustedDeviceEntry *peerAuthInfo = CreateDeviceEntry();
     if (peerAuthInfo == NULL) {
         LOGE("Failed to allocate devEntry memory for peerAuthInfo!");
         return HC_ERR_ALLOC_MEMORY;
@@ -339,9 +351,9 @@ static int32_t FillNonAccountAuthInfo(const GroupInfo *entry, const DeviceInfo *
     const char *peerUdid = GetStringFromJson(paramsData, FIELD_PEER_CONN_DEVICE_ID);
     const char *peeAuthId = GetStringFromJson(paramsData, FIELD_PEER_AUTH_ID);
     if (peerUdid != NULL) {
-        res = GetTrustedDevInfoById(peerUdid, true, groupId, peerAuthInfo);
+        res = GaGetTrustedDeviceEntryById(osAccountId, peerUdid, true, groupId, peerAuthInfo);
     } else if (peeAuthId != NULL) {
-        res = GetTrustedDevInfoById(peeAuthId, false, groupId, peerAuthInfo);
+        res = GaGetTrustedDeviceEntryById(osAccountId, peeAuthId, false, groupId, peerAuthInfo);
     } else {
         LOGE("Invalid input, both peer udid and peer authId are null!");
         res = HC_ERR_NULL_PTR;
@@ -362,7 +374,7 @@ static int32_t FillNonAccountAuthInfo(const GroupInfo *entry, const DeviceInfo *
             break;
         }
     } while (0);
-    DestroyDeviceInfoStruct(peerAuthInfo);
+    DestroyDeviceEntry(peerAuthInfo);
     return res;
 }
 
@@ -424,7 +436,12 @@ static int32_t CombineDasServerConfirmParams(const CJson *confirmationJson, CJso
 static int32_t GetDasAuthParamForServer(const CJson *dataFromClient, ParamsVec *authParamsVec)
 {
     LOGI("Begin get non-account auth params for server.");
-    int32_t res = GetAuthParamsList(dataFromClient, authParamsVec);
+    int32_t osAccountId = ANY_OS_ACCOUNT;
+    if (GetIntFromJson(dataFromClient, FIELD_OS_ACCOUNT_ID, &osAccountId) != HC_SUCCESS) {
+        LOGE("Failed to get os accountId from dataFromClient!");
+        return HC_ERR_JSON_GET;
+    }
+    int32_t res = GetAuthParamsList(osAccountId, dataFromClient, authParamsVec);
     if (res != HC_SUCCESS) {
         LOGE("Failed to get non-account auth params!");
     }

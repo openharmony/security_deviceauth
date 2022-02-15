@@ -14,8 +14,11 @@
  */
 
 #include "deviceauth_test_mock.h"
+#include "iostream"
 #include <cstring>
 #include "securec.h"
+
+using namespace std;
 
 static bool g_testForClient = false;
 
@@ -41,7 +44,17 @@ int32_t HcGetUdid(uint8_t *udid, int32_t udidLen)
     return 0;
 }
 
-const char *GetStoragePath()
+const char *GetStoragePath(void)
 {
     return "/data/data/deviceauth/hcgroup.dat";
+}
+
+const char *GetStorageDirPath(void)
+{
+#ifndef LITE_DEVICE
+    const char *storageFile = "/data/data/deviceauth";
+#else
+    const char *storageFile = "/storage/deviceauth";
+#endif
+    return storageFile;
 }

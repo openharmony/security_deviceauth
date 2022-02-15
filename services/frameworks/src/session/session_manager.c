@@ -38,10 +38,10 @@ typedef struct {
     int64_t sessionId;
 } RequestInfo;
 
-DECLARE_HC_VECTOR(SessionManagerVec, void *)
+DECLARE_HC_VECTOR(SessionManagerVec, void *);
 IMPLEMENT_HC_VECTOR(SessionManagerVec, void *, 1)
 
-DECLARE_HC_VECTOR(RequestInfoVec, RequestInfo)
+DECLARE_HC_VECTOR(RequestInfoVec, RequestInfo);
 IMPLEMENT_HC_VECTOR(RequestInfoVec, RequestInfo, 1)
 
 static SessionManagerVec g_sessionManagerVec;
@@ -113,8 +113,8 @@ static void DestroyRequest(int64_t requestId)
 
 void InitSessionManager(void)
 {
-    g_sessionManagerVec = CREATE_HC_VECTOR(SessionManagerVec)
-    g_requestVec = CREATE_HC_VECTOR(RequestInfoVec)
+    g_sessionManagerVec = CREATE_HC_VECTOR(SessionManagerVec);
+    g_requestVec = CREATE_HC_VECTOR(RequestInfoVec);
 }
 
 void DestroySessionManager(void)
@@ -127,8 +127,8 @@ void DestroySessionManager(void)
             temp->destroy(temp);
         }
     }
-    DESTROY_HC_VECTOR(SessionManagerVec, &g_sessionManagerVec)
-    DESTROY_HC_VECTOR(RequestInfoVec, &g_requestVec)
+    DESTROY_HC_VECTOR(SessionManagerVec, &g_sessionManagerVec);
+    DESTROY_HC_VECTOR(RequestInfoVec, &g_requestVec);
 }
 
 bool IsRequestExist(int64_t requestId)

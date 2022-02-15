@@ -20,10 +20,11 @@
 #include "pake_base_cur_task.h"
 
 typedef struct TokenManagerT {
-    int (*registerLocalIdentity)(const char *, const char *, Uint8Buff *, int);
+    int32_t (*registerLocalIdentity)(const char *, const char *, Uint8Buff *, int);
     int32_t (*unregisterLocalIdentity)(const char *, const char *, Uint8Buff *, int);
     int32_t (*deletePeerAuthInfo)(const char *, const char *, Uint8Buff *, int);
-    int (*computeAndSavePsk)(const PakeParams *);
+    int32_t (*computeAndSavePsk)(const PakeParams *);
+    int32_t (*getPublicKey)(const char *, const char *, Uint8Buff *, int, Uint8Buff *);
 } TokenManager;
 
 #endif

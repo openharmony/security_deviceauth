@@ -26,6 +26,7 @@
 #include "hc_log.h"
 #include "json_utils.h"
 #include "lcm_adapter.h"
+#include "os_account_adapter.h"
 #include "session_manager.h"
 #include "task_manager.h"
 
@@ -38,7 +39,7 @@ static void DestroyGroupAuthTask(HcTaskBase *task)
     FreeJson(realTask->authParams);
 }
 
-static bool InitAuthDeviceTask(AuthDeviceTask *task, int64_t authReqId, CJson *authParams,
+static bool InitAuthDeviceTask(int32_t osAccountId, AuthDeviceTask *task, int64_t authReqId, CJson *authParams,
     const DeviceAuthCallback *gaCallback)
 {
     task->base.doAction = DoAuthDevice;
@@ -46,6 +47,10 @@ static bool InitAuthDeviceTask(AuthDeviceTask *task, int64_t authReqId, CJson *a
     task->authReqId = authReqId;
     if (AddByteToJson(authParams, FIELD_REQUEST_ID, (const uint8_t*)&authReqId, sizeof(int64_t)) != HC_SUCCESS) {
         LOGE("Failed to add requestId to json!");
+        return false;
+    }
+    if (AddIntToJson(authParams, FIELD_OS_ACCOUNT_ID, osAccountId) != HC_SUCCESS) {
+        LOGE("Failed to add os accountId to json for auth device!");
         return false;
     }
     task->authParams = authParams;
@@ -57,8 +62,8 @@ static bool InitAuthDeviceTask(AuthDeviceTask *task, int64_t authReqId, CJson *a
     return true;
 }
 
-static bool InitProcessDataTask(AuthDeviceTask *task, int64_t authReqId, CJson *receivedData,
-    const DeviceAuthCallback *gaCallback)
+static bool InitProcessDataTask(AuthDeviceTask *task, int64_t authReqId,
+    CJson *receivedData, const DeviceAuthCallback *gaCallback)
 {
     task->base.doAction = DoProcessAuthData;
     task->base.destroy = DestroyGroupAuthTask;
@@ -80,9 +85,11 @@ static bool InitProcessDataTask(AuthDeviceTask *task, int64_t authReqId, CJson *
     return true;
 }
 
-static int32_t AuthDevice(int64_t authReqId, const char *authParams, const DeviceAuthCallback *gaCallback)
+static int32_t AuthDevice(int32_t osAccountId, int64_t authReqId, const char *authParams,
+    const DeviceAuthCallback *gaCallback)
 {
     LOGI("Begin AuthDevice.");
+    osAccountId = DevAuthGetRealOsAccountLocalId(osAccountId);
     if (authParams == NULL) {
         LOGE("The input auth params is null!");
         return HC_ERR_INVALID_PARAMS;
@@ -98,7 +105,7 @@ static int32_t AuthDevice(int64_t authReqId, const char *authParams, const Devic
         LOGE("Failed to allocate memory for task!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    if (!InitAuthDeviceTask(task, authReqId, jsonParams, gaCallback)) {
+    if (!InitAuthDeviceTask(osAccountId, task, authReqId, jsonParams, gaCallback)) {
         LOGE("Failed to init task!");
         FreeJson(jsonParams);
         HcFree(task);
@@ -296,6 +303,7 @@ DEVICE_AUTH_API_PUBLIC const DeviceGroupManager *GetGmInstance(void)
     g_groupManagerInstance->getDeviceInfoById = GetDeviceInfoByIdImpl;
     g_groupManagerInstance->getTrustedDevices = GetTrustedDevicesImpl;
     g_groupManagerInstance->isDeviceInGroup = IsDeviceInGroupImpl;
+    g_groupManagerInstance->getPkInfoList = GetPkInfoListImpl;
     g_groupManagerInstance->destroyInfo = DestroyInfoImpl;
     return g_groupManagerInstance;
 }

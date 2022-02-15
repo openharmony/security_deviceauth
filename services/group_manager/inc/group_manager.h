@@ -26,34 +26,43 @@ extern "C" {
 int32_t InitGroupManager(void);
 void DestroyGroupManager(void);
 
-int32_t CreateGroupImpl(int64_t requestId, const char *appId, const char *createParams);
-int32_t DeleteGroupImpl(int64_t requestId, const char *appId, const char *disbandParams);
-int32_t AddMemberToGroupImpl(int64_t requestId, const char *appId, const char *addParams);
-int32_t DeleteMemberFromGroupImpl(int64_t requestId, const char *appId, const char *deleteParams);
+int32_t CreateGroupImpl(int32_t osAccountId, int64_t requestId, const char *appId, const char *createParams);
+int32_t DeleteGroupImpl(int32_t osAccountId, int64_t requestId, const char *appId, const char *disbandParams);
+int32_t AddMemberToGroupImpl(int32_t osAccountId, int64_t requestId, const char *appId, const char *addParams);
+int32_t DeleteMemberFromGroupImpl(int32_t osAccountId, int64_t requestId, const char *appId, const char *deleteParams);
 int32_t ProcessBindDataImpl(int64_t requestId, const uint8_t *data, uint32_t dataLen);
-int32_t ConfirmRequestImpl(int64_t requestId, const char *appId, const char *confirmParams);
+int32_t ConfirmRequestImpl(int32_t osAccountId, int64_t requestId, const char *appId, const char *confirmParams);
 int32_t GenerateAccountGroupIdImpl(int32_t groupType, const char *userIdHash, const char *sharedUserIdHash,
     char **returnGroupId);
 int32_t SyncAcrossAccountGroupImpl(const char *appId, const char *userIdHash, const char *deviceId,
     const CJson *sharedUserIdHashList);
-int32_t AddGroupManagerImpl(const char *appId, const char *groupId, const char *managerAppId);
-int32_t AddGroupFriendImpl(const char *appId, const char *groupId, const char *friendAppId);
-int32_t DeleteGroupManagerImpl(const char *appId, const char *groupId, const char *managerAppId);
-int32_t DeleteGroupFriendImpl(const char *appId, const char *groupId, const char *friendAppId);
-int32_t GetGroupManagersImpl(const char *appId, const char *groupId, char **returnManagers, uint32_t *returnSize);
-int32_t GetGroupFriendsImpl(const char *appId, const char *groupId, char **returnFriends, uint32_t *returnSize);
+int32_t AddGroupManagerImpl(int32_t osAccountId, const char *appId, const char *groupId, const char *managerAppId);
+int32_t AddGroupFriendImpl(int32_t osAccountId, const char *appId, const char *groupId, const char *friendAppId);
+int32_t DeleteGroupManagerImpl(int32_t osAccountId, const char *appId, const char *groupId, const char *managerAppId);
+int32_t DeleteGroupFriendImpl(int32_t osAccountId, const char *appId, const char *groupId, const char *friendAppId);
+int32_t GetGroupManagersImpl(int32_t osAccountId, const char *appId, const char *groupId,
+    char **returnManagers, uint32_t *returnSize);
+int32_t GetGroupFriendsImpl(int32_t osAccountId, const char *appId, const char *groupId,
+    char **returnFriends, uint32_t *returnSize);
 
 int32_t RegListenerImpl(const char *appId, const DataChangeListener *listener);
 int32_t UnRegListenerImpl(const char *appId);
 
-int32_t CheckAccessToGroupImpl(const char *appId, const char *groupId);
-int32_t GetGroupInfoByIdImpl(const char *appId, const char *groupId, char **returnGroupInfo);
-int32_t GetGroupInfoImpl(const char *appId, const char *queryParams, char **returnGroupVec, uint32_t *groupNum);
-int32_t GetJoinedGroupsImpl(const char *appId, int groupType, char **returnGroupVec, uint32_t *groupNum);
-int32_t GetRelatedGroupsImpl(const char *appId, const char *peerDeviceId, char **returnGroupVec, uint32_t *groupNum);
-int32_t GetDeviceInfoByIdImpl(const char *appId, const char *deviceId, const char *groupId, char **returnDeviceInfo);
-int32_t GetTrustedDevicesImpl(const char *appId, const char *groupId, char **returnDevInfoVec, uint32_t *deviceNum);
-bool IsDeviceInGroupImpl(const char *appId, const char *groupId, const char *deviceId);
+int32_t CheckAccessToGroupImpl(int32_t osAccountId, const char *appId, const char *groupId);
+int32_t GetGroupInfoByIdImpl(int32_t osAccountId, const char *appId, const char *groupId, char **returnGroupInfo);
+int32_t GetGroupInfoImpl(int32_t osAccountId, const char *appId, const char *queryParams,
+    char **returnGroupVec, uint32_t *groupNum);
+int32_t GetJoinedGroupsImpl(int32_t osAccountId, const char *appId, int groupType,
+    char **returnGroupVec, uint32_t *groupNum);
+int32_t GetRelatedGroupsImpl(int32_t osAccountId, const char *appId, const char *peerDeviceId,
+    char **returnGroupVec, uint32_t *groupNum);
+int32_t GetDeviceInfoByIdImpl(int32_t osAccountId, const char *appId, const char *deviceId, const char *groupId,
+    char **returnDeviceInfo);
+int32_t GetTrustedDevicesImpl(int32_t osAccountId, const char *appId, const char *groupId,
+    char **returnDevInfoVec, uint32_t *deviceNum);
+bool IsDeviceInGroupImpl(int32_t osAccountId, const char *appId, const char *groupId, const char *deviceId);
+int32_t GetPkInfoListImpl(int32_t osAccountId, const char *appId, const char *queryParams,
+    char **returnInfoList, uint32_t *returnInfoNum);
 void DestroyInfoImpl(char **returnInfo);
 
 int32_t BindPeerImpl(int64_t requestId, const char *appId, const char *bindParams);

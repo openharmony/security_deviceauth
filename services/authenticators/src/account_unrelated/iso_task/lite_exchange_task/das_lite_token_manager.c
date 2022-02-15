@@ -74,6 +74,7 @@ TokenManager g_symTokenManagerInstance = {
     .unregisterLocalIdentity = UnregisterLocalIdentity,
     .deletePeerAuthInfo = DeletePeerAuthInfo,
     .computeAndSavePsk = NULL,
+    .getPublicKey = NULL,
 };
 
 const TokenManager *GetLiteTokenManagerInstance(void)

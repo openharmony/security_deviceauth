@@ -17,28 +17,32 @@
 
 #include "bind_peer.h"
 #include "common_defs.h"
-#include "database_manager.h"
+#include "data_manager.h"
 #include "group_operation.h"
 #include "key_agree.h"
 
-int32_t CreateGroupImpl(int64_t requestId, const char *appId, const char *createParams)
+int32_t CreateGroupImpl(int32_t osAccountId, int64_t requestId, const char *appId, const char *createParams)
 {
-    return IsGroupSupport() ? GetGroupImplInstance()->createGroup(requestId, appId, createParams) : HC_ERR_NOT_SUPPORT;
+    return IsGroupSupport() ? GetGroupImplInstance()->createGroup(osAccountId, requestId, appId, createParams)
+                            : HC_ERR_NOT_SUPPORT;
 }
 
-int32_t DeleteGroupImpl(int64_t requestId, const char *appId, const char *disbandParams)
+int32_t DeleteGroupImpl(int32_t osAccountId, int64_t requestId, const char *appId, const char *disbandParams)
 {
-    return IsGroupSupport() ? GetGroupImplInstance()->deleteGroup(requestId, appId, disbandParams) : HC_ERR_NOT_SUPPORT;
+    return IsGroupSupport() ? GetGroupImplInstance()->deleteGroup(osAccountId, requestId, appId, disbandParams)
+                            : HC_ERR_NOT_SUPPORT;
 }
 
-int32_t AddMemberToGroupImpl(int64_t requestId, const char *appId, const char *addParams)
+int32_t AddMemberToGroupImpl(int32_t osAccountId, int64_t requestId, const char *appId, const char *addParams)
 {
-    return IsGroupSupport() ? GetGroupImplInstance()->addMember(requestId, appId, addParams) : HC_ERR_NOT_SUPPORT;
+    return IsGroupSupport() ? GetGroupImplInstance()->addMember(osAccountId, requestId, appId, addParams)
+                            : HC_ERR_NOT_SUPPORT;
 }
 
-int32_t DeleteMemberFromGroupImpl(int64_t requestId, const char *appId, const char *deleteParams)
+int32_t DeleteMemberFromGroupImpl(int32_t osAccountId, int64_t requestId, const char *appId, const char *deleteParams)
 {
-    return IsGroupSupport() ? GetGroupImplInstance()->deleteMember(requestId, appId, deleteParams) : HC_ERR_NOT_SUPPORT;
+    return IsGroupSupport() ? GetGroupImplInstance()->deleteMember(osAccountId, requestId, appId, deleteParams)
+                            : HC_ERR_NOT_SUPPORT;
 }
 
 int32_t ProcessBindDataImpl(int64_t requestId, const uint8_t *data, uint32_t dataLen)
@@ -46,9 +50,9 @@ int32_t ProcessBindDataImpl(int64_t requestId, const uint8_t *data, uint32_t dat
     return IsGroupSupport() ? GetGroupImplInstance()->processBindData(requestId, data, dataLen) : HC_ERR_NOT_SUPPORT;
 }
 
-int32_t ConfirmRequestImpl(int64_t requestId, const char *appId, const char *confirmParams)
+int32_t ConfirmRequestImpl(int32_t osAccountId, int64_t requestId, const char *appId, const char *confirmParams)
 {
-    return IsGroupSupport() ? GetGroupImplInstance()->confirmRequest(requestId, appId,
+    return IsGroupSupport() ? GetGroupImplInstance()->confirmRequest(osAccountId, requestId, appId,
         confirmParams) : HC_ERR_NOT_SUPPORT;
 }
 
@@ -66,39 +70,41 @@ int32_t SyncAcrossAccountGroupImpl(const char *appId, const char *userIdHash, co
         sharedUserIdHashList) : HC_ERR_NOT_SUPPORT;
 }
 
-int32_t AddGroupManagerImpl(const char *appId, const char *groupId, const char *managerAppId)
+int32_t AddGroupManagerImpl(int32_t osAccountId, const char *appId, const char *groupId, const char *managerAppId)
 {
-    return IsGroupSupport() ? GetGroupImplInstance()->addGroupRole(true, appId, groupId,
+    return IsGroupSupport() ? GetGroupImplInstance()->addGroupRole(osAccountId, true, appId, groupId,
         managerAppId) : HC_ERR_NOT_SUPPORT;
 }
 
-int32_t AddGroupFriendImpl(const char *appId, const char *groupId, const char *friendAppId)
+int32_t AddGroupFriendImpl(int32_t osAccountId, const char *appId, const char *groupId, const char *friendAppId)
 {
-    return IsGroupSupport() ? GetGroupImplInstance()->addGroupRole(false, appId, groupId,
+    return IsGroupSupport() ? GetGroupImplInstance()->addGroupRole(osAccountId, false, appId, groupId,
         friendAppId) : HC_ERR_NOT_SUPPORT;
 }
 
-int32_t DeleteGroupManagerImpl(const char *appId, const char *groupId, const char *managerAppId)
+int32_t DeleteGroupManagerImpl(int32_t osAccountId, const char *appId, const char *groupId, const char *managerAppId)
 {
-    return IsGroupSupport() ? GetGroupImplInstance()->deleteGroupRole(true, appId, groupId,
+    return IsGroupSupport() ? GetGroupImplInstance()->deleteGroupRole(osAccountId, true, appId, groupId,
         managerAppId) : HC_ERR_NOT_SUPPORT;
 }
 
-int32_t DeleteGroupFriendImpl(const char *appId, const char *groupId, const char *friendAppId)
+int32_t DeleteGroupFriendImpl(int32_t osAccountId, const char *appId, const char *groupId, const char *friendAppId)
 {
-    return IsGroupSupport() ? GetGroupImplInstance()->deleteGroupRole(false, appId, groupId,
+    return IsGroupSupport() ? GetGroupImplInstance()->deleteGroupRole(osAccountId, false, appId, groupId,
         friendAppId) : HC_ERR_NOT_SUPPORT;
 }
 
-int32_t GetGroupManagersImpl(const char *appId, const char *groupId, char **returnManagers, uint32_t *returnSize)
+int32_t GetGroupManagersImpl(int32_t osAccuntId, const char *appId, const char *groupId,
+    char **returnManagers, uint32_t *returnSize)
 {
-    return IsGroupSupport() ? GetGroupImplInstance()->getGroupRoles(true, appId, groupId,
+    return IsGroupSupport() ? GetGroupImplInstance()->getGroupRoles(osAccuntId, true, appId, groupId,
         returnManagers, returnSize) : HC_ERR_NOT_SUPPORT;
 }
 
-int32_t GetGroupFriendsImpl(const char *appId, const char *groupId, char **returnFriends, uint32_t *returnSize)
+int32_t GetGroupFriendsImpl(int32_t osAccuntId, const char *appId, const char *groupId,
+    char **returnFriends, uint32_t *returnSize)
 {
-    return IsGroupSupport() ? GetGroupImplInstance()->getGroupRoles(false, appId, groupId,
+    return IsGroupSupport() ? GetGroupImplInstance()->getGroupRoles(osAccuntId, false, appId, groupId,
         returnFriends, returnSize) : HC_ERR_NOT_SUPPORT;
 }
 
@@ -112,51 +118,64 @@ int32_t UnRegListenerImpl(const char *appId)
     return IsGroupSupport() ? GetGroupImplInstance()->unRegListener(appId) : HC_ERR_NOT_SUPPORT;
 }
 
-int32_t CheckAccessToGroupImpl(const char *appId, const char *groupId)
+int32_t CheckAccessToGroupImpl(int32_t osAccountId, const char *appId, const char *groupId)
 {
-    return IsGroupSupport() ? GetGroupImplInstance()->checkAccessToGroup(appId, groupId) : HC_ERR_NOT_SUPPORT;
+    return IsGroupSupport() ? GetGroupImplInstance()->checkAccessToGroup(osAccountId, appId, groupId)
+                            : HC_ERR_NOT_SUPPORT;
 }
 
-int32_t GetGroupInfoByIdImpl(const char *appId, const char *groupId, char **returnGroupInfo)
+int32_t GetGroupInfoByIdImpl(int32_t osAccountId, const char *appId, const char *groupId, char **returnGroupInfo)
 {
-    return IsGroupSupport() ? GetGroupImplInstance()->getAccessibleGroupInfoById(appId, groupId,
+    return IsGroupSupport() ? GetGroupImplInstance()->getAccessibleGroupInfoById(osAccountId, appId, groupId,
         returnGroupInfo) : HC_ERR_NOT_SUPPORT;
 }
 
-int32_t GetGroupInfoImpl(const char *appId, const char *queryParams, char **returnGroupVec, uint32_t *groupNum)
+int32_t GetGroupInfoImpl(int32_t osAccountId, const char *appId, const char *queryParams,
+    char **returnGroupVec, uint32_t *groupNum)
 {
-    return IsGroupSupport() ? GetGroupImplInstance()->getAccessibleGroupInfo(appId, queryParams, returnGroupVec,
-        groupNum) : HC_ERR_NOT_SUPPORT;
-}
-
-int32_t GetJoinedGroupsImpl(const char *appId, int groupType, char **returnGroupVec, uint32_t *groupNum)
-{
-    return IsGroupSupport() ? GetGroupImplInstance()->getAccessibleJoinedGroups(appId, groupType, returnGroupVec,
-        groupNum) : HC_ERR_NOT_SUPPORT;
-}
-
-int32_t GetRelatedGroupsImpl(const char *appId, const char *peerDeviceId, char **returnGroupVec, uint32_t *groupNum)
-{
-    return IsGroupSupport() ? GetGroupImplInstance()->getAccessibleRelatedGroups(appId, peerDeviceId, false,
+    return IsGroupSupport() ? GetGroupImplInstance()->getAccessibleGroupInfo(osAccountId, appId, queryParams,
         returnGroupVec, groupNum) : HC_ERR_NOT_SUPPORT;
 }
 
-int32_t GetDeviceInfoByIdImpl(const char *appId, const char *deviceId, const char *groupId, char **returnDeviceInfo)
+int32_t GetJoinedGroupsImpl(int32_t osAccountId, const char *appId, int groupType,
+    char **returnGroupVec, uint32_t *groupNum)
 {
-    return IsGroupSupport() ? GetGroupImplInstance()->getAccessibleDeviceInfoById(appId, deviceId, false, groupId,
-        returnDeviceInfo) : HC_ERR_NOT_SUPPORT;
+    return IsGroupSupport() ? GetGroupImplInstance()->getAccessibleJoinedGroups(osAccountId, appId, groupType,
+        returnGroupVec, groupNum) : HC_ERR_NOT_SUPPORT;
 }
 
-int32_t GetTrustedDevicesImpl(const char *appId, const char *groupId, char **returnDevInfoVec, uint32_t *deviceNum)
+int32_t GetRelatedGroupsImpl(int32_t osAccountId, const char *appId, const char *peerDeviceId,
+    char **returnGroupVec, uint32_t *groupNum)
 {
-    return IsGroupSupport() ? GetGroupImplInstance()->getAccessibleTrustedDevices(appId, groupId, returnDevInfoVec,
-        deviceNum) : HC_ERR_NOT_SUPPORT;
+    return IsGroupSupport() ? GetGroupImplInstance()->getAccessibleRelatedGroups(osAccountId, appId, peerDeviceId,
+        false, returnGroupVec, groupNum) : HC_ERR_NOT_SUPPORT;
 }
 
-bool IsDeviceInGroupImpl(const char *appId, const char *groupId, const char *deviceId)
+int32_t GetDeviceInfoByIdImpl(int32_t osAccountId, const char *appId, const char *deviceId, const char *groupId,
+    char **returnDeviceInfo)
 {
-    return IsGroupSupport() ? GetGroupImplInstance()->isDeviceInAccessibleGroup(appId, groupId,
+    return IsGroupSupport() ? GetGroupImplInstance()->getAccessibleDeviceInfoById(osAccountId, appId, deviceId,
+        false, groupId, returnDeviceInfo) : HC_ERR_NOT_SUPPORT;
+}
+
+int32_t GetTrustedDevicesImpl(int32_t osAccountId, const char *appId, const char *groupId,
+    char **returnDevInfoVec, uint32_t *deviceNum)
+{
+    return IsGroupSupport() ? GetGroupImplInstance()->getAccessibleTrustedDevices(osAccountId, appId, groupId,
+        returnDevInfoVec, deviceNum) : HC_ERR_NOT_SUPPORT;
+}
+
+bool IsDeviceInGroupImpl(int32_t osAccountId, const char *appId, const char *groupId, const char *deviceId)
+{
+    return IsGroupSupport() ? GetGroupImplInstance()->isDeviceInAccessibleGroup(osAccountId, appId, groupId,
         deviceId, false) : false;
+}
+
+int32_t GetPkInfoListImpl(int32_t osAccountId, const char *appId, const char *queryParams,
+    char **returnInfoList, uint32_t *returnInfoNum)
+{
+    return IsGroupSupport() ? GetGroupImplInstance()->getPkInfoList(osAccountId, appId, queryParams,
+        returnInfoList, returnInfoNum) : HC_ERR_NOT_SUPPORT;
 }
 
 void DestroyInfoImpl(char **returnInfo)
