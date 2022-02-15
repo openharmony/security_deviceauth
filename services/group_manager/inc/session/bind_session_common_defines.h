@@ -33,6 +33,7 @@ typedef struct {
     int32_t opCode;
     int32_t channelType;
     int32_t moduleType;
+    int32_t osAccountId;
     int64_t reqId;
     int64_t channelId;
 } BindSession;

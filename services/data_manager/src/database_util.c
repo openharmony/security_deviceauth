@@ -123,7 +123,7 @@ static int32_t GenerateAcrossAccountGroupInfoByUserIdHash(const TrustedGroupEntr
     return GenerateGroupInfoSharedUserIdHash(sharedUserIdHash, returnGroupInfo);
 }
 
-static int32_t GenerateDeviceInfoCommonByEntry(const TrustedDeviceEntry *entry, DeviceInfo *returnDeviceInfo)
+static int32_t GenerateDeviceInfoCommonByEntry(const TrustedDeviceEntry *entry, TrustedDeviceEntry *returnDeviceInfo)
 {
     if (!StringSet(&returnDeviceInfo->udid, entry->udid)) {
         LOGE("[DB]: Failed to copy udid!");
@@ -146,7 +146,7 @@ static int32_t GenerateDeviceInfoCommonByEntry(const TrustedDeviceEntry *entry, 
     return HC_SUCCESS;
 }
 
-static int32_t GenerateDeviceInfoId(const char *groupId, DeviceInfo *returnDeviceInfo)
+static int32_t GenerateDeviceInfoId(const char *groupId, TrustedDeviceEntry *returnDeviceInfo)
 {
     if (!StringSetPointer(&(returnDeviceInfo->groupId), groupId)) {
         LOGE("[DB]: Failed to copy groupId!");
@@ -240,7 +240,7 @@ void DestroyStrVector(StringVector *vec)
     FOR_EACH_HC_VECTOR(*vec, index, strItemPtr) {
         DeleteString(strItemPtr);
     }
-    DESTROY_HC_VECTOR(StringVector, vec)
+    DESTROY_HC_VECTOR(StringVector, vec);
 }
 
 GroupInfo *CreateGroupInfoStruct(void)
@@ -271,9 +271,9 @@ void DestroyGroupInfoStruct(GroupInfo *groupInfo)
     HcFree(groupInfo);
 }
 
-DeviceInfo *CreateDeviceInfoStruct(void)
+TrustedDeviceEntry *CreateDeviceInfoStruct(void)
 {
-    DeviceInfo *deviceInfo = (DeviceInfo *)HcMalloc(sizeof(DeviceInfo), 0);
+    TrustedDeviceEntry *deviceInfo = (TrustedDeviceEntry *)HcMalloc(sizeof(DeviceInfo), 0);
     if (deviceInfo == NULL) {
         LOGE("[DB]: Failed to allocate deviceInfo memory!");
         return NULL;
@@ -286,7 +286,7 @@ DeviceInfo *CreateDeviceInfoStruct(void)
     return deviceInfo;
 }
 
-void DestroyDeviceInfoStruct(DeviceInfo *deviceInfo)
+void DestroyDeviceInfoStruct(TrustedDeviceEntry *deviceInfo)
 {
     if (deviceInfo == NULL) {
         return;
@@ -358,7 +358,7 @@ int32_t GenerateGroupInfoByEntry(const TrustedGroupEntry *groupEntry, const char
 }
 
 int32_t GenerateDeviceInfoByEntry(const TrustedDeviceEntry *deviceEntry, const char *groupId,
-    DeviceInfo *returnDeviceInfo)
+    TrustedDeviceEntry *returnDeviceInfo)
 {
     int32_t result = GenerateDeviceInfoCommonByEntry(deviceEntry, returnDeviceInfo);
     if (result != HC_SUCCESS) {

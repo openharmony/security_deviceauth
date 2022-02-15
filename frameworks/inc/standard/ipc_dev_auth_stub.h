@@ -25,8 +25,8 @@ typedef struct {
     IpcServiceCall method;
     int32_t methodId;
 } IpcServiceCallMap;
-const int32_t MAX_CALLMAP_SIZE = 32;
-const int32_t MAX_CBSTUB_SIZE = 32;
+const int32_t MAX_CALLMAP_SIZE = 64;
+const int32_t MAX_CBSTUB_SIZE = 64;
 
 class ServiceDevAuth : public IRemoteStub<IMethodsIpcCall> {
 public:

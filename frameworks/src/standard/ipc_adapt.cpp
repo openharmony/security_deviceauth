@@ -129,6 +129,7 @@ void ResetIpcCallBackNodeByNodeId(int32_t nodeIdx)
         return;
     }
     ResetIpcCallBackNode(g_ipcCallBackList.ctx[nodeIdx]);
+    g_ipcCallBackList.nodeCnt--;
     LOGI("done, index %d", nodeIdx);
     return;
 }
@@ -354,7 +355,7 @@ int32_t AddIpcCallBackByReqId(int64_t reqId, const uint8_t *cbPtr, int32_t cbSz,
             ServiceDevAuth::ResetRemoteObject(node->proxyId);
             node->proxyId = -1;
         }
-        LOGI("callback added success, request id %lld, type %d", (long long)reqId, type);
+        LOGI("callback replaced success, request id %lld, type %d", (long long)reqId, type);
         return HC_SUCCESS;
     }
 
@@ -1442,7 +1443,7 @@ static bool IsTypeForSettingPtr(int32_t type)
 static bool IsTypeForCpyData(int32_t type)
 {
     int32_t typeList[] = {
-        PARAM_TYPE_REQID, PARAM_TYPE_GROUP_TYPE, PARAM_TYPE_OPCODE, PARAM_TYPE_ERRCODE
+        PARAM_TYPE_REQID, PARAM_TYPE_GROUP_TYPE, PARAM_TYPE_OPCODE, PARAM_TYPE_ERRCODE, PARAM_TYPE_OS_ACCOUNT_ID
     };
     int32_t i;
     int32_t n = sizeof(typeList) / sizeof(typeList[0]);

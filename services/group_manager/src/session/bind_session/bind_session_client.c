@@ -136,7 +136,7 @@ static void OnBindChannelOpened(Session *session, int64_t channelId, int64_t req
 
 static int32_t PrepareClient(const CJson *jsonParams, BindSession *session)
 {
-    int32_t result = GenerateBindParams(CLIENT, jsonParams, session);
+    int32_t result = GenerateBindParams(session->osAccountId, CLIENT, jsonParams, session);
     if (result != HC_SUCCESS) {
         return result;
     }

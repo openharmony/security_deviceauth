@@ -19,21 +19,25 @@ module_output_path = "deviceauth_standard/deviceauth_test"
 
 ohos_unittest("deviceauth_llt") {
   module_out_path = module_output_path
-  include_dirs = [
+
+  include_dirs = inc_path
+  include_dirs += hals_inc_path
+
+  include_dirs += [
     "./include",
     "//third_party/json/include",
     "//utils/native/base/include",
     "//foundation/communication/dsoftbus/interfaces/kits/common",
     "//foundation/communication/dsoftbus/interfaces/kits/transport",
     "//foundation/communication/dsoftbus/interfaces/inner_kits/transport",
+    "//base/account/os_account/interfaces/innerkits/osaccount/native/include",
   ]
-  include_dirs += inc_path
-  include_dirs += hals_inc_path
 
   sources = [
     "${common_lib_path}/impl/src/clib_types.c",
     "${common_lib_path}/impl/src/hc_parcel.c",
     "${common_lib_path}/impl/src/hc_string.c",
+    "${common_lib_path}/impl/src/hc_string_vector.c",
     "${common_lib_path}/impl/src/hc_tlv_parser.c",
     "${common_lib_path}/impl/src/json_utils.c",
     "${common_lib_path}/impl/src/string_util.c",
@@ -67,5 +71,6 @@ ohos_unittest("deviceauth_llt") {
   external_deps = [
     "dsoftbus_standard:softbus_client",
     "hiviewdfx_hilog_native:libhilog",
+    "os_account_standard:os_account_innerkits",
   ]
 }

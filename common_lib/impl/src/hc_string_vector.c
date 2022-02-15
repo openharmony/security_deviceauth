@@ -13,26 +13,21 @@
  * limitations under the License.
  */
 
-#ifndef ACCOUNT_RELATED_GROUP_AUTH_H
-#define ACCOUNT_RELATED_GROUP_AUTH_H
+#include "hc_string_vector.h"
 
-#include <stdint.h>
-#include "base_group_auth.h"
-#include "data_manager.h"
+IMPLEMENT_HC_VECTOR(StringVector, HcString, 1)
 
-typedef void (*GetAccountCandidateGroupFunc)(const CJson *param, const QueryGroupParams *queryParams,
-    GroupEntryVec *vec);
-
-typedef struct {
-    BaseGroupAuth base;
-    GetAccountCandidateGroupFunc getAccountCandidateGroup;
-} AccountRelatedGroupAuth;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-BaseGroupAuth *GetAccountRelatedGroupAuth(void);
-#ifdef __cplusplus
+StringVector CreateStrVector(void)
+{
+    return CreateStringVector();
 }
-#endif
-#endif
+
+void DestroyStrVector(StringVector *vec)
+{
+    uint32_t index;
+    HcString *strItemPtr = NULL;
+    FOR_EACH_HC_VECTOR(*vec, index, strItemPtr) {
+        DeleteString(strItemPtr);
+    }
+    DESTROY_HC_VECTOR(StringVector, vec);
+}

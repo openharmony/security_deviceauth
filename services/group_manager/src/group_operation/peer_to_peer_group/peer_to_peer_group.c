@@ -18,7 +18,7 @@
 #include "alg_defs.h"
 #include "callback_manager.h"
 #include "channel_manager.h"
-#include "database_manager.h"
+#include "data_manager.h"
 #include "dev_auth_module_manager.h"
 #include "group_operation_common.h"
 #include "hc_dev_info.h"
@@ -26,7 +26,30 @@
 #include "session_manager.h"
 #include "string_util.h"
 
-static int32_t CheckGroupName(const char *appId, const CJson *jsonParams)
+static bool IsSameNameGroupExist(int32_t osAccountId, const char *ownerName, const char *groupName)
+{
+    if ((ownerName == NULL) || (groupName == NULL)) {
+        LOGE("The input ownerName or groupName is NULL!");
+        return false;
+    }
+    QueryGroupParams queryParams = InitQueryGroupParams();
+    queryParams.ownerName = ownerName;
+    queryParams.groupName = groupName;
+    GroupEntryVec groupEntryVec = CreateGroupEntryVec();
+    int32_t result = QueryGroups(osAccountId, &queryParams, &groupEntryVec);
+    if (result != HC_SUCCESS) {
+        ClearGroupEntryVec(&groupEntryVec);
+        return result;
+    }
+    if (HC_VECTOR_SIZE(&groupEntryVec) > 0) {
+        ClearGroupEntryVec(&groupEntryVec);
+        return true;
+    }
+    ClearGroupEntryVec(&groupEntryVec);
+    return false;
+}
+
+static int32_t CheckGroupName(int32_t osAccountId, const char *appId, const CJson *jsonParams)
 {
     const char *groupName = GetStringFromJson(jsonParams, FIELD_GROUP_NAME);
     if (groupName == NULL) {
@@ -34,7 +57,7 @@ static int32_t CheckGroupName(const char *appId, const CJson *jsonParams)
         return HC_ERR_JSON_GET;
     }
 
-    if (IsSameNameGroupExist(appId, groupName)) {
+    if (IsSameNameGroupExist(osAccountId, appId, groupName)) {
         LOGE("A group with the same group name has been created! [AppId]: %s, [GroupName]: %s", appId, groupName);
         return HC_ERR_INVALID_PARAMS;
     }
@@ -90,7 +113,7 @@ static int32_t GeneratePeerToPeerGroupId(const CJson *jsonParams, char **returnG
     return HC_SUCCESS;
 }
 
-static int32_t CheckCreateParams(const CJson *jsonParams)
+static int32_t CheckCreateParams(int32_t osAccountId, const CJson *jsonParams)
 {
     const char *appId = GetStringFromJson(jsonParams, FIELD_APP_ID);
     if (appId == NULL) {
@@ -98,17 +121,17 @@ static int32_t CheckCreateParams(const CJson *jsonParams)
         return HC_ERR_JSON_GET;
     }
     int32_t result;
-    if (((result = CheckGroupName(appId, jsonParams)) != HC_SUCCESS) ||
+    if (((result = CheckGroupName(osAccountId, appId, jsonParams)) != HC_SUCCESS) ||
         ((result = CheckUserTypeIfExist(jsonParams)) != HC_SUCCESS) ||
         ((result = CheckGroupVisibilityIfExist(jsonParams)) != HC_SUCCESS) ||
         ((result = CheckExpireTimeIfExist(jsonParams)) != HC_SUCCESS) ||
-        ((result = CheckGroupNumLimit(PEER_TO_PEER_GROUP, appId)) != HC_SUCCESS)) {
+        ((result = CheckGroupNumLimit(osAccountId, PEER_TO_PEER_GROUP, appId)) != HC_SUCCESS)) {
         return result;
     }
     return HC_SUCCESS;
 }
 
-static int32_t GenerateGroupParams(const CJson *jsonParams, const char *groupId, GroupInfo *groupParams)
+static int32_t GenerateGroupParams(const CJson *jsonParams, const char *groupId, TrustedGroupEntry *groupParams)
 {
     const char *groupName = GetStringFromJson(jsonParams, FIELD_GROUP_NAME);
     if (groupName == NULL) {
@@ -132,7 +155,7 @@ static int32_t GenerateGroupParams(const CJson *jsonParams, const char *groupId,
     return HC_SUCCESS;
 }
 
-static int32_t GenerateDevParams(const CJson *jsonParams, const char *groupId, DeviceInfo *devParams)
+static int32_t GenerateDevParams(const CJson *jsonParams, const char *groupId, TrustedDeviceEntry *devParams)
 {
     int32_t result;
     if (((result = AddUdidToParams(devParams)) != HC_SUCCESS) ||
@@ -145,15 +168,16 @@ static int32_t GenerateDevParams(const CJson *jsonParams, const char *groupId, D
     return HC_SUCCESS;
 }
 
-static int32_t CreateGroupInner(const CJson *jsonParams, char **returnGroupId)
+static int32_t CreateGroupInner(int32_t osAccountId, const CJson *jsonParams, char **returnGroupId)
 {
     char *groupId = NULL;
     int32_t result;
-    if (((result = CheckCreateParams(jsonParams)) != HC_SUCCESS) ||
+    if (((result = CheckCreateParams(osAccountId, jsonParams)) != HC_SUCCESS) ||
         ((result = GeneratePeerToPeerGroupId(jsonParams, &groupId)) != HC_SUCCESS) ||
         ((result = ProcessKeyPair(CREATE_KEY_PAIR, jsonParams, groupId)) != HC_SUCCESS) ||
-        ((result = AddGroupToDatabaseByJson(GenerateGroupParams, jsonParams, groupId)) != HC_SUCCESS) ||
-        ((result = AddDeviceToDatabaseByJson(GenerateDevParams, jsonParams, groupId)) != HC_SUCCESS)) {
+        ((result = AddGroupToDatabaseByJson(osAccountId, GenerateGroupParams, jsonParams, groupId)) != HC_SUCCESS) ||
+        ((result = AddDeviceToDatabaseByJson(osAccountId, GenerateDevParams, jsonParams, groupId)) != HC_SUCCESS) ||
+        ((result = SaveOsAccountDb(osAccountId)) != HC_SUCCESS)) {
         HcFree(groupId);
         return result;
     }
@@ -161,28 +185,31 @@ static int32_t CreateGroupInner(const CJson *jsonParams, char **returnGroupId)
     return HC_SUCCESS;
 }
 
-static int32_t GetPeerDevUserTypeFromDb(const char *groupId, const char *peerAuthId)
+static int32_t GetPeerDevUserTypeFromDb(int32_t osAccountId, const char *groupId, const char *peerAuthId)
 {
     int peerUserType = DEVICE_TYPE_ACCESSORY;
-    DeviceInfo *devAuthParams = CreateDeviceInfoStruct();
+    TrustedDeviceEntry *devAuthParams = CreateDeviceEntry();
     if (devAuthParams == NULL) {
         LOGE("Failed to allocate devEntry memory!");
         return peerUserType;
     }
-    if (GetTrustedDevInfoById(peerAuthId, false, groupId, devAuthParams) != HC_SUCCESS) {
+    if (GetTrustedDevInfoById(osAccountId, peerAuthId, false, groupId, devAuthParams) != HC_SUCCESS) {
         LOGE("Failed to obtain the device information from the database!");
-        DestroyDeviceInfoStruct(devAuthParams);
+        DestroyDeviceEntry(devAuthParams);
         return peerUserType;
     }
     peerUserType = devAuthParams->devType;
-    DestroyDeviceInfoStruct(devAuthParams);
+    DestroyDeviceEntry(devAuthParams);
     return peerUserType;
 }
 
-static int32_t DelPeerDevAndKeyInfo(const char *groupId, const char *peerAuthId)
+static int32_t DelPeerDevAndKeyInfo(int32_t osAccountId, const char *groupId, const char *peerAuthId)
 {
-    int32_t peerUserType = GetPeerDevUserTypeFromDb(groupId, peerAuthId);
-    int32_t result = DelTrustedDevice(peerAuthId, false, groupId);
+    int32_t peerUserType = GetPeerDevUserTypeFromDb(osAccountId, groupId, peerAuthId);
+    QueryDeviceParams queryDeviceParams = InitQueryDeviceParams();
+    queryDeviceParams.groupId = groupId;
+    queryDeviceParams.authId = peerAuthId;
+    int32_t result = DelTrustedDevice(osAccountId, &queryDeviceParams);
     if (result != HC_SUCCESS) {
         LOGE("Failed to delete peer device from database!");
         return result;
@@ -208,77 +235,87 @@ static int32_t DelPeerDevAndKeyInfo(const char *groupId, const char *peerAuthId)
 
 static bool IsLocalDevice(const char *udid)
 {
-    return (strcmp(GetLocalDevUdid(), udid) == 0);
+    char localUdid[INPUT_UDID_LEN] = { 0 };
+    int32_t res = HcGetUdid((uint8_t *)localUdid, INPUT_UDID_LEN);
+    if (res != HC_SUCCESS) {
+        LOGE("Failed to get local udid! res: %d", res);
+        return HC_ERR_DB;
+    }
+    return (strcmp(localUdid, udid) == 0);
 }
 
-static int32_t DelAllPeerDevAndKeyInfo(const char *groupId)
+static int32_t DelAllPeerDevAndKeyInfo(int32_t osAccountId, const char *groupId)
 {
-    DeviceInfoVec deviceInfoVec;
-    CreateDeviceInfoVecStruct(&deviceInfoVec);
-    int32_t result = GetTrustedDevices(groupId, &deviceInfoVec);
+    QueryDeviceParams queryParams = InitQueryDeviceParams();
+    queryParams.groupId = groupId;
+    DeviceEntryVec deviceEntryVec = CreateDeviceEntryVec();
+    int32_t result = QueryDevices(osAccountId, &queryParams, &deviceEntryVec);
     if (result != HC_SUCCESS) {
-        DestroyDeviceInfoVecStruct(&deviceInfoVec);
+        ClearDeviceEntryVec(&deviceEntryVec);
         return result;
     }
     uint32_t index;
-    void **devInfoPtr = NULL;
-    FOR_EACH_HC_VECTOR(deviceInfoVec, index, devInfoPtr) {
-        if ((devInfoPtr == NULL) || ((*devInfoPtr) == NULL)) {
+    TrustedDeviceEntry **entryPtr = NULL;
+    FOR_EACH_HC_VECTOR(deviceEntryVec, index, entryPtr) {
+        if ((entryPtr == NULL) || (*entryPtr == NULL)) {
             continue;
         }
-        DeviceInfo *devInfo = (DeviceInfo*)(*devInfoPtr);
-        if (IsLocalDevice(StringGet(&devInfo->udid))) {
+        TrustedDeviceEntry *entry = (TrustedDeviceEntry *)(*entryPtr);
+        if (IsLocalDevice(StringGet(&entry->udid))) {
             continue;
         }
-        result = DelPeerDevAndKeyInfo(groupId, StringGet(&devInfo->authId));
+        result = DelPeerDevAndKeyInfo(osAccountId, groupId, StringGet(&entry->authId));
         if (result != HC_SUCCESS) {
-            DestroyDeviceInfoVecStruct(&deviceInfoVec);
+            ClearDeviceEntryVec(&deviceEntryVec);
             return result;
         }
     }
-    DestroyDeviceInfoVecStruct(&deviceInfoVec);
+    ClearDeviceEntryVec(&deviceEntryVec);
     return HC_SUCCESS;
 }
 
-static int32_t AddAuthIdAndUserTypeToParams(const char *groupId, CJson *jsonParams)
+static int32_t AddAuthIdAndUserTypeToParams(int32_t osAccountId, const char *groupId, CJson *jsonParams)
 {
-    DeviceInfo *deviceInfo = CreateDeviceInfoStruct();
+    TrustedDeviceEntry *deviceInfo = CreateDeviceEntry();
     if (deviceInfo == NULL) {
         LOGE("Failed to allocate deviceInfo memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    const char *udid = GetLocalDevUdid();
-    if (udid == NULL) {
-        LOGE("Failed to get local udid!");
-        DestroyDeviceInfoStruct(deviceInfo);
-        return HC_ERROR;
-    }
-    if (GetTrustedDevInfoById(udid, true, groupId, deviceInfo) != HC_SUCCESS) {
-        LOGE("Failed to obtain the device information from the database!");
-        DestroyDeviceInfoStruct(deviceInfo);
+
+    char localUdid[INPUT_UDID_LEN] = { 0 };
+    int32_t res = HcGetUdid((uint8_t *)localUdid, INPUT_UDID_LEN);
+    if (res != HC_SUCCESS) {
+        LOGE("Failed to get local udid! res: %d", res);
         return HC_ERR_DB;
     }
+
+    if (GetTrustedDevInfoById(osAccountId, localUdid, true, groupId, deviceInfo) != HC_SUCCESS) {
+        LOGE("Failed to obtain the device information from the database!");
+        DestroyDeviceEntry(deviceInfo);
+        return HC_ERR_DB;
+    }
+
     if (AddStringToJson(jsonParams, FIELD_DEVICE_ID, StringGet(&deviceInfo->authId)) != HC_SUCCESS) {
         LOGE("Failed to add authId to params!");
-        DestroyDeviceInfoStruct(deviceInfo);
+        DestroyDeviceEntry(deviceInfo);
         return HC_ERR_JSON_FAIL;
     }
     if (AddIntToJson(jsonParams, FIELD_USER_TYPE, deviceInfo->devType) != HC_SUCCESS) {
         LOGE("Failed to add userType to params!");
-        DestroyDeviceInfoStruct(deviceInfo);
+        DestroyDeviceEntry(deviceInfo);
         return HC_ERR_JSON_FAIL;
     }
-    DestroyDeviceInfoStruct(deviceInfo);
+    DestroyDeviceEntry(deviceInfo);
     return HC_SUCCESS;
 }
 
-static int32_t DelGroupAndSelfKeyInfo(const char *groupId, CJson *jsonParams)
+static int32_t DelGroupAndSelfKeyInfo(int32_t osAccountId, const char *groupId, CJson *jsonParams)
 {
-    int32_t result = AddAuthIdAndUserTypeToParams(groupId, jsonParams);
+    int32_t result = AddAuthIdAndUserTypeToParams(osAccountId, groupId, jsonParams);
     if (result != HC_SUCCESS) {
         return result;
     }
-    result = DelGroupFromDatabase(groupId);
+    result = DelGroupFromDb(osAccountId, groupId);
     if (result != HC_SUCCESS) {
         return result;
     }
@@ -295,7 +332,8 @@ static int32_t DelGroupAndSelfKeyInfo(const char *groupId, CJson *jsonParams)
     return HC_SUCCESS;
 }
 
-static int32_t HandleLocalUnbind(int64_t requestId, const CJson *jsonParams, const DeviceAuthCallback *callback)
+static int32_t HandleLocalUnbind(int64_t requestId, const CJson *jsonParams,
+    const DeviceAuthCallback *callback)
 {
     const char *peerAuthId = GetStringFromJson(jsonParams, FIELD_DELETE_ID);
     if (peerAuthId == NULL) {
@@ -307,8 +345,18 @@ static int32_t HandleLocalUnbind(int64_t requestId, const CJson *jsonParams, con
         LOGE("Failed to get groupId from jsonParams!");
         return HC_ERR_JSON_GET;
     }
-    int32_t result = DelPeerDevAndKeyInfo(groupId, peerAuthId);
+    int32_t osAccountId;
+    if (GetIntFromJson(jsonParams, FIELD_OS_ACCOUNT_ID, &osAccountId) != HC_SUCCESS) {
+        LOGE("Failed to get osAccountId from jsonParams!");
+        return HC_ERR_JSON_GET;
+    }
+    int result = DelPeerDevAndKeyInfo(osAccountId, groupId, peerAuthId);
     if (result != HC_SUCCESS) {
+        return result;
+    }
+    result = SaveOsAccountDb(osAccountId);
+    if (result != HC_SUCCESS) {
+        LOGE("Failed to save osAccountDb!");
         return result;
     }
     char *returnDataStr = NULL;
@@ -346,10 +394,11 @@ static int32_t IsPeerDeviceNotSelf(const char *peerUdid)
         LOGE("The input peerUdid is NULL!");
         return HC_ERR_NULL_PTR;
     }
-    const char *udid = GetLocalDevUdid();
-    if (udid == NULL) {
-        LOGE("Failed to get local udid!");
-        return HC_ERROR;
+    char udid[INPUT_UDID_LEN] = { 0 };
+    int32_t res = HcGetUdid((uint8_t *)udid, INPUT_UDID_LEN);
+    if (res != HC_SUCCESS) {
+        LOGE("Failed to get local udid! res: %d", res);
+        return HC_ERR_DB;
     }
     if (strcmp(peerUdid, udid) == 0) {
         LOGE("You are not allowed to delete yourself!");
@@ -358,26 +407,26 @@ static int32_t IsPeerDeviceNotSelf(const char *peerUdid)
     return HC_SUCCESS;
 }
 
-static int32_t CheckPeerDeviceStatus(const char *groupId, const CJson *jsonParams)
+static int32_t CheckPeerDeviceStatus(int32_t osAccountId, const char *groupId, const CJson *jsonParams)
 {
     const char *peerAuthId = GetStringFromJson(jsonParams, FIELD_DELETE_ID);
     if (peerAuthId == NULL) {
         LOGE("Failed to get peerUdid from jsonParams!");
         return HC_ERR_JSON_GET;
     }
-    DeviceInfo *deviceInfo = CreateDeviceInfoStruct();
+    TrustedDeviceEntry *deviceInfo = CreateDeviceEntry();
     if (deviceInfo == NULL) {
         LOGE("Failed to allocate deviceInfo memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    int32_t result = GetTrustedDevInfoById(peerAuthId, false, groupId, deviceInfo);
+    int32_t result = GetTrustedDevInfoById(osAccountId, peerAuthId, false, groupId, deviceInfo);
     if (result != HC_SUCCESS) {
         LOGE("Failed to obtain the peer device information from the database!");
-        DestroyDeviceInfoStruct(deviceInfo);
+        DestroyDeviceEntry(deviceInfo);
         return result;
     }
     result = IsPeerDeviceNotSelf(StringGet(&deviceInfo->udid));
-    DestroyDeviceInfoStruct(deviceInfo);
+    DestroyDeviceEntry(deviceInfo);
     return result;
 }
 
@@ -393,14 +442,19 @@ static int32_t CheckInvitePeer(const CJson *jsonParams)
         LOGE("Failed to get appId from jsonParams!");
         return HC_ERR_JSON_GET;
     }
+    int32_t osAccountId;
+    if (GetIntFromJson(jsonParams, FIELD_OS_ACCOUNT_ID, &osAccountId) != HC_SUCCESS) {
+        LOGE("Failed to get osAccountId from jsonParams!");
+        return HC_ERR_JSON_GET;
+    }
 
     int32_t groupType = PEER_TO_PEER_GROUP;
     int32_t result;
-    if (((result = CheckGroupExist(groupId)) != HC_SUCCESS) ||
-        ((result = GetGroupTypeFromDb(groupId, &groupType)) != HC_SUCCESS) ||
+    if (((result = CheckGroupExist(osAccountId, groupId)) != HC_SUCCESS) ||
+        ((result = GetGroupTypeFromDb(osAccountId, groupId, &groupType)) != HC_SUCCESS) ||
         ((result = AssertPeerToPeerGroupType(groupType)) != HC_SUCCESS) ||
-        ((result = CheckPermForGroup(MEMBER_INVITE, appId, groupId)) != HC_SUCCESS) ||
-        ((result = CheckDeviceNumLimit(groupId, NULL)) != HC_SUCCESS)) {
+        ((result = CheckPermForGroup(osAccountId, MEMBER_INVITE, appId, groupId)) != HC_SUCCESS) ||
+        ((result = CheckDeviceNumLimit(osAccountId, groupId, NULL)) != HC_SUCCESS)) {
         return result;
     }
     return HC_SUCCESS;
@@ -423,14 +477,19 @@ static int32_t CheckDeletePeer(const CJson *jsonParams)
         LOGE("Failed to get appId from jsonParams!");
         return HC_ERR_JSON_GET;
     }
+    int32_t osAccountId;
+    if (GetIntFromJson(jsonParams, FIELD_OS_ACCOUNT_ID, &osAccountId) != HC_SUCCESS) {
+        LOGE("Failed to get osAccountId from jsonParams!");
+        return HC_ERR_JSON_GET;
+    }
 
     int32_t groupType = PEER_TO_PEER_GROUP;
     int32_t result;
-    if (((result = CheckGroupExist(groupId)) != HC_SUCCESS) ||
-        ((result = GetGroupTypeFromDb(groupId, &groupType)) != HC_SUCCESS) ||
+    if (((result = CheckGroupExist(osAccountId, groupId)) != HC_SUCCESS) ||
+        ((result = GetGroupTypeFromDb(osAccountId, groupId, &groupType)) != HC_SUCCESS) ||
         ((result = AssertPeerToPeerGroupType(groupType)) != HC_SUCCESS) ||
-        ((result = CheckPermForGroup(MEMBER_DELETE, appId, groupId)) != HC_SUCCESS) ||
-        ((result = CheckPeerDeviceStatus(groupId, jsonParams)) != HC_SUCCESS)) {
+        ((result = CheckPermForGroup(osAccountId, MEMBER_DELETE, appId, groupId)) != HC_SUCCESS) ||
+        ((result = CheckPeerDeviceStatus(osAccountId, groupId, jsonParams)) != HC_SUCCESS)) {
         return result;
     }
     return HC_SUCCESS;
@@ -503,49 +562,6 @@ static void InformPeerProcessError(int64_t requestId, const CJson *jsonParams, c
     FreeJsonString(errorDataStr);
 }
 
-static int32_t CheckServerStatusIfNotInvite(int operationCode, const CJson *jsonParams)
-{
-    if (operationCode == MEMBER_INVITE) {
-        return HC_SUCCESS;
-    }
-    const char *groupId = GetStringFromJson(jsonParams, FIELD_GROUP_ID);
-    if (groupId == NULL) {
-        LOGE("Failed to get groupId from jsonParams!");
-        return HC_ERR_JSON_GET;
-    }
-    const char *appId = GetStringFromJson(jsonParams, FIELD_APP_ID);
-    if (appId == NULL) {
-        LOGE("Failed to get appId from jsonParams!");
-        return HC_ERR_JSON_GET;
-    }
-    const char *peerUdid = GetStringFromJson(jsonParams, FIELD_CONN_DEVICE_ID);
-    if (peerUdid == NULL) {
-        LOGE("Failed to get peerUdid from jsonParams!");
-        return HC_ERR_JSON_GET;
-    }
-    int32_t result = CheckGroupExist(groupId);
-    if (result != HC_SUCCESS) {
-        return result;
-    }
-    if (operationCode == MEMBER_JOIN) {
-        /* The client sends a join request, which is equivalent to the server performing an invitation operation. */
-        result = CheckPermForGroup(MEMBER_INVITE, appId, groupId);
-        if (result != HC_SUCCESS) {
-            return result;
-        }
-        result = CheckDeviceNumLimit(groupId, peerUdid);
-    } else if (operationCode == MEMBER_DELETE) {
-        result = CheckPermForGroup(MEMBER_DELETE, appId, groupId);
-        if (result != HC_SUCCESS) {
-            return result;
-        }
-        if (!IsTrustedDeviceInGroup(groupId, peerUdid, true)) {
-            result = HC_ERR_DEVICE_NOT_EXIST;
-        }
-    }
-    return result;
-}
-
 static int32_t ShouldForceUnbind(bool isForceDelete, const CJson *jsonParams)
 {
     bool isIgnoreChannel = false;
@@ -589,7 +605,7 @@ static int32_t CreateServerSession(int64_t requestId, int32_t operationCode, CJs
     return HC_SUCCESS;
 }
 
-static int32_t CreateGroup(CJson *jsonParams, char **returnJsonStr)
+static int32_t CreateGroup(int32_t osAccountId, CJson *jsonParams, char **returnJsonStr)
 {
     LOGI("[Start]: Start to create a peer to peer group!");
     if ((jsonParams == NULL) || (returnJsonStr == NULL)) {
@@ -597,7 +613,7 @@ static int32_t CreateGroup(CJson *jsonParams, char **returnJsonStr)
         return HC_ERR_INVALID_PARAMS;
     }
     char *groupId = NULL;
-    int32_t result = CreateGroupInner(jsonParams, &groupId);
+    int32_t result = CreateGroupInner(osAccountId, jsonParams, &groupId);
     if (result != HC_SUCCESS) {
         return result;
     }
@@ -610,7 +626,7 @@ static int32_t CreateGroup(CJson *jsonParams, char **returnJsonStr)
     return HC_SUCCESS;
 }
 
-static int32_t DeleteGroup(CJson *jsonParams, char **returnJsonStr)
+static int32_t DeleteGroup(int32_t osAccountId, CJson *jsonParams, char **returnJsonStr)
 {
     LOGI("[Start]: Start to delete a peer to peer group!");
     if ((jsonParams == NULL) || (returnJsonStr == NULL)) {
@@ -620,8 +636,8 @@ static int32_t DeleteGroup(CJson *jsonParams, char **returnJsonStr)
     int32_t result;
     const char *groupId = NULL;
     if (((result = GetGroupIdFromJson(jsonParams, &groupId)) != HC_SUCCESS) ||
-        ((result = DelAllPeerDevAndKeyInfo(groupId)) != HC_SUCCESS) ||
-        ((result = DelGroupAndSelfKeyInfo(groupId, jsonParams)) != HC_SUCCESS) ||
+        ((result = DelAllPeerDevAndKeyInfo(osAccountId, groupId)) != HC_SUCCESS) ||
+        ((result = DelGroupAndSelfKeyInfo(osAccountId, groupId, jsonParams)) != HC_SUCCESS) ||
         ((result = ConvertGroupIdToJsonStr(groupId, returnJsonStr)) != HC_SUCCESS)) {
         return result;
     }
@@ -629,7 +645,8 @@ static int32_t DeleteGroup(CJson *jsonParams, char **returnJsonStr)
     return HC_SUCCESS;
 }
 
-static int32_t AddMemberToGroup(int64_t requestId, CJson *jsonParams, const DeviceAuthCallback *callback)
+static int32_t AddMemberToGroup(int32_t osAccountId, int64_t requestId, CJson *jsonParams,
+    const DeviceAuthCallback *callback)
 {
     LOGI("[Start]: Start to add member to a peer to peer group!");
     if ((jsonParams == NULL) || (callback == NULL)) {
@@ -638,6 +655,7 @@ static int32_t AddMemberToGroup(int64_t requestId, CJson *jsonParams, const Devi
     }
     int32_t result;
     int32_t operationCode = MEMBER_INVITE;
+    AddIntToJson(jsonParams, FIELD_OS_ACCOUNT_ID, osAccountId);
     (void)GetIntFromJson(jsonParams, FIELD_OPERATION_CODE, &operationCode);
     result = CheckClientStatus(operationCode, jsonParams);
     if (result != HC_SUCCESS) {
@@ -647,13 +665,15 @@ static int32_t AddMemberToGroup(int64_t requestId, CJson *jsonParams, const Devi
     return CreateClientSession(requestId, operationCode, GetChannelType(callback, jsonParams), jsonParams, callback);
 }
 
-static int32_t DeleteMemberFromGroup(int64_t requestId, CJson *jsonParams, const DeviceAuthCallback *callback)
+static int32_t DeleteMemberFromGroup(int32_t osAccountId, int64_t requestId, CJson *jsonParams,
+    const DeviceAuthCallback *callback)
 {
     LOGI("[Start]: Start to delete member from a peer to peer group!");
     if ((jsonParams == NULL) || (callback == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
+    AddIntToJson(jsonParams, FIELD_OS_ACCOUNT_ID, osAccountId);
     int32_t result = CheckClientStatus(MEMBER_DELETE, jsonParams);
     if (result != HC_SUCCESS) {
         ProcessErrorCallback(requestId, MEMBER_DELETE, result, NULL, callback);
@@ -680,118 +700,95 @@ static int32_t ProcessData(int64_t requestId, CJson *jsonParams, const DeviceAut
     }
     int32_t operationCode = MEMBER_INVITE;
     (void)(GetIntFromJson(jsonParams, FIELD_GROUP_OP, &operationCode));
-    int32_t result = CheckServerStatusIfNotInvite(operationCode, jsonParams);
-    if (result != HC_SUCCESS) {
-        InformPeerProcessError(requestId, jsonParams, callback, result);
-        ProcessErrorCallback(requestId, operationCode, result, NULL, callback);
-        return result;
-    }
     return CreateServerSession(requestId, operationCode, jsonParams, callback);
 }
 
-static int32_t AddManagerWithCheck(const char *appId, const char *groupId, const char *managerAppId)
+static int32_t AddManagerWithCheck(int32_t osAccountId, const char *appId, const char *groupId, const char *managerAppId)
 {
     int32_t groupType = PEER_TO_PEER_GROUP;
-    if (GetGroupTypeFromDb(groupId, &groupType) != HC_SUCCESS) {
+    if (GetGroupTypeFromDb(osAccountId, groupId, &groupType) != HC_SUCCESS) {
         LOGE("No group is found based on the query parameters!");
         return HC_ERR_GROUP_NOT_EXIST;
     }
     if (AssertPeerToPeerGroupType(groupType) != HC_SUCCESS) {
         return HC_ERR_NOT_SUPPORT;
     }
-    if (!IsGroupOwner(groupId, appId)) {
+    if (!IsGroupOwner(osAccountId, groupId, appId)) {
         LOGE("You do not have the permission to add a manager to the group!");
         return HC_ERR_ACCESS_DENIED;
     }
-    if (AddGroupRole(groupId, GROUP_MANAGER, managerAppId) != HC_SUCCESS) {
-        LOGE("Failed to add manager!");
-        return HC_ERR_DB;
-    }
+    (void)managerAppId;
     return HC_SUCCESS;
 }
 
-static int32_t AddFriendWithCheck(const char *appId, const char *groupId, const char *friendAppId)
+static int32_t AddFriendWithCheck(int32_t osAccountId, const char *appId, const char *groupId, const char *friendAppId)
 {
     int32_t groupType = PEER_TO_PEER_GROUP;
-    if (GetGroupTypeFromDb(groupId, &groupType) != HC_SUCCESS) {
+    if (GetGroupTypeFromDb(osAccountId, groupId, &groupType) != HC_SUCCESS) {
         LOGE("No group is found based on the query parameters!");
         return HC_ERR_GROUP_NOT_EXIST;
     }
     if (AssertPeerToPeerGroupType(groupType) != HC_SUCCESS) {
         return HC_ERR_NOT_SUPPORT;
     }
-    if (!IsGroupEditAllowed(groupId, appId)) {
+    if (!IsGroupEditAllowed(osAccountId, groupId, appId)) {
         LOGE("You do not have the permission to add a friend to the group!");
         return HC_ERR_ACCESS_DENIED;
     }
-    if (CompareVisibility(groupId, GROUP_VISIBILITY_ALLOW_LIST) != HC_SUCCESS) {
-        LOGE("The group dose not support the allow list protection!");
-        return HC_ERR_NOT_SUPPORT;
-    }
-    if (AddGroupRole(groupId, GROUP_FRIEND, friendAppId) != HC_SUCCESS) {
-        LOGE("Failed to add friend!");
-        return HC_ERR_DB;
-    }
+    (void)friendAppId;
     return HC_SUCCESS;
 }
 
-static int32_t DeleteManagerWithCheck(const char *appId, const char *groupId, const char *managerAppId)
+static int32_t DeleteManagerWithCheck(int32_t osAccountId, const char *appId, const char *groupId,
+    const char *managerAppId)
 {
     int32_t groupType = PEER_TO_PEER_GROUP;
-    if (GetGroupTypeFromDb(groupId, &groupType) != HC_SUCCESS) {
+    if (GetGroupTypeFromDb(osAccountId, groupId, &groupType) != HC_SUCCESS) {
         LOGE("No group is found based on the query parameters!");
         return HC_ERR_GROUP_NOT_EXIST;
     }
     if (AssertPeerToPeerGroupType(groupType) != HC_SUCCESS) {
         return HC_ERR_NOT_SUPPORT;
     }
-    if (!IsGroupOwner(groupId, appId)) {
+    if (!IsGroupOwner(osAccountId, groupId, appId)) {
         LOGE("You do not have the permission to delete a manager from the group!");
         return HC_ERR_ACCESS_DENIED;
     }
-    if (RemoveGroupRole(groupId, GROUP_MANAGER, managerAppId) != HC_SUCCESS) {
-        LOGE("Failed to delete manager!");
-        return HC_ERR_DB;
-    }
+    (void)managerAppId;
     return HC_SUCCESS;
 }
 
-static int32_t DeleteFriendWithCheck(const char *appId, const char *groupId, const char *friendAppId)
+static int32_t DeleteFriendWithCheck(int32_t osAccountId, const char *appId, const char *groupId,
+    const char *friendAppId)
 {
     int32_t groupType = PEER_TO_PEER_GROUP;
-    if (GetGroupTypeFromDb(groupId, &groupType) != HC_SUCCESS) {
+    if (GetGroupTypeFromDb(osAccountId, groupId, &groupType) != HC_SUCCESS) {
         LOGE("No group is found based on the query parameters!");
         return HC_ERR_GROUP_NOT_EXIST;
     }
     if (AssertPeerToPeerGroupType(groupType) != HC_SUCCESS) {
         return HC_ERR_NOT_SUPPORT;
     }
-    if (!IsGroupEditAllowed(groupId, appId)) {
+    if (!IsGroupEditAllowed(osAccountId, groupId, appId)) {
         LOGE("You do not have the permission to add a friend to the group!");
         return HC_ERR_ACCESS_DENIED;
     }
-    if (CompareVisibility(groupId, GROUP_VISIBILITY_ALLOW_LIST) != HC_SUCCESS) {
-        LOGE("The group dose not support the allow list protection!");
-        return HC_ERR_NOT_SUPPORT;
-    }
-    if (RemoveGroupRole(groupId, GROUP_FRIEND, friendAppId) != HC_SUCCESS) {
-        LOGE("Failed to delete friend!");
-        return HC_ERR_DB;
-    }
+    (void)friendAppId;
     return HC_SUCCESS;
 }
 
-static int32_t GetManagersWithCheck(const char *appId, const char *groupId, char **returnManagers, uint32_t *returnSize)
+static int32_t GetManagersWithCheck(int32_t osAccountId, const char *appId, const char *groupId, char **returnManagers,
+    uint32_t *returnSize)
 {
     int32_t groupType = PEER_TO_PEER_GROUP;
-    if (GetGroupTypeFromDb(groupId, &groupType) != HC_SUCCESS) {
+    if (GetGroupTypeFromDb(osAccountId, groupId, &groupType) != HC_SUCCESS) {
         LOGE("No group is found based on the query parameters!");
         return HC_ERR_GROUP_NOT_EXIST;
     }
     if (AssertPeerToPeerGroupType(groupType) != HC_SUCCESS) {
         return HC_ERR_NOT_SUPPORT;
     }
-    if (!IsGroupOwner(groupId, appId)) {
+    if (!IsGroupOwner(osAccountId, groupId, appId)) {
         LOGE("You do not have the permission to query the group managers information!");
         return HC_ERR_ACCESS_DENIED;
     }
@@ -800,82 +797,56 @@ static int32_t GetManagersWithCheck(const char *appId, const char *groupId, char
         LOGE("Failed to allocate managers memory!");
         return HC_ERR_JSON_FAIL;
     }
-    int32_t result = GetGroupRoles(groupId, GROUP_MANAGER, managers);
-    if (result != HC_SUCCESS) {
-        LOGE("Failed to get managers!");
-        FreeJson(managers);
-        return result;
-    }
-    *returnManagers = PackJsonToString(managers);
-    if (*returnManagers == NULL) {
-        LOGE("Failed to convert json to string!");
-        FreeJson(managers);
-        return HC_ERR_JSON_FAIL;
-    }
-    *returnSize = GetItemNum(managers);
-    FreeJson(managers);
+    (void)returnManagers;
+    (void)returnSize;
     return HC_SUCCESS;
 }
 
-static int32_t GetFriendsWithCheck(const char *appId, const char *groupId, char **returnFriends, uint32_t *returnSize)
+static int32_t GetFriendsWithCheck(int32_t osAccountId, const char *appId, const char *groupId, char **returnFriends,
+    uint32_t *returnSize)
 {
     int32_t groupType = PEER_TO_PEER_GROUP;
-    if (GetGroupTypeFromDb(groupId, &groupType) != HC_SUCCESS) {
+    if (GetGroupTypeFromDb(osAccountId, groupId, &groupType) != HC_SUCCESS) {
         LOGE("No group is found based on the query parameters!");
         return HC_ERR_GROUP_NOT_EXIST;
     }
     if (AssertPeerToPeerGroupType(groupType) != HC_SUCCESS) {
         return HC_ERR_NOT_SUPPORT;
     }
-    if (!IsGroupEditAllowed(groupId, appId)) {
+    if (!IsGroupEditAllowed(osAccountId, groupId, appId)) {
         LOGE("You do not have the permission to query the group friends information!");
         return HC_ERR_ACCESS_DENIED;
     }
-    CJson *friends = CreateJsonArray();
-    if (friends == NULL) {
-        LOGE("Failed to allocate friends memory!");
-        return HC_ERR_JSON_FAIL;
-    }
-    int32_t result = GetGroupRoles(groupId, GROUP_FRIEND, friends);
-    if (result != HC_SUCCESS) {
-        LOGE("Failed to get friends!");
-        FreeJson(friends);
-        return result;
-    }
-    *returnFriends = PackJsonToString(friends);
-    if (*returnFriends == NULL) {
-        LOGE("Failed to convert json to string!");
-        FreeJson(friends);
-        return HC_ERR_JSON_FAIL;
-    }
-    *returnSize = GetItemNum(friends);
-    FreeJson(friends);
+    (void)returnFriends;
+    (void)returnSize;
     return HC_SUCCESS;
 }
 
-static int32_t AddGroupRoleWithCheck(bool isManager, const char *appId, const char *groupId, const char *roleAppId)
+static int32_t AddGroupRoleWithCheck(int32_t osAccountId, bool isManager, const char *appId, const char *groupId,
+    const char *roleAppId)
 {
     if (isManager) {
-        return AddManagerWithCheck(appId, groupId, roleAppId);
+        return AddManagerWithCheck(osAccountId, appId, groupId, roleAppId);
     }
-    return AddFriendWithCheck(appId, groupId, roleAppId);
+    return AddFriendWithCheck(osAccountId, appId, groupId, roleAppId);
 }
 
-static int32_t DeleteGroupRoleWithCheck(bool isManager, const char *appId, const char *groupId, const char *roleAppId)
+static int32_t DeleteGroupRoleWithCheck(int32_t osAccountId, bool isManager, const char *appId, const char *groupId,
+    const char *roleAppId)
 {
     if (isManager) {
-        return DeleteManagerWithCheck(appId, groupId, roleAppId);
+        return DeleteManagerWithCheck(osAccountId, appId, groupId, roleAppId);
     }
-    return DeleteFriendWithCheck(appId, groupId, roleAppId);
+    return DeleteFriendWithCheck(osAccountId, appId, groupId, roleAppId);
 }
 
-static int32_t GetGroupRolesWithCheck(bool isManager, const char *appId, const char *groupId, char **returnJsonStr,
-    uint32_t *returnSize)
+static int32_t GetGroupRolesWithCheck(int32_t osAccountId, bool isManager, const char *appId, const char *groupId,
+    char **returnJsonStr, uint32_t *returnSize)
 {
     if (isManager) {
-        return GetManagersWithCheck(appId, groupId, returnJsonStr, returnSize);
+        return GetManagersWithCheck(osAccountId, appId, groupId, returnJsonStr, returnSize);
     }
-    return GetFriendsWithCheck(appId, groupId, returnJsonStr, returnSize);
+    return GetFriendsWithCheck(osAccountId, appId, groupId, returnJsonStr, returnSize);
 }
 
 static PeerToPeerGroup g_peerToPeerGroup = {

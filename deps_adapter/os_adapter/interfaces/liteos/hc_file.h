@@ -16,30 +16,35 @@
 #ifndef HC_FILE_H
 #define HC_FILE_H
 
+#include "hc_string_vector.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define MAX_FILE_PATH_SIZE 64
+
 typedef struct {
     union {
         void *pfd;
         int fd;
     } fileHandle;
-    const char *filePath;
+    char filePath[MAX_FILE_PATH_SIZE];
 } FileHandle;
-
-typedef enum FileIdEnumT {
-    FILE_ID_GROUP = 0,
-    FILE_ID_CRED_DATA,
-    FILE_ID_LAST,
-} FileIdEnum;
 
 #define MODE_FILE_READ 0
 #define MODE_FILE_WRITE 1
 
 /* 0 indicates success, -1 indicates fail */
-int HcFileOpen(int fileId, int mode, FileHandle *file);
+int HcFileOpen(const char *path, int mode, FileHandle *file);
 int HcFileSize(FileHandle file);
 int HcFileRead(FileHandle file, void *dst, int dstSize);
 int HcFileWrite(FileHandle file, const void *src, int srcSize);
 void HcFileClose(FileHandle file);
-void HcFileRemove(int fileId);
-void SetFilePath(FileIdEnum fileId, const char *path);
+void HcFileRemove(const char *path);
+void HcFileGetSubFileName(const char *path, StringVector *nameVec);
 
+#ifdef __cplusplus
+}
+#endif
 #endif
