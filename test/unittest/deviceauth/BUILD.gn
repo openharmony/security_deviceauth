@@ -30,7 +30,6 @@ ohos_unittest("deviceauth_llt") {
     "//foundation/communication/dsoftbus/interfaces/kits/common",
     "//foundation/communication/dsoftbus/interfaces/kits/transport",
     "//foundation/communication/dsoftbus/interfaces/inner_kits/transport",
-    "//base/account/os_account/interfaces/innerkits/osaccount/native/include",
   ]
 
   sources = [
@@ -71,6 +70,8 @@ ohos_unittest("deviceauth_llt") {
   external_deps = [
     "dsoftbus_standard:softbus_client",
     "hiviewdfx_hilog_native:libhilog",
-    "os_account_standard:os_account_innerkits",
   ]
+  if (support_jsapi) {
+    external_deps += [ "os_account_standard:os_account_innerkits" ]
+  }
 }
