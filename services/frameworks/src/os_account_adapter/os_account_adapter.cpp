@@ -18,11 +18,14 @@
 #include <vector>
 #include "device_auth.h"
 #include "hc_log.h"
+#ifdef SUPPORT_OS_ACCOUNT
 #include "os_account_manager.h"
+#endif
 
 int32_t DevAuthGetRealOsAccountLocalId(int32_t inputId)
 {
     if (inputId == ANY_OS_ACCOUNT) {
+#ifdef SUPPORT_OS_ACCOUNT
         std::vector<int> activatedOsAccountIds;
         LOGI("[OsAccountManager][In]: QueryActiveOsAccountIds!");
         OHOS::ErrCode res = OHOS::AccountSA::OsAccountManager::QueryActiveOsAccountIds(activatedOsAccountIds);
@@ -34,6 +37,9 @@ int32_t DevAuthGetRealOsAccountLocalId(int32_t inputId)
         int osAccountId = activatedOsAccountIds[0];
         LOGI("[Account]: Use activated os account! [Id]: %d", osAccountId);
         return osAccountId;
+#else
+        return 0;
+#endif
     } else if (inputId >= 0) {
         LOGI("[Account]: Use input os account! [Id]: %d", inputId);
         return inputId;
