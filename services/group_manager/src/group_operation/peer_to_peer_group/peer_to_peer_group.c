@@ -703,7 +703,8 @@ static int32_t ProcessData(int64_t requestId, CJson *jsonParams, const DeviceAut
     return CreateServerSession(requestId, operationCode, jsonParams, callback);
 }
 
-static int32_t AddManagerWithCheck(int32_t osAccountId, const char *appId, const char *groupId, const char *managerAppId)
+static int32_t AddManagerWithCheck(int32_t osAccountId, const char *appId, const char *groupId,
+    const char *managerAppId)
 {
     int32_t groupType = PEER_TO_PEER_GROUP;
     if (GetGroupTypeFromDb(osAccountId, groupId, &groupType) != HC_SUCCESS) {

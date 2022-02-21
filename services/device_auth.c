@@ -90,8 +90,8 @@ static int32_t AuthDevice(int32_t osAccountId, int64_t authReqId, const char *au
 {
     LOGI("Begin AuthDevice.");
     osAccountId = DevAuthGetRealOsAccountLocalId(osAccountId);
-    if (authParams == NULL) {
-        LOGE("The input auth params is null!");
+    if ((authParams == NULL) || (osAccountId == INVALID_OS_ACCOUNT)) {
+        LOGE("The input auth params is invalid!");
         return HC_ERR_INVALID_PARAMS;
     }
     CJson *jsonParams = CreateJsonFromString(authParams);
