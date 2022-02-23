@@ -1040,7 +1040,8 @@ static int32_t IpcGmAddGroupFriend(int32_t osAccountId, const char *appId, const
     return ret;
 }
 
-static int32_t IpcGmDelGroupManager(int32_t osAccountId, const char *appId, const char *groupId, const char *managerAppId)
+static int32_t IpcGmDelGroupManager(int32_t osAccountId, const char *appId, const char *groupId,
+    const char *managerAppId)
 {
     uintptr_t callCtx = 0x0;
     int32_t ret;

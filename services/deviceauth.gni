@@ -119,11 +119,7 @@ group_auth_account_unrelated_files = [ "${group_auth_path}/src/group_auth_manage
 group_auth_account_unrelated_mock_files = [ "${group_auth_path}/src/group_auth_manager/account_unrelated_group_auth_mock/account_unrelated_group_auth_mock.c" ]
 group_auth_account_related_mock_files = [ "${group_auth_path}/src/group_auth_manager/account_related_group_auth_mock/account_related_group_auth_mock.c" ]
 
-database_manager_files = [
-  # "${data_manager_path}/src/database_manager.c",
-  # "${data_manager_path}/src/database_util.c",
-  "${data_manager_path}/src/data_manager.c",
-]
+database_manager_files = [ "${data_manager_path}/src/data_manager.c" ]
 database_manager_lite_files = []
 
 group_manager_files = [
