@@ -14,7 +14,7 @@
     "component": {
       "name": "deviceauth_standard",
       "subsystem": "security",
-      "syscap": [ "SystemCapability.security.deviceauth" ],
+      "syscap": [ "SystemCapability.Security.DeviceAuth" ],
       "features": [],
       "adapted_system_type": [
           "standard",
