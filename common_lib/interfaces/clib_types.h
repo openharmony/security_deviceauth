@@ -17,6 +17,7 @@
 #define CLIB_TYPES_H
 
 #include <stdint.h>
+#include <stdio.h>
 
 typedef uint32_t HcBool;
 #define HC_TRUE 1
