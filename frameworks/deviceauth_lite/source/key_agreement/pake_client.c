@@ -20,7 +20,7 @@
 #if !(defined(_CUT_PAKE_) || defined(_CUT_PAKE_CLIENT_))
 
 #include <string.h>
-#include <securec.h>
+#include "securec.h"
 #include "huks_adapter.h"
 #include "commonutil.h"
 

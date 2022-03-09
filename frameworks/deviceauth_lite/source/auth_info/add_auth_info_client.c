@@ -14,7 +14,7 @@
  */
 
 #include "add_auth_info_client.h"
-#include <securec.h>
+#include "securec.h"
 #include "huks_adapter.h"
 #include "log.h"
 #include "mem_stat.h"

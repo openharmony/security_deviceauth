@@ -14,7 +14,7 @@
  */
 
 #include "distribution.h"
-#include <securec.h>
+#include "securec.h"
 #include "log.h"
 #include "pake_client.h"
 #include "pake_server.h"

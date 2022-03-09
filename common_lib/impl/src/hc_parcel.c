@@ -29,7 +29,7 @@ HcParcel CreateParcel(uint32_t size, uint32_t allocUnit)
         parcel.allocUnit = PARCEL_DEFAULT_INCREASE_STEP;
     }
     if (size > 0) {
-        parcel.data = (char*)ClibMalloc(size, 0);
+        parcel.data = (char *)ClibMalloc(size, 0);
         if (parcel.data != NULL) {
             parcel.length = size;
         }

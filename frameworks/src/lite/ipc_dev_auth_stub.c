@@ -66,7 +66,7 @@ static int32_t BinderLiteProcess(SvcIdentity **svc, int32_t procType)
             (void)BinderRelease((*svc)->ipcContext, (*svc)->handle);
             break;
         default:
-            LOGW("internal error: unknow processing type");
+            LOGW("internal error: unknown processing type");
     }
 #endif
     return (ret == 0) ? HC_SUCCESS : HC_ERROR;

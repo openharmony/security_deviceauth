@@ -17,11 +17,11 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <securec.h>
 #include <stdio.h>
 #include <unistd.h>
 #include "hal_error.h"
 #include "hc_log.h"
+#include "securec.h"
 #include "utils_file.h"
 
 #define MAX_FOLDER_NAME_SIZE 128
@@ -136,8 +136,11 @@ void HcFileGetSubFileName(const char *path, StringVector *nameVec)
             continue;
         }
         if (nameVec->pushBackT(nameVec, subFileName) == NULL) {
-            LOGE("Failed to push path to pathVec!");
+            LOGE("Failed to push name!");
             DeleteString(&subFileName);
         }
+    }
+    if (closedir(dir) < 0) {
+        LOGE("Failed to close file");
     }
 }

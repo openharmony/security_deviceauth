@@ -14,7 +14,7 @@
  */
 
 #include "auth_info.h"
-#include <securec.h>
+#include "securec.h"
 #include "log.h"
 #include "mem_stat.h"
 #include "huks_adapter.h"
@@ -78,7 +78,7 @@ int32_t encrypt_payload(const struct var_buffer *key, const struct uint8_buff *p
     struct aes_aad aes_aad;
     (void)memset_s(&aes_aad, sizeof(aes_aad), 0, sizeof(aes_aad));
     if (strcpy_s((char *)aes_aad.aad, sizeof(aes_aad.aad), aad) != EOK) {
-        LOGE("What happened was that the probability was zero"); /* caller perceives memery error, no return */
+        LOGE("What happened was that the probability was zero"); /* caller perceives memory error, no return */
     }
     aes_aad.length = strlen(aad);
     int32_t ret = aes_gcm_encrypt((struct var_buffer *)key, plain, &aes_aad, payload);
@@ -104,7 +104,7 @@ int32_t decrypt_payload(const struct var_buffer *key, const struct uint8_buff *p
     struct aes_aad aes_aad;
     (void)memset_s(&aes_aad, sizeof(aes_aad), 0, sizeof(aes_aad));
     if (strcpy_s((char *)aes_aad.aad, sizeof(aes_aad.aad), aad) != EOK) {
-        LOGE("What happened was that the probability was zero"); /* caller perceives memery error, no return */
+        LOGE("What happened was that the probability was zero"); /* caller perceives memory error, no return */
     }
     aes_aad.length = strlen(aad);
     int32_t ret = aes_gcm_decrypt((struct var_buffer *)key, payload, &aes_aad, plain);

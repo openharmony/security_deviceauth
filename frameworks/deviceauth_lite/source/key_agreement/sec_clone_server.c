@@ -18,7 +18,7 @@
 #include "sec_clone_server.h"
 #include <stdlib.h>
 #include <string.h>
-#include <securec.h>
+#include "securec.h"
 #include "huks_adapter.h"
 #include "log.h"
 #include "commonutil.h"
