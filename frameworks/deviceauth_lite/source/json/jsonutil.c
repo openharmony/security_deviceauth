@@ -27,10 +27,10 @@ json_handle parse_json(const char *data)
     return (void *)root;
 }
 
-void free_json(json_handle hanlde)
+void free_json(json_handle handle)
 {
-    if (hanlde != NULL) {
-        cJSON_Delete((cJSON *)hanlde);
+    if (handle != NULL) {
+        cJSON_Delete((cJSON *)handle);
     }
 }
 

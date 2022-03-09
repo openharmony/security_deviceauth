@@ -1392,8 +1392,8 @@ void SetCbCtxToDataCtx(uintptr_t callCtx, int32_t cbIdx)
     ProxyDevAuthData *dataCache = NULL;
     const SvcIdentity *stubInfo = &g_sdkCbStub.stubIdentity;
     (void)cbIdx;
-    if (!g_sdkCbStub.registed) {
-        LOGW("SDK callback stub un-registed");
+    if (!g_sdkCbStub.registered) {
+        LOGW("SDK callback stub un-registered");
         return;
     }
     ShowIpcSvcInfo(stubInfo);
@@ -1661,7 +1661,7 @@ int32_t InitProxyAdapt(void)
         LOGI("get proxy instance success");
     }
 
-    if (!g_sdkCbStub.registed) {
+    if (!g_sdkCbStub.registered) {
         ret = RegisterIpcCallback(CbStubOnRemoteRequest, 0, IPC_WAIT_FOREVER, &(g_sdkCbStub.stubIdentity), NULL);
         if (ret != 0) {
             LOGE("register ipc cb failed");
@@ -1669,7 +1669,7 @@ int32_t InitProxyAdapt(void)
         }
         ShowIpcSvcInfo(&(g_sdkCbStub.stubIdentity));
         LOGI("register ipc cb success");
-        g_sdkCbStub.registed = true;
+        g_sdkCbStub.registered = true;
     }
     return HC_SUCCESS;
 }
@@ -1680,7 +1680,7 @@ void UnInitProxyAdapt(void)
     if (UnregisterIpcCallback(g_sdkCbStub.stubIdentity)) {
         LOGW("un-register ipc cb failed");
     }
-    g_sdkCbStub.registed = false;
+    g_sdkCbStub.registered = false;
     return;
 }
 

@@ -62,7 +62,7 @@ static int32_t AddChannelEntry(int64_t requestId, int64_t channelId)
 {
     int64_t tmpReqId = DEFAULT_REQUEST_ID;
     if (GetReqIdByChannelId(channelId, &tmpReqId) == HC_SUCCESS) {
-        LOGE("A request to use the channel alreay exists!");
+        LOGE("A request to use the channel already exists!");
         return HC_ERR_REQUEST_EXIST;
     }
     ChannelEntry entry = {
@@ -149,7 +149,7 @@ static char *GenRecvData(int64_t channelId, const void *data, uint32_t dataLen, 
 
 static bool IsServer(int sessionId)
 {
-    return (GetSessionSide(sessionId) == 0) ? true : false;
+    return GetSessionSide(sessionId) == 0;
 }
 
 static int OnChannelOpenedCb(int sessionId, int result)

@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include <securec.h>
+#include "securec.h"
 #include "commonutil.h"
 #include "distribution.h"
 #include "log.h"
@@ -242,7 +242,7 @@ int32_t init_center(const struct hc_package_name *package_name, const struct hc_
         LOGE("Generate derived dek failed");
         return ret;
     }
-    if (memcpy_s(dek, sizeof(struct hc_key_alias), &dek_alias, sizeof(struct hc_key_alias)) != HC_OK) {
+    if (memcpy_s(dek, sizeof(struct hc_key_alias), &dek_alias, sizeof(struct hc_key_alias)) != EOK) {
         return HC_INNER_ERROR;
     }
 
@@ -1175,7 +1175,7 @@ static int32_t delete_public_key(hc_handle handle, struct service_id service_id,
     (void)memset_s(auth_id_list, length, 0, length);
 
     uint32_t peers_num = list_trust_peers(handle, user_type, NULL, &auth_id_list);
-    LOGI("peers_num %d", peers_num);
+    LOGI("peers_num %u", peers_num);
     for (uint32_t loop = 0; loop < peers_num; loop++) {
         struct hc_key_alias key_alias = generate_key_alias(&service_id, &auth_id_list[loop], user_type);
         if (key_alias.length == 0) {

@@ -14,7 +14,7 @@
  */
 
 #include "commonutil.h"
-#include <securec.h>
+#include "securec.h"
 #include "base.h"
 #include "log.h"
 #include "mem_stat.h"
@@ -22,7 +22,8 @@
 
 char hex_to_char(uint8_t hex)
 {
-    return (hex > 9) ? hex + 0x37 : hex + 0x30; /* Convert to the corresponding character */
+    /* Convert to the corresponding character, hex + 0x37 -> A-F, hex + 0x30 -> 0-9 */
+    return (hex > 9) ? hex + 0x37 : hex + 0x30;
 }
 
 void byte_to_hex_string(const uint8_t *hex, int32_t hex_len, uint8_t *buf, int32_t buf_len)
@@ -115,22 +116,6 @@ int32_t string_convert(json_pobject obj, const char *field, uint8_t *str, uint32
     }
     *length = len;
     return HC_OK;
-}
-
-void hex_string_convert(uint32_t length, const uint8_t *hex, const char *field, json_pobject parent)
-{
-    int32_t org_cha_len = length;
-    int32_t tmp_cha_data_hex_len = org_cha_len * BYTE_TO_HEX_OPER_LENGTH + 1;
-    uint8_t *tmp_cha_data_hex = (uint8_t *)MALLOC(tmp_cha_data_hex_len);
-
-    if (tmp_cha_data_hex == NULL) {
-        return;
-    }
-    (void)memset_s(tmp_cha_data_hex, tmp_cha_data_hex_len, 0, tmp_cha_data_hex_len);
-    byte_to_hex_string(hex, org_cha_len, tmp_cha_data_hex, org_cha_len * BYTE_TO_HEX_OPER_LENGTH);
-    add_string_to_object(parent, field, (char *)tmp_cha_data_hex);
-    FREE(tmp_cha_data_hex);
-    tmp_cha_data_hex = NULL;
 }
 
 int32_t memory_copy_error(const char *fun, unsigned int line)

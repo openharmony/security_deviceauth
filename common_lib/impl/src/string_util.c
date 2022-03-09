@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <securec.h>
+#include "securec.h"
 #include "clib_error.h"
 #include "clib_types.h"
 
@@ -228,8 +228,7 @@ int32_t ByteToBase64String(const uint8_t *byte, uint32_t byteLen, char *base64St
     if (byteLen % 3 == 1) {
         base64Str[i - 2] = '=';
         base64Str[i - 1] = '=';
-    }
-    if (byteLen % 3 == 2) {
+    } else if (byteLen % 3 == 2) {
         base64Str[i - 1] = '=';
     }
     base64Str[len] = '\0';

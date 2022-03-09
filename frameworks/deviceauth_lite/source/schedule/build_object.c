@@ -14,7 +14,7 @@
  */
 
 #include "build_object.h"
-#include <securec.h>
+#include "securec.h"
 #include "log.h"
 #include "auth_info.h"
 

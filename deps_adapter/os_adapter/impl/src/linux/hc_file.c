@@ -19,9 +19,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "securec.h"
 #include "hc_log.h"
 #include "hc_types.h"
+#include "securec.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -123,8 +123,8 @@ int HcFileRead(FileHandle file, void *dst, int dstSize)
     int total = 0;
     while (total < dstSize) {
         int readCount = fread(dstBuffer + total, 1, dstSize - total, fp);
-        if ((readCount < 0) || (readCount > (dstSize - total))) {
-            return -1;
+        if (ferror(fp) != 0) {
+            LOGE("read file error!");
         }
         if (readCount == 0) {
             return total;
@@ -146,8 +146,8 @@ int HcFileWrite(FileHandle file, const void *src, int srcSize)
     int total = 0;
     while (total < srcSize) {
         int writeCount = fwrite(srcBuffer + total, 1, srcSize - total, fp);
-        if (writeCount < 0 || writeCount > (srcSize - total)) {
-            return -1;
+        if (ferror(fp) != 0) {
+            LOGE("write file error!");
         }
         total += writeCount;
     }
@@ -195,6 +195,9 @@ void HcFileGetSubFileName(const char *path, StringVector *nameVec)
             LOGE("Failed to push path to pathVec!");
             DeleteString(&subFileName);
         }
+    }
+    if (closedir(dir) < 0) {
+        LOGE("Failed to close file");
     }
 }
 
