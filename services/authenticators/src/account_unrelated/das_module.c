@@ -61,7 +61,7 @@ bool IsDasMsgNeedIgnore(const CJson *in)
         return false;
     }
 
-    LOGI("The message needs to ignore, message: %u.", message);
+    LOGI("The message needs to ignore, message: %d.", message);
     return true;
 }
 

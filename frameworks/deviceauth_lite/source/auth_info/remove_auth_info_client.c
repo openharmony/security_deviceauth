@@ -16,7 +16,7 @@
 #include "remove_auth_info_client.h"
 #include <string.h>
 #include <stdlib.h>
-#include <securec.h>
+#include "securec.h"
 #include "log.h"
 #include "base.h"
 #include "mem_stat.h"

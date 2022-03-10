@@ -16,7 +16,7 @@
 #include "json_utils.h"
 #include <inttypes.h>
 #include <string.h>
-#include <securec.h>
+#include "securec.h"
 #include "clib_error.h"
 #include "clib_types.h"
 #include "string_util.h"
@@ -203,12 +203,7 @@ int32_t GetByteFromJson(const CJson *jsonObj, const char *key, uint8_t *byte, ui
     if (len < strlen(valueStr) / BYTE_TO_HEX_OPER_LENGTH) {
         return CLIB_ERR_INVALID_LEN;
     }
-    int32_t ret = HexStringToByte(valueStr, byte, len);
-    if (ret != CLIB_SUCCESS) {
-        return ret;
-    }
-
-    return ret;
+    return HexStringToByte(valueStr, byte, len);
 }
 
 int32_t GetIntFromJson(const CJson *jsonObj, const char *key, int32_t *value)

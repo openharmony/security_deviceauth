@@ -14,7 +14,7 @@
  */
 
 #include "hc_log.h"
-#include <securec.h>
+#include "securec.h"
 
 #define LOG_PRINT_MAX_LEN 256
 

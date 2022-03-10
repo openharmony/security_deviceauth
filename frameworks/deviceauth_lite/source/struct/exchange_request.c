@@ -15,7 +15,7 @@
 
 #if !(defined(_CUT_PAKE_) || defined(_CUT_PAKE_SERVER_) || defined(_CUT_EXCHANGE_) || defined(_CUT_EXCHANGE_SERVER_))
 
-#include <securec.h>
+#include "securec.h"
 #include "log.h"
 #include "mem_stat.h"
 #include "jsonutil.h"

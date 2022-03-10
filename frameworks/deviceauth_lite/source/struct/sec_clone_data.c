@@ -16,7 +16,7 @@
 #if (defined(_SUPPORT_SEC_CLONE_) || defined(_SUPPORT_SEC_CLONE_SERVER_))
 
 #include <string.h>
-#include <securec.h>
+#include "securec.h"
 #include "jsonutil.h"
 #include "commonutil.h"
 #include "exchange_auth_info.h"

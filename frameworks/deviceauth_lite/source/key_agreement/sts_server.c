@@ -18,7 +18,7 @@
 
 #if !(defined(_CUT_STS_) || defined(_CUT_STS_SERVER_))
 
-#include <securec.h>
+#include "securec.h"
 #include "commonutil.h"
 #include "distribution.h"
 #include "mem_stat.h"
