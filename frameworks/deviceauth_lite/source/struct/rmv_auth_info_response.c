@@ -15,7 +15,7 @@
 
 #if !(defined(_CUT_STS_) || defined(_CUT_STS_SERVER_) || defined(_CUT_REMOVE_) || defined(_CUT_REMOVE_SERVER_))
 
-#include <securec.h>
+#include "securec.h"
 #include "log.h"
 #include "mem_stat.h"
 #include "jsonutil.h"

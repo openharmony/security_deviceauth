@@ -62,7 +62,7 @@ int32_t send_start_response(void *handle, void *receive_data, void *send_data)
     }
     set_state(base, START_RESPONSE);
     set_last_time_sec(base);
-    DBG_OUT("Object %u receive start request data send start response data succcess", base->sn);
+    DBG_OUT("Object %u receive start request data send start response data success", base->sn);
     return HC_OK;
 }
 
@@ -94,7 +94,7 @@ int32_t send_end_response(void *handle, void *receive_data, void *send_data)
     }
     set_state(base, PROTOCOL_FINISH);
     set_last_time_sec(base);
-    DBG_OUT("Object %u receive end request data send end response data succcess", base->sn);
+    DBG_OUT("Object %u receive end request data send end response data success", base->sn);
     return HC_OK;
 }
 #endif /* DESC */

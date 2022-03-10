@@ -16,7 +16,7 @@
 #if !(defined(_CUT_PAKE_) || defined(_CUT_PAKE_SERVER_))
 
 #include <log.h>
-#include <securec.h>
+#include "securec.h"
 #include "mem_stat.h"
 #include "jsonutil.h"
 #include "commonutil.h"
