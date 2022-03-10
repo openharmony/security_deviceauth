@@ -11,19 +11,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if (defined(ohos_lite)) {
-  import("//build/lite/config/component/lite_component.gni")
-} else {
-  import("//build/ohos.gni")
-}
 import("//base/security/deviceauth/deps_adapter/deviceauth_hals.gni")
+import("//build/ohos.gni")
 import("deviceauth.gni")
 
 config("deviceauth_config") {
   include_dirs = [ "//base/security/deviceauth/interfaces/innerkits" ]
 }
 include_dirs = inc_path + hals_inc_path
-if (defined(ohos_lite)) {
+if (os_level == "mini" || os_level == "small") {
   static_library("deviceauth") {
     public_configs = [ ":deviceauth_config" ]
     include_dirs += [
@@ -59,6 +55,13 @@ if (defined(ohos_lite)) {
       include_dirs +=
           [ "//base/hiviewdfx/hilog_lite/interfaces/native/kits/hilog_lite" ]
       deps += [ "//base/hiviewdfx/hilog_lite/frameworks/mini:hilog_lite" ]
+    }
+  }
+
+  if (os_level == "mini") {
+    group("deviceauth_sdk") {
+    }
+    group("deviceauth_service") {
     }
   }
 
