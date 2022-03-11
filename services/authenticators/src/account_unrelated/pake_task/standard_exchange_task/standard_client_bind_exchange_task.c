@@ -58,11 +58,7 @@ static int ExchangeRequest(AsyBaseCurTask *task, PakeParams *params, const CJson
     }
 
     // execute
-    res = ClientRequestStandardBindExchange(params, &(realTask->params));
-    if (res != HC_SUCCESS) {
-        LOGE("ClientRequestStandardBindExchange failed");
-        return res;
-    }
+    GOTO_ERR_AND_SET_RET(ClientRequestStandardBindExchange(params, &(realTask->params)), res);
 
     // package message
     GOTO_ERR_AND_SET_RET(AddIntToJson(sendToPeer, FIELD_MESSAGE, PAKE_BIND_EXCHANGE_REQUEST), res);
