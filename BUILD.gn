@@ -11,41 +11,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if (defined(ohos_lite)) {
-  import("//build/lite/config/component/lite_component.gni")
-  lite_component("deviceauth_lite") {
-    features = [ "services:deviceauth" ]
-    if (ohos_kernel_type == "linux" || ohos_kernel_type == "liteos_a") {
-      features += [
-        "services:deviceauth_service",
-        "services:deviceauth_sdk",
-      ]
-    }
-  }
-} else {
-  import("//build/ohos.gni")
-  import("deviceauth_env.gni")
+import("//build/ohos.gni")
+import("deviceauth_env.gni")
 
-  group("deviceauth_sdk_build") {
-    if (os_level == "standard" || os_level == "small") {
-      deps = [ "services:deviceauth_sdk" ]
-    }
+group("deviceauth_sdk_build") {
+  if (os_level == "standard" || os_level == "small") {
+    deps = [ "services:deviceauth_sdk" ]
   }
+}
 
-  group("deviceauth_service_build") {
-    if (os_level == "standard" || os_level == "small") {
-      deps = [ "services:deviceauth_service" ]
-    }
+group("deviceauth_service_build") {
+  if (os_level == "standard" || os_level == "small") {
+    deps = [ "services:deviceauth_service" ]
   }
+}
 
-  group("deviceauth_build") {
-    deps = [ "services:deviceauth" ]
-  }
+group("deviceauth_build") {
+  deps = [ "services:deviceauth" ]
+}
 
-  group("deviceauth_test_build") {
-    if (os_level == "standard") {
-      testonly = true
-      deps = [ "test/unittest/deviceauth:deviceauth_llt" ]
-    }
+group("deviceauth_test_build") {
+  if (os_level == "standard") {
+    testonly = true
+    deps = [ "test/unittest/deviceauth:deviceauth_llt" ]
   }
 }

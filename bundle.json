@@ -45,7 +45,8 @@
         "sub_component": [
           "//base/security/deviceauth:deviceauth_sdk_build",
           "//base/security/deviceauth:deviceauth_service_build",
-          "//base/security/deviceauth:deviceauth_build"
+          "//base/security/deviceauth:deviceauth_build",
+          "//base/security/deviceauth/frameworks/deviceauth_lite:hichainsdk"
         ],
         "inner_kits": [
           {
@@ -60,7 +61,8 @@
           }
         ],
         "test": [
-            "//base/security/deviceauth:deviceauth_test_build"
+            "//base/security/deviceauth:deviceauth_test_build",
+            "//base/security/deviceauth/frameworks/deviceauth_lite:deviceauth_lite_test_build"
         ]
       }
     }
