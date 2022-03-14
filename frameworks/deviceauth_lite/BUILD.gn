@@ -13,13 +13,21 @@
 # limitations under the License.
 #
 
-import("//build/lite/config/component/lite_component.gni")
+import("//build/ohos.gni")
 
-lite_component("hichainsdk") {
-  features = [
-    "//base/security/deviceauth/frameworks/deviceauth_lite/source:hichainsdk",
-  ]
-  if (ohos_build_type == "debug" && ohos_kernel_type == "liteos_a") {
-    features += [ "//base/security/deviceauth/frameworks/deviceauth_lite/unittest:deviceauth_test" ]
+group("hichainsdk") {
+  deps = []
+  if (os_level == "mini" || os_level == "small") {
+    deps += [
+      "//base/security/deviceauth/frameworks/deviceauth_lite/source:hichainsdk",
+    ]
+  }
+}
+
+group("deviceauth_lite_test_build") {
+  testonly = true
+  deps = []
+  if (os_level == "small") {
+    deps += [ "//base/security/deviceauth/frameworks/deviceauth_lite/unittest:deviceauth_test" ]
   }
 }
