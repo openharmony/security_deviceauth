@@ -14,7 +14,7 @@
  */
 
 #include "clib_types.h"
-#include <securec.h>
+#include "securec.h"
 
 void *ClibMalloc(uint32_t size, char val)
 {

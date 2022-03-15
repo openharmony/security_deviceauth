@@ -15,7 +15,7 @@
 
 #if !(defined(_CUT_PAKE_) || defined(_CUT_PAKE_CLIENT_) || defined(_CUT_EXCHANGE_) || defined(_CUT_EXCHANGE_CLIENT_))
 #include "exchange_auth_info_client.h"
-#include <securec.h>
+#include "securec.h"
 #include "log.h"
 #include "base.h"
 #include "mem_stat.h"

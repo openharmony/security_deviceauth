@@ -17,7 +17,7 @@
 
 #if !(defined(_CUT_STS_) || defined(_CUT_STS_CLIENT_))
 #include <string.h>
-#include <securec.h>
+#include "securec.h"
 #include "huks_adapter.h"
 #include "log.h"
 #include "commonutil.h"

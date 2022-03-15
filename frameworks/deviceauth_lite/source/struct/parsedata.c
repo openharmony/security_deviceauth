@@ -14,7 +14,7 @@
  */
 
 #include "parsedata.h"
-#include <securec.h>
+#include "securec.h"
 #include "mem_stat.h"
 #include "jsonutil.h"
 #include "log.h"

@@ -402,12 +402,12 @@ int32_t GetAndCheckAuthIdPeer(const CJson *in, const Uint8Buff *authIdSelf, cons
         return HC_ERR_CONVERT_FAILED;
     }
     if ((authIdSelf->length == authIdPeer->length) &&
-        memcmp(authIdSelf->val, authIdPeer->val, authIdSelf->length) == 0) {
+        memcmp(authIdSelf->val, authIdPeer->val, authIdSelf->length) == EOK) {
         LOGE("Peer id can not be equal to self id.");
         HcFree(authIdPeerTmp);
         return HC_ERR_INVALID_PARAMS;
     }
-    if (memcmp(authIdPeer->val, authIdPeerTmp, authIdPeer->length) != 0) {
+    if (memcmp(authIdPeer->val, authIdPeerTmp, authIdPeer->length) != EOK) {
         LOGE("Peer authId does not match.");
         HcFree(authIdPeerTmp);
         return HC_ERR_INVALID_PARAMS;

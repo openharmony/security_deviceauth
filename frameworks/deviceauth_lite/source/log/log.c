@@ -16,7 +16,7 @@
 #ifndef _HC_DEBUG_
 
 #include "log.h"
-#include <securec.h>
+#include "securec.h"
 #include "base.h"
 
 #if defined(_WINDOWS)

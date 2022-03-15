@@ -127,10 +127,7 @@ static bool EndWithZero(HcParcel *parcel)
     if (p == NULL) {
         return false;
     }
-    if (*p == '\0') {
-        return true;
-    }
-    return false;
+    return (*p == '\0');
 }
 
 static bool LoadStringVectorFromParcel(StringVector *vec, HcParcel *parcel)
@@ -201,7 +198,7 @@ static bool GetOsAccountInfoPath(int32_t osAccountId, char *infoPath, uint32_t p
 {
     const char *beginPath = GetStorageDirPath();
     if (beginPath == NULL) {
-        LOGE("[DB]: Failed to get the stroage path dir!");
+        LOGE("[DB]: Failed to get the storage path dir!");
         return false;
     }
     int32_t ret;
@@ -424,13 +421,13 @@ static bool ReadParcelFromFile(int32_t osAccountId, HcParcel *parcel)
     }
     int fileSize = HcFileSize(file);
     if (fileSize <= 0) {
-        LOGE("[DB]: The databse file size is invalid!");
+        LOGE("[DB]: The database file size is invalid!");
         HcFileClose(file);
         return false;
     }
     char *fileData = (char *)HcMalloc(fileSize, 0);
     if (fileData == NULL) {
-        LOGE("[DB]: Failed to allocate fileData memroy!");
+        LOGE("[DB]: Failed to allocate fileData memory!");
         HcFileClose(file);
         return false;
     }
@@ -697,16 +694,25 @@ static TrustedDeviceEntry **QueryDeviceEntryPtrIfMatch(const DeviceEntryVec *vec
 
 static void PostGroupCreatedMsg(const TrustedGroupEntry *groupEntry)
 {
+    if (!IsBroadcastSupported()) {
+        return;
+    }
     GetBroadcaster()->postOnGroupCreated(groupEntry);
 }
 
 static void PostGroupDeletedMsg(const TrustedGroupEntry *groupEntry)
 {
+    if (!IsBroadcastSupported()) {
+        return;
+    }
     GetBroadcaster()->postOnGroupDeleted(groupEntry);
 }
 
 static void PostDeviceBoundMsg(OsAccountTrustedInfo *info, const TrustedDeviceEntry *deviceEntry)
 {
+    if (!IsBroadcastSupported()) {
+        return;
+    }
     QueryGroupParams groupParams = InitQueryGroupParams();
     groupParams.groupId = StringGet(&deviceEntry->groupId);
     TrustedGroupEntry **groupEntryPtr = QueryGroupEntryPtrIfMatch(&info->groups, &groupParams);
@@ -717,11 +723,21 @@ static void PostDeviceBoundMsg(OsAccountTrustedInfo *info, const TrustedDeviceEn
 
 static void PostDeviceUnBoundMsg(OsAccountTrustedInfo *info, const TrustedDeviceEntry *deviceEntry)
 {
+    if (!IsBroadcastSupported()) {
+        return;
+    }
+    const char *groupId = StringGet(&deviceEntry->groupId);
+    const char *udid = StringGet(&deviceEntry->udid);
     QueryGroupParams groupParams = InitQueryGroupParams();
-    groupParams.groupId = StringGet(&deviceEntry->groupId);
+    groupParams.groupId = groupId;
     TrustedGroupEntry **groupEntryPtr = QueryGroupEntryPtrIfMatch(&info->groups, &groupParams);
     if (groupEntryPtr != NULL) {
-        GetBroadcaster()->postOnDeviceUnBound(StringGet(&deviceEntry->udid), *groupEntryPtr);
+        GetBroadcaster()->postOnDeviceUnBound(udid, *groupEntryPtr);
+    }
+    QueryDeviceParams deviceParams = InitQueryDeviceParams();
+    deviceParams.udid = udid;
+    if (QueryDeviceEntryPtrIfMatch(&info->devices, &deviceParams) == NULL) {
+        GetBroadcaster()->postOnDeviceNotTrusted(udid);
     }
 }
 
@@ -1021,7 +1037,7 @@ int32_t QueryGroups(int32_t osAccountId, const QueryGroupParams *params, GroupEn
             continue;
         }
         if (vec->pushBackT(vec, newEntry) == NULL) {
-            LOGE("[DB]: Faild to push entry to vec!");
+            LOGE("[DB]: Failed to push entry to vec!");
             DestroyGroupEntry(newEntry);
         }
     }
@@ -1053,7 +1069,7 @@ int32_t QueryDevices(int32_t osAccountId, const QueryDeviceParams *params, Devic
             continue;
         }
         if (vec->pushBackT(vec, newEntry) == NULL) {
-            LOGE("[DB]: Faild to push entry to vec!");
+            LOGE("[DB]: Failed to push entry to vec!");
             DestroyDeviceEntry(newEntry);
         }
     }
