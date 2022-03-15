@@ -15,7 +15,7 @@
 
 #include "deviceauth_test.h"
 #include <gtest/gtest.h>
-#include <securec.h>
+#include "securec.h"
 #include "hichain.h"
 
 #define LOG(format, ...) (printf(format"\n", ##__VA_ARGS__))
@@ -54,7 +54,7 @@ static void Transmit(const struct session_identity *identity, const void *data, 
     LOG("--------Transmit--------");
     LOG("identity session_id[%d] package_name[%s]", identity->session_id, identity->package_name.name);
     LOG("data[%s]", (char *)data);
-    LOG("length[%d]", length);
+    LOG("length[%u]", length);
     LOG("--------Transmit--------");
 }
 

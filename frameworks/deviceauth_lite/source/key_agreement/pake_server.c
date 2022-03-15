@@ -18,7 +18,7 @@
 
 #if !(defined(_CUT_PAKE_) || defined(_CUT_PAKE_SERVER_))
 
-#include <securec.h>
+#include "securec.h"
 #include "huks_adapter.h"
 #include "mem_stat.h"
 

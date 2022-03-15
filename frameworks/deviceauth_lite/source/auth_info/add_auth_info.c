@@ -15,7 +15,7 @@
 
 #include "add_auth_info.h"
 #include <string.h>
-#include <securec.h>
+#include "securec.h"
 #include "log.h"
 #include "base.h"
 #include "mem_stat.h"
@@ -192,7 +192,7 @@ int32_t import_signed_auth_info_hilink(const struct hichain *hichain, const stru
     uint32_t len = (data->length / BYTE_TO_HEX_OPER_LENGTH) + 1;
     uint8_t *receive_data = (uint8_t *)MALLOC(len);
     if (receive_data == NULL) {
-        LOGE("malloc inport signed auth info receive data failed");
+        LOGE("malloc import signed auth info receive data failed");
         return HC_MALLOC_FAILED;
     }
     (void)memset_s(receive_data, len, 0, len);

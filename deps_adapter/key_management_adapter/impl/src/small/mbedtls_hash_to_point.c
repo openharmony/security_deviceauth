@@ -16,7 +16,7 @@
 #include "mbedtls_hash_to_point.h"
 #include <stdio.h>
 #include <mbedtls/bignum.h>
-#include <securec.h>
+#include "securec.h"
 #include "alg_defs.h"
 #include "hal_error.h"
 #include "hc_log.h"

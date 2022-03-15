@@ -28,7 +28,6 @@ void print_bytes(uint8_t *buf, int32_t buf_len);
 
 int32_t byte_convert(json_pobject obj, const char *field, uint8_t *hex, uint32_t *length, uint32_t max_len);
 int32_t string_convert(json_pobject obj, const char *field, uint8_t *str, uint32_t *length, uint32_t max_len);
-void hex_string_convert(uint32_t length, const uint8_t *hex, const char *field, json_pobject parent);
 
 int32_t memory_copy_error(const char *fun, unsigned int line);
 

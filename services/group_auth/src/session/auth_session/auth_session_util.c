@@ -90,7 +90,7 @@ int32_t GetInfoHash(const uint8_t *info, uint32_t infoLen, char *str, uint32_t s
     }
     int32_t res;
     do {
-        if (memcpy_s(message.val, message.length, info, infoLen) != HC_SUCCESS) {
+        if (memcpy_s(message.val, message.length, info, infoLen) != EOK) {
             LOGE("Failed to copy data!");
             res = HC_ERR_ALLOC_MEMORY;
             break;

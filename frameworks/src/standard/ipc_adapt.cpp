@@ -1349,6 +1349,7 @@ int32_t AddDevAuthServiceToManager(uintptr_t *serviceCtx)
     ret = sysMgr->AddSystemAbility(DEVICE_AUTH_SERVICE_ID, sPtr);
     if (ret != ERR_OK) {
         LOGE("add service failed");
+        delete sPtr;
         return HC_ERROR;
     }
     *serviceCtx = reinterpret_cast<uintptr_t>(sPtr);

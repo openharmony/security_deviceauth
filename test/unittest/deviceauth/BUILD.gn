@@ -30,6 +30,7 @@ ohos_unittest("deviceauth_llt") {
     "//foundation/communication/dsoftbus/interfaces/kits/common",
     "//foundation/communication/dsoftbus/interfaces/kits/transport",
     "//foundation/communication/dsoftbus/interfaces/inner_kits/transport",
+    "//base/startup/syspara_lite/interfaces/innerkits/native/syspara/include",
   ]
 
   sources = [
@@ -47,19 +48,18 @@ ohos_unittest("deviceauth_llt") {
     "${os_adapter_path}/impl/src/hc_task_thread.c",
     "${os_adapter_path}/impl/src/hc_time.c",
     "${os_adapter_path}/impl/src/linux/hc_condition.c",
+    "${os_adapter_path}/impl/src/linux/hc_dev_info.c",
     "${os_adapter_path}/impl/src/linux/hc_file.c",
     "${os_adapter_path}/impl/src/linux/hc_init_protection.c",
     "${os_adapter_path}/impl/src/linux/hc_thread.c",
     "${os_adapter_path}/impl/src/linux/hc_types.c",
   ]
   sources += deviceauth_files
-  sources += [
-    "source/deviceauth_standard_test.cpp",
-    "source/deviceauth_test_mock.cpp",
-  ]
+  sources += [ "source/deviceauth_standard_test.cpp" ]
 
   deps = [
     "//base/security/huks/interfaces/innerkits/huks_standard/main:libhukssdk",
+    "//base/startup/syspara_lite/interfaces/innerkits/native/syspara:syspara",
     "//third_party/cJSON:cjson_static",
     "//third_party/googletest:gmock_main",
     "//third_party/googletest:gtest_main",

@@ -15,7 +15,7 @@
 
 #if !(defined(_CUT_STS_) || defined(_CUT_STS_SERVER_))
 
-#include <securec.h>
+#include "securec.h"
 #include "log.h"
 #include "mem_stat.h"
 #include "jsonutil.h"
@@ -90,8 +90,8 @@ void free_auth_start_request(void *obj)
     }
 }
 
-static char *make_requst_json_str(struct sts_start_request_data *auth_start_request,
-                                  struct sts_start_request_data_hex tmp_hex)
+static char *make_request_json_str(struct sts_start_request_data *auth_start_request,
+                                   struct sts_start_request_data_hex tmp_hex)
 {
     char *tmp_str = (char *)MALLOC(RET_STR_LENGTH);
     if (tmp_str == NULL) {
@@ -156,7 +156,7 @@ char *make_auth_start_request(void *data)
         FREE(tmp_hex.tmp_cha_data_hex);
         return NULL;
     }
-    char *ret_str = make_requst_json_str(auth_start_request, tmp_hex);
+    char *ret_str = make_request_json_str(auth_start_request, tmp_hex);
     FREE(tmp_hex.tmp_epk_data_hex);
     FREE(tmp_hex.tmp_cha_data_hex);
     FREE(tmp_hex.tmp_type_data_hex);

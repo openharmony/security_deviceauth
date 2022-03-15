@@ -998,7 +998,7 @@ int32_t ProcessKeyPair(int action, const CJson *jsonParams, const char *groupId)
         LOGE("Failed to allocate authIdBuff memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    if (memcpy_s(authIdBuff.val, authIdBuff.length, authId, authIdBuff.length) != HC_SUCCESS) {
+    if (memcpy_s(authIdBuff.val, authIdBuff.length, authId, authIdBuff.length) != EOK) {
         LOGE("Failed to copy authId!");
         HcFree(authIdBuff.val);
         return HC_ERR_MEMORY_COPY;

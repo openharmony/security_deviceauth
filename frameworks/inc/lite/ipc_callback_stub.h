@@ -25,7 +25,7 @@ extern "C" {
 
 typedef struct {
     SvcIdentity stubIdentity;
-    bool registed;
+    bool registered;
 } StubDevAuthCb;
 
 int32_t CbStubOnRemoteRequest(const IpcContext *ctx, void *ipcMsg, IpcIo *data, void *arg);

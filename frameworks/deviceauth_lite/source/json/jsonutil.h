@@ -22,7 +22,7 @@ typedef void *json_handle;
 typedef void *json_pobject;
 
 json_handle parse_json(const char *data);
-void free_json(json_handle hanlde);
+void free_json(json_handle handle);
 
 json_pobject get_json_obj(json_pobject parent, const char *field);
 int32_t get_json_int(json_pobject obj, const char *field);
