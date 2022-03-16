@@ -84,6 +84,16 @@ typedef enum {
 } GroupType;
 
 typedef enum {
+    ALL_GROUP_VISIBILITY = -2,
+    GROUP_VISIBILITY_PRIVATE = 0,
+    GROUP_VISIBILITY_ALLOW_LIST = 1,
+    GROUP_VISIBILITY_SIGNATURE = 2,
+    GROUP_VISIBILITY_SYSTEM = 4,
+    GROUP_VISIBILITY_PRIVILEGE = 8,
+    GROUP_VISIBILITY_PUBLIC = -1
+} GroupVisibility;
+
+typedef enum {
     GROUP_CREATE = 0,
     GROUP_DISBAND = 1,
     MEMBER_INVITE = 2,
@@ -148,13 +158,8 @@ typedef struct {
 typedef struct {
     int32_t (*processData)(int64_t authReqId, const uint8_t *data, uint32_t dataLen,
         const DeviceAuthCallback *gaCallback);
-    int32_t (*queryTrustedDeviceNum)(void);
-    bool (*isTrustedDevice)(const char *udid);
-    int32_t (*getAuthState)(int64_t authReqId, const char *groupId, const char *peerUdid,
-        uint8_t *out, uint32_t *outLen);
     int32_t (*authDevice)(int32_t osAccountId, int64_t authReqId, const char *authParams,
         const DeviceAuthCallback *gaCallback);
-    void (*informDeviceDisconnection)(const char *udid);
 } GroupAuthManager;
 
 typedef struct {
@@ -168,27 +173,11 @@ typedef struct {
     int32_t (*deleteMemberFromGroup)(int32_t osAccountId, int64_t requestId, const char *appId,
         const char *deleteParams);
     int32_t (*processData)(int64_t requestId, const uint8_t *data, uint32_t dataLen);
-    int32_t (*confirmRequest)(int32_t osAccountId, int64_t requestId, const char *appId, const char *confirmParams);
-    int32_t (*bindPeer)(int64_t requestId, const char *appId, const char *bindParams);
-    int32_t (*unbindPeer)(int64_t requestId, const char *appId, const char *unbindParams);
-    int32_t (*processLiteData)(int64_t requestId, const char *appId, const uint8_t *data, uint32_t dataLen);
-    int32_t (*authKeyAgree)(int64_t requestId, const char *appId, const char *buildParams);
-    int32_t (*processKeyAgreeData)(int64_t requestId, const char *appId, const uint8_t *data, uint32_t dataLen);
     int32_t (*processCredential)(int operationCode, const char *reqJsonStr, char **returnJsonStr);
     int32_t (*getRegisterInfo)(char **returnRegisterInfo);
-    int32_t (*getLocalConnectInfo)(char *returnInfo, int32_t bufLen);
     int32_t (*checkAccessToGroup)(int32_t osAccountId, const char *appId, const char *groupId);
     int32_t (*getPkInfoList)(int32_t osAccountId, const char *appId, const char *queryParams, char **returnInfoList,
         uint32_t *returnInfoNum);
-    int32_t (*addGroupManager)(int32_t osAccountId, const char *appId, const char *groupId, const char *managerAppId);
-    int32_t (*addGroupFriend)(int32_t osAccountId, const char *appId, const char *groupId, const char *friendAppId);
-    int32_t (*deleteGroupManager)(int32_t osAccountId, const char *appId, const char *groupId,
-        const char *managerAppId);
-    int32_t (*deleteGroupFriend)(int32_t osAccountId, const char *appId, const char *groupId, const char *friendAppId);
-    int32_t (*getGroupManagers)(int32_t osAccountId, const char *appId, const char *groupId, char **returnManagers,
-        uint32_t *returnSize);
-    int32_t (*getGroupFriends)(int32_t osAccountId, const char *appId, const char *groupId,
-        char **returnFriends, uint32_t *returnSize);
     int32_t (*getGroupInfoById)(int32_t osAccountId, const char *appId, const char *groupId, char **returnGroupInfo);
     int32_t (*getGroupInfo)(int32_t osAccountId, const char *appId, const char *queryParams,
         char **returnGroupVec, uint32_t *groupNum);
