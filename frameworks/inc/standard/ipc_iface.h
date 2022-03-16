@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Huawei Device Co., Ltd.
+ * Copyright (C) 2021-2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -26,7 +26,7 @@ public:
     enum {
         DEV_AUTH_CALL_REQUEST = 1,
     };
-    DECLARE_INTERFACE_DESCRIPTOR(u"MethodsIpcCall");
+    DECLARE_INTERFACE_DESCRIPTOR(u"deviceauth.IMethodsIpcCall");
 };
 
 class ICommIpcCallback : public IRemoteBroker {
@@ -34,7 +34,7 @@ public:
     enum {
         DEV_AUTH_CALLBACK_REQUEST = 1,
     };
-    DECLARE_INTERFACE_DESCRIPTOR(u"CommIpcCallback");
+    DECLARE_INTERFACE_DESCRIPTOR(u"deviceauth.ICommIpcCallback");
     virtual void DoCallBack(int32_t callbackId, uintptr_t cbHook,
         MessageParcel &dataParcel, MessageParcel &reply, MessageOption &option) = 0;
 };

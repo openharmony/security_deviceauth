@@ -1,4 +1,4 @@
-# Copyright (C) 2021 Huawei Device Co., Ltd.
+# Copyright (C) 2021-2022 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -193,10 +193,12 @@ if (os_level == "mini" || os_level == "small") {
       "//third_party/cJSON",
       "//utils/native/base/include",
       "${frameworks_path}/inc/standard",
+      "${dev_frameworks_path}/inc/permission_adapter",
       "//utils/system/safwk/native/include",
     ]
 
     sources = deviceauth_ipc_files
+    sources += permission_adapter_files
     sources += [ "${frameworks_path}/src/ipc_service.c" ]
 
     cflags = [ "-DHILOG_ENABLE" ]
@@ -213,6 +215,7 @@ if (os_level == "mini" || os_level == "small") {
     ]
 
     external_deps = [
+      "access_token:libaccesstoken_sdk",
       "hiviewdfx_hilog_native:libhilog",
       "ipc:ipc_core",
       "safwk:system_ability_fwk",
@@ -229,12 +232,14 @@ if (os_level == "mini" || os_level == "small") {
       "//third_party/cJSON",
       "//utils/native/base/include",
       "${frameworks_path}/inc/standard",
+      "${dev_frameworks_path}/inc/permission_adapter",
       "//utils/system/safwk/native/include",
       "//foundation/communication/ipc/interfaces/innerkits/ipc_core/include",
       "//foundation/distributedschedule/samgr/interfaces/innerkits/samgr_proxy/include",
     ]
 
     sources = deviceauth_ipc_files
+    sources += permission_adapter_files
     sources += [ "${frameworks_path}/src/ipc_sdk.c" ]
 
     defines = [
@@ -254,6 +259,7 @@ if (os_level == "mini" || os_level == "small") {
     ]
 
     external_deps = [
+      "access_token:libaccesstoken_sdk",
       "hiviewdfx_hilog_native:libhilog",
       "ipc:ipc_core",
       "samgr_standard:samgr_proxy",
