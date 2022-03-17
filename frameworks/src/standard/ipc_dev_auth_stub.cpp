@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Huawei Device Co., Ltd.
+ * Copyright (C) 2021-2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,6 +20,7 @@
 #include "ipc_adapt.h"
 #include "ipc_callback_stub.h"
 #include "ipc_sdk.h"
+#include "permission_adapter.h"
 #include "securec.h"
 #include "system_ability_definition.h"
 
@@ -146,6 +147,13 @@ static void InitCbStubTable()
 
 int32_t ServiceDevAuth::OnRemoteRequest(uint32_t code, MessageParcel &data, MessageParcel &reply, MessageOption &option)
 {
+    if (data.ReadInterfaceToken() != GetDescriptor()) {
+        LOGE("The client interface token is invalid!");
+        return -1;
+    }
+    if (CheckPermission() != HC_SUCCESS) {
+        return -1;
+    }
     int32_t ret = HC_ERR_IPC_UNKNOW_OPCODE;
     int32_t dataLen;
     int32_t methodId = 0;
