@@ -705,9 +705,9 @@ int32_t AddUdidToParams(TrustedDeviceEntry *devParams)
 int32_t AddAuthIdToParamsOrDefault(const CJson *jsonParams, TrustedDeviceEntry *devParams)
 {
     const char *authId = GetStringFromJson(jsonParams, FIELD_DEVICE_ID);
+    char udid[INPUT_UDID_LEN] = { 0 };
     if (authId == NULL) {
         LOGD("No authId is found. The default value is udid!");
-        char udid[INPUT_UDID_LEN] = { 0 };
         int32_t res = HcGetUdid((uint8_t *)udid, INPUT_UDID_LEN);
         if (res != HC_SUCCESS) {
             LOGE("Failed to get local udid! res: %d", res);
@@ -983,7 +983,7 @@ int32_t ProcessKeyPair(int action, const CJson *jsonParams, const char *groupId)
             LOGE("Failed to get local udid! res: %d", res);
             return HC_ERR_DB;
         }
-        authId = (char *)udid;
+        authId = udid;
     }
     int32_t userType = DEVICE_TYPE_ACCESSORY;
     (void)GetIntFromJson(jsonParams, FIELD_USER_TYPE, &userType);
