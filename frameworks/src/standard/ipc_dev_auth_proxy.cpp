@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Huawei Device Co., Ltd.
+ * Copyright (C) 2021-2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -84,6 +84,15 @@ int32_t ProxyDevAuthData::FinalCallRequest(int32_t methodId)
     dataPtr = const_cast<const uint8_t *>(reinterpret_cast<uint8_t *>(tmpDataParcel.GetData()));
     if ((dataLen <= 0) || (dataPtr == nullptr)) {
         LOGE("data invalid");
+        return HC_ERROR;
+    }
+    auto proxy = GetProxy();
+    if (proxy == nullptr) {
+        LOGE("get proxy failed");
+        return HC_ERR_IPC_GET_PROXY;
+    }
+    if (!dataParcel.WriteInterfaceToken(proxy->GetDescriptor())) {
+        LOGE("Failed to write interface token!");
         return HC_ERROR;
     }
     LOGI("method id %d, param num %d, data length %d", methodId, paramCnt, dataLen);
