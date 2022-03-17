@@ -273,29 +273,17 @@ DEVICE_AUTH_API_PUBLIC const DeviceGroupManager *GetGmInstance(void)
 
     g_groupManagerInstance->regCallback = RegGroupManagerCallback;
     g_groupManagerInstance->unRegCallback = UnRegGroupManagerCallback;
+    g_groupManagerInstance->regDataChangeListener = RegListenerImpl;
+    g_groupManagerInstance->unRegDataChangeListener = UnRegListenerImpl;
     g_groupManagerInstance->createGroup = CreateGroupImpl;
     g_groupManagerInstance->deleteGroup = DeleteGroupImpl;
     g_groupManagerInstance->addMemberToGroup = AddMemberToGroupImpl;
     g_groupManagerInstance->deleteMemberFromGroup = DeleteMemberFromGroupImpl;
     g_groupManagerInstance->processData = ProcessBindDataImpl;
-    g_groupManagerInstance->confirmRequest = ConfirmRequestImpl;
-    g_groupManagerInstance->bindPeer = BindPeerImpl;
-    g_groupManagerInstance->unbindPeer = UnbindPeerImpl;
-    g_groupManagerInstance->processLiteData = ProcessLiteDataImpl;
-    g_groupManagerInstance->authKeyAgree = AuthKeyAgreeImpl;
-    g_groupManagerInstance->processKeyAgreeData = ProcessKeyAgreeDataImpl;
     g_groupManagerInstance->processCredential = ProcessCredential;
     g_groupManagerInstance->getRegisterInfo = GetRegisterInfo;
-    g_groupManagerInstance->getLocalConnectInfo = NULL;
     g_groupManagerInstance->checkAccessToGroup = CheckAccessToGroupImpl;
-    g_groupManagerInstance->addGroupManager = AddGroupManagerImpl;
-    g_groupManagerInstance->deleteGroupManager = DeleteGroupManagerImpl;
-    g_groupManagerInstance->getGroupManagers = GetGroupManagersImpl;
-    g_groupManagerInstance->addGroupFriend = AddGroupFriendImpl;
-    g_groupManagerInstance->deleteGroupFriend = DeleteGroupFriendImpl;
-    g_groupManagerInstance->getGroupFriends = GetGroupFriendsImpl;
-    g_groupManagerInstance->regDataChangeListener = RegListenerImpl;
-    g_groupManagerInstance->unRegDataChangeListener = UnRegListenerImpl;
+    g_groupManagerInstance->getPkInfoList = GetPkInfoListImpl;
     g_groupManagerInstance->getGroupInfoById = GetGroupInfoByIdImpl;
     g_groupManagerInstance->getGroupInfo = GetGroupInfoImpl;
     g_groupManagerInstance->getJoinedGroups = GetJoinedGroupsImpl;
@@ -303,7 +291,6 @@ DEVICE_AUTH_API_PUBLIC const DeviceGroupManager *GetGmInstance(void)
     g_groupManagerInstance->getDeviceInfoById = GetDeviceInfoByIdImpl;
     g_groupManagerInstance->getTrustedDevices = GetTrustedDevicesImpl;
     g_groupManagerInstance->isDeviceInGroup = IsDeviceInGroupImpl;
-    g_groupManagerInstance->getPkInfoList = GetPkInfoListImpl;
     g_groupManagerInstance->destroyInfo = DestroyInfoImpl;
     return g_groupManagerInstance;
 }
@@ -316,10 +303,6 @@ DEVICE_AUTH_API_PUBLIC const GroupAuthManager *GetGaInstance(void)
     }
 
     g_groupAuthManager->processData = ProcessData;
-    g_groupAuthManager->queryTrustedDeviceNum = QueryTrustedDeviceNum;
-    g_groupAuthManager->isTrustedDevice = IsTrustedDevice;
-    g_groupAuthManager->getAuthState = GetAuthState;
     g_groupAuthManager->authDevice = AuthDevice;
-    g_groupAuthManager->informDeviceDisconnection = InformDeviceDisconnection;
     return g_groupAuthManager;
 }
