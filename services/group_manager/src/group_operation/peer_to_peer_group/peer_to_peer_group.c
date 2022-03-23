@@ -286,6 +286,7 @@ static int32_t AddAuthIdAndUserTypeToParams(int32_t osAccountId, const char *gro
     int32_t res = HcGetUdid((uint8_t *)localUdid, INPUT_UDID_LEN);
     if (res != HC_SUCCESS) {
         LOGE("Failed to get local udid! res: %d", res);
+        DestroyDeviceEntry(deviceInfo);
         return HC_ERR_DB;
     }
 

@@ -61,7 +61,7 @@ static int ExchangeRequest(AsyBaseCurTask *task, PakeParams *params, const CJson
     res = ClientRequestStandardUnbindExchange(params, &(realTask->params));
     if (res != HC_SUCCESS) {
         LOGE("ClientRequestStandardUnbindExchange failed");
-        return res;
+        goto ERR;
     }
 
     // package message
