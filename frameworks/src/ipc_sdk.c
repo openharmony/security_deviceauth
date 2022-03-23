@@ -1696,40 +1696,40 @@ static bool IpcGmIsDeviceInGroup(const char *appId, const char *groupId, const c
 
     LOGI("starting ...");
     if (!IS_STRING_VALID(appId) || !IS_STRING_VALID(groupId) || !IS_STRING_VALID(udid)) {
-        return HC_ERR_INVALID_PARAMS;
+        return false;
     }
     if (!IsServiceRunning()) {
         LOGE("service is not activity");
-        return HC_ERROR;
+        return false;
     }
     ret = CreateCallCtx(&callCtx, NULL);
     if (ret != HC_SUCCESS) {
         LOGE("CreateCallCtx failed, ret %d", ret);
-        return HC_ERR_IPC_INIT;
+        return false;
     }
     ret = SetCallRequestParamInfo(callCtx, PARAM_TYPE_APPID, (const uint8_t *)appId, strlen(appId) + 1);
     if (ret != HC_SUCCESS) {
         LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_APPID);
         DestroyCallCtx(&callCtx, NULL);
-        return HC_ERR_IPC_BUILD_PARAM;
+        return false;
     }
     ret = SetCallRequestParamInfo(callCtx, PARAM_TYPE_GROUPID, (const uint8_t *)groupId, strlen(groupId) + 1);
     if (ret != HC_SUCCESS) {
         LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_GROUPID);
         DestroyCallCtx(&callCtx, NULL);
-        return HC_ERR_IPC_BUILD_PARAM;
+        return false;
     }
     ret = SetCallRequestParamInfo(callCtx, PARAM_TYPE_UDID, (const uint8_t *)udid, strlen(udid) + 1);
     if (ret != HC_SUCCESS) {
         LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_UDID);
         DestroyCallCtx(&callCtx, NULL);
-        return HC_ERR_IPC_BUILD_PARAM;
+        return false;
     }
     ret = DoBinderCall(callCtx, IPC_CALL_ID_IS_DEV_IN_GROUP, true);
     if (ret == HC_ERR_IPC_INTERNAL_FAILED) {
         LOGE("ipc call failed");
         DestroyCallCtx(&callCtx, NULL);
-        return HC_ERR_IPC_PROC_FAILED;
+        return false;
     }
     DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
     ret = HC_ERR_IPC_UNKNOW_REPLY;
@@ -1909,29 +1909,29 @@ static bool IpcGaIsTrustedDevice(const char *udid)
 
     LOGI("starting ...");
     if (udid == NULL) {
-        return HC_ERR_INVALID_PARAMS;
+        return false;
     }
     if (!IsServiceRunning()) {
         LOGE("service is not activity");
-        return HC_ERROR;
+        return false;
     }
     ret = CreateCallCtx(&callCtx, NULL);
     if (ret != HC_SUCCESS) {
         LOGE("CreateCallCtx failed, ret %d", ret);
-        return HC_ERR_IPC_INIT;
+        return false;
     }
     uint32_t udidLen = strlen(udid) + 1;
     ret = SetCallRequestParamInfo(callCtx, PARAM_TYPE_COMM_DATA, (const uint8_t *)udid, udidLen);
     if (ret != HC_SUCCESS) {
         LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_COMM_DATA);
         DestroyCallCtx(&callCtx, NULL);
-        return HC_ERR_IPC_BUILD_PARAM;
+        return false;
     }
     ret = DoBinderCall(callCtx, IPC_CALL_ID_IS_TRUST_DEVICE, true);
     if (ret == HC_ERR_IPC_INTERNAL_FAILED) {
         LOGE("ipc call failed");
         DestroyCallCtx(&callCtx, NULL);
-        return HC_ERR_IPC_PROC_FAILED;
+        return false;
     }
     DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
     ret = HC_ERR_IPC_UNKNOW_REPLY;
