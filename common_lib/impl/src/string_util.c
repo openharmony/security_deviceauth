@@ -241,11 +241,12 @@ int32_t ToUpperCase(const char *oriStr, char **desStr)
     if (oriStr == NULL || desStr == NULL) {
         return CLIB_ERR_NULL_PTR;
     }
-    *desStr = ClibMalloc(strlen(oriStr) + 1, 0);
+    uint32_t len = strlen(oriStr);
+    *desStr = ClibMalloc(len + 1, 0);
     if (*desStr == NULL) {
         return CLIB_ERR_BAD_ALLOC;
     }
-    for (uint32_t i = 0; i < strlen(oriStr); i++) {
+    for (uint32_t i = 0; i < len; i++) {
         if ((oriStr[i] >= 'a') && (oriStr[i] <= 'f')) {
             (*desStr)[i] = oriStr[i] - ASCII_CASE_DIFFERENCE_VALUE;
         } else {
