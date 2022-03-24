@@ -88,7 +88,7 @@ const char *GetParcelData(const HcParcel *parcel)
     return parcel->data + parcel->beginPos;
 }
 
-const char* GetParcelLastChar(const HcParcel *parcel)
+const char *GetParcelLastChar(const HcParcel *parcel)
 {
     if (parcel == NULL || GetParcelDataSize(parcel) == 0) {
         return NULL;
@@ -159,7 +159,6 @@ HcBool ParcelEraseBlock(HcParcel *parcel, uint32_t start, uint32_t dataSize, voi
     return HC_TRUE;
 }
 
-
 HcBool ParcelReadRevert(HcParcel *parcel, void *dst, uint32_t dataSize)
 {
     if (ParcelRead(parcel, dst, dataSize)) {
@@ -183,7 +182,7 @@ HcBool ParcelWriteRevert(HcParcel *parcel, const void *src, uint32_t dataSize)
         return HC_FALSE;
     }
     DataRevert(srcCopy, dataSize);
-    HcBool ret = ParcelWrite(parcel, srcCopy,  dataSize);
+    HcBool ret = ParcelWrite(parcel, srcCopy, dataSize);
     ClibFree(srcCopy);
     return ret;
 }
@@ -233,7 +232,7 @@ static HcBool ParcelRealloc(HcParcel *parcel, uint32_t size)
     if (parcel->length >= size) {
         return HC_FALSE;
     }
-    char *newData = (char*)ClibMalloc(size, 0);
+    char *newData = (char *)ClibMalloc(size, 0);
     if (newData == NULL) {
         return HC_FALSE;
     }
@@ -256,7 +255,7 @@ static HcBool ParcelIncrease(HcParcel *parcel, uint32_t size)
         if (parcel->length != 0) {
             return HC_FALSE;
         }
-        (*parcel) = CreateParcel(size, parcel->allocUnit);
+        *parcel = CreateParcel(size, parcel->allocUnit);
         if (parcel->data == NULL) {
             return HC_FALSE;
         } else {
@@ -372,7 +371,7 @@ HcBool ParcelReadParcel(HcParcel *src, HcParcel *dst, uint32_t size, HcBool copy
     if (GetParcelDataSize(src) < size) {
         return HC_FALSE;
     }
-    if (!ParcelWrite(dst, (void*)GetParcelData(src), size)) {
+    if (!ParcelWrite(dst, (void *)GetParcelData(src), size)) {
         return HC_FALSE;
     }
 
