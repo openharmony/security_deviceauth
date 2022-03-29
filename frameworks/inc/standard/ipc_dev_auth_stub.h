@@ -52,7 +52,7 @@ private:
 class DevAuthDeathRecipient : public IRemoteObject::DeathRecipient {
 public:
     DevAuthDeathRecipient() {}
-    DevAuthDeathRecipient(int32_t cbIdx);
+    explicit DevAuthDeathRecipient(int32_t cbIdx);
     ~DevAuthDeathRecipient() {}
     virtual void OnRemoteDied(const wptr<IRemoteObject>& remoteObject) override;
 private:
