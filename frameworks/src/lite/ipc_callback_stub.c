@@ -57,11 +57,16 @@ static int32_t CbStubOnRemoteReply(void *ipcMsg, IpcIo *reply)
     IpcIo replyErr;
     uint8_t replyBuff[16] = {0}; /* length of reply buffer - 16 */
 
+    /* flag: ipc mode is blocking or non blocking. */
     GetFlag(ipcMsg, &flag);
-    if (flag != 0) {
+    if (flag != LITEIPC_FLAG_DEFAULT) {
+        /* Ipc mode is non blocking. */
         LOGI("callback - async call(%u)", flag);
+        /* If the system is based on liteipc, the ipcMsg memory needs to be cleaned manually. */
+        FreeBuffer(NULL, ipcMsg);
         return 0;
     }
+    /* Ipc mode is blocking. */
     if (!IpcIoAvailable(reply)) {
         IpcIoInit(&replyErr, replyBuff, sizeof(replyBuff), 0);
         IpcIoPushInt32(&replyErr, HC_ERR_IPC_INTERNAL_FAILED);
