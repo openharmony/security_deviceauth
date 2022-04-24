@@ -484,48 +484,6 @@ static int32_t ProcessBindData(int64_t requestId, CJson *jsonParams, const Devic
     return instance->processData(requestId, jsonParams, callback);
 }
 
-static int32_t GenerateAccountGroupId(int32_t groupType, const char *userIdHash, const char *sharedUserIdHash,
-    char **returnGroupId)
-{
-    if ((!IsAccountRelatedGroup(groupType)) || (!IsGroupTypeSupported(groupType))) {
-        LOGE("This type of group is not supported!");
-        return HC_ERR_INVALID_PARAMS;
-    }
-    if (groupType == IDENTICAL_ACCOUNT_GROUP) {
-        IdenticalAccountGroup *instance = (IdenticalAccountGroup *)GetIdenticalAccountGroupInstance();
-        if ((instance == NULL) || (instance->generateGroupId == NULL)) {
-            LOGE("The group instance is NULL or its function ptr is NULL!");
-            return HC_ERR_NULL_PTR;
-        }
-        return instance->generateGroupId(userIdHash, returnGroupId);
-    }
-    AcrossAccountGroup *instance = (AcrossAccountGroup *)GetAcrossAccountGroupInstance();
-    if ((instance == NULL) || (instance->generateGroupId == NULL)) {
-        LOGE("The group instance is NULL or its function ptr is NULL!");
-        return HC_ERR_NULL_PTR;
-    }
-    return instance->generateGroupId(userIdHash, sharedUserIdHash, returnGroupId);
-}
-
-static int32_t SyncAcrossAccountGroup(const char *appId, const char *userIdHash, const char *deviceId,
-    const CJson *sharedUserIdHashList)
-{
-    if ((appId == NULL) || (deviceId == NULL) || (userIdHash == NULL) || (sharedUserIdHashList == NULL)) {
-        LOGE("The input parameters contains NULL value!");
-        return HC_ERR_INVALID_PARAMS;
-    }
-    if (!IsAcrossAccountGroupSupported()) {
-        LOGE("Across account group is not supported!");
-        return HC_ERR_NOT_SUPPORT;
-    }
-    AcrossAccountGroup *instance = (AcrossAccountGroup *)GetAcrossAccountGroupInstance();
-    if ((instance == NULL) || (instance->syncGroup == NULL)) {
-        LOGE("The group instance is NULL or its function ptr is NULL!");
-        return HC_ERR_NULL_PTR;
-    }
-    return instance->syncGroup(appId, userIdHash, deviceId, sharedUserIdHashList);
-}
-
 static int32_t AddGroupRoleWithCheck(int32_t osAccuntId, bool isManager, const char *appId, const char *groupId,
     const char *roleAppId)
 {
@@ -1172,8 +1130,6 @@ static const GroupImpl g_groupImplInstance = {
     .deleteMember = RequestDeleteMemberFromGroup,
     .processBindData = RequestProcessBindData,
     .confirmRequest = RequestConfirmRequest,
-    .generateAccountGroupId = GenerateAccountGroupId,
-    .syncAcrossAccountGroup = SyncAcrossAccountGroup,
     .addGroupRole = AddGroupRoleWithCheck,
     .deleteGroupRole = DeleteGroupRoleWithCheck,
     .getGroupRoles = GetGroupRolesWithCheck,

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Huawei Device Co., Ltd.
+ * Copyright (C) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include "mbedtls_hash_to_point.h"
+#include "mbedtls_ec_adapter.h"
 #include <stdio.h>
 #include <mbedtls/bignum.h>
 #include "securec.h"
@@ -278,4 +278,11 @@ int32_t MbedtlsHashToPoint(const Uint8Buff *hash, Uint8Buff *outEcPoint)
         LOGE("Elligator failed, status:%d", status);
     }
     return status;
+}
+
+// only support P256 AgreeSharedSecret for standard system
+int32_t MbedtlsAgreeSharedSecret(const KeyBuff *priKey, const KeyBuff *pubKey, Uint8Buff *sharedKey)
+{
+    LOGE("MbedtlsAgreeSharedSecret for P256 is not supported now in small system.");
+    return HAL_ERR_NOT_SUPPORTED;
 }

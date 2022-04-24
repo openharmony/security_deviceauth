@@ -41,7 +41,6 @@ inc_path = [
   "${group_manager_path}/inc/callback_manager",
   "${group_manager_path}/inc/channel_manager",
   "${group_manager_path}/inc/channel_manager/soft_bus_channel",
-  "${group_manager_path}/inc/lcm_adapter",
   "${group_manager_path}/inc/session",
   "${group_manager_path}/inc/session/bind_session",
   "${group_manager_path}/inc/session/bind_session_lite",
@@ -82,6 +81,7 @@ deviceauth_common_files = [
   "${protocol_path}/src/pake_protocol/pake_v1_protocol/pake_v1_protocol_common.c",
   "${protocol_path}/src/pake_protocol/pake_protocol_dl_common/pake_protocol_dl_common.c",
   "${protocol_path}/src/pake_protocol/pake_protocol_ec_common/pake_protocol_ec_common.c",
+  "${protocol_path}/src/pake_protocol/pake_v2_protocol/pake_v2_protocol_common.c",
 ]
 
 dev_frameworks_files = [
@@ -222,9 +222,6 @@ broadcast_manager_files =
 broadcast_manager_mock_files =
     [ "${group_manager_path}/src/broadcast_manager/broadcast_manager_mock.c" ]
 
-lcm_adapter_mock_files =
-    [ "${group_manager_path}/src/lcm_adapter_mock/lcm_adapter_mock.c" ]
-
 deviceauth_files =
     dev_frameworks_files + deviceauth_common_files + key_agree_mock_files
 
@@ -282,12 +279,12 @@ if (enable_p2p_auth_standard_protocol == true) {
 }
 
 if (enable_group == true && enable_account == true) {
-  import("//base/security/deviceauth_account/deviceauth_account.gni")
+  import("//base/security/deviceauth/services/deviceauth_account.gni")
   deviceauth_defines += account_related_defines
   inc_path += account_related_inc_path
   deviceauth_files += account_related_files + bind_peer_files
 } else if (enable_group == false && enable_account == true) {
-  import("//base/security/deviceauth_account/deviceauth_account.gni")
+  import("//base/security/deviceauth/services/deviceauth_account.gni")
   deviceauth_defines += account_related_defines
   inc_path += account_related_inc_path
   deviceauth_files +=
@@ -298,7 +295,7 @@ if (enable_group == true && enable_account == true) {
       group_auth_account_related_mock_files +
       group_manager_identical_account_mock_files +
       group_manager_across_account_mock_files + bind_peer_mock_files +
-      lcm_adapter_mock_files + authenticators_account_related_mock_files
+      authenticators_account_related_mock_files
 }
 
 if (enable_soft_bus_channel == true) {

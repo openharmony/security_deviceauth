@@ -22,6 +22,12 @@
 #include "hc_vector.h"
 #include "json_utils.h"
 
+#define FIELD_DEVICE_PK "devicePk"
+#define FIELD_UDID "udid"
+#define FIELD_PK_INFO_SIGNATURE "pkInfoSignature"
+#define FIELD_CREDENTIAL "credential"
+#define FIELD_SERVER_PK "serverPk"
+
 #define FIELD_ADD_TYPE "addType"
 #define FIELD_ADD_ID "addId"
 #define FIELD_ADD_KEY "addKey"
@@ -71,7 +77,6 @@
 #define FIELD_NONCE "nonce"
 #define FIELD_OPERATION_CODE "operationCode"
 #define FIELD_OPERATION_PARAMS "operationParams"
-#define FIELD_OS_ACCOUNT_ID "osAccountId"
 #define FIELD_OWNER_ID "ownerId"
 #define FIELD_OWNER_NAME "ownerName"
 #define FIELD_PERMISSION "Permission"
@@ -79,9 +84,12 @@
 #define FIELD_PEER_DEVICE_ID "peerDeviceId"
 #define FIELD_PIN_CODE "pinCode"
 #define FIELD_PUBLIC_KEY "publicKey"
+#define FIELD_PK_INFO "pkInfo"
 #define FIELD_PKG_NAME "pkgName"
 #define FIELD_SELF_AUTH_ID "selfAuthId"
 #define FIELD_SELF_DEVICE_ID "selfDeviceId"
+#define FIELD_SELF_DEV_ID "selfDevId"
+#define FIELD_SELF_USER_ID "selfUserId"
 #define FIELD_REQUEST_ID "requestId"
 #define FIELD_RECEIVED_DATA "receivedData"
 #define FIELD_RETURN_CODE "returnCode"
@@ -104,6 +112,13 @@
 #define FIELD_VERSION "version"
 #define FIELD_MK_AGREE_MSG "mkaMsg"
 #define FIELD_PEER_ID_FROM_REQUEST "peerIdFromRequest"
+#define FIELD_STEP "step"
+#define FIELD_DATA "data"
+#define FIELD_SUPPORTED_VERSION "supportedVersion"
+#define FIELD_EPK "epk"
+#define FIELD_AUTH_KEY_ALG_ENCODE "authKeyAlgEncode"
+#define FIELD_AUTH_PK_INFO "authPkInfo"
+#define FIELD_AUTH_PK_INFO_SIGN "authPkInfoSign"
 
 #define INVALID_MODULE_TYPE (-1)
 #define GROUP_ERR_MSG 0x8080
@@ -171,6 +186,14 @@ typedef enum {
 #define GOTO_IF_ERR(x) do { \
         int32_t res = x; \
         if ((res) != HC_SUCCESS) { \
+            goto ERR; \
+        } \
+    } while (0)
+
+#define GOTO_IF_CHECK_NULL(ptr, paramTag) \
+    do { \
+        if ((ptr) == NULL) { \
+            LOGE("%s is null ptr", (paramTag)); \
             goto ERR; \
         } \
     } while (0)

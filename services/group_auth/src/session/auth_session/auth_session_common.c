@@ -119,29 +119,6 @@ static int32_t AddGeneralParams(const char *groupId, int32_t groupType, const Tr
     return HC_SUCCESS;
 }
 
-static int32_t GetLocalDeviceInfoFromDatabase(int32_t osAccountId, const char *groupId,
-    TrustedDeviceEntry *localAuthInfo)
-{
-    char *localUdid = (char *)HcMalloc(INPUT_UDID_LEN, 0);
-    if (localUdid == NULL) {
-        LOGE("Failed to malloc for local udid!");
-        return HC_ERR_ALLOC_MEMORY;
-    }
-    int32_t res = HcGetUdid((uint8_t *)localUdid, INPUT_UDID_LEN);
-    if (res != HC_SUCCESS) {
-        LOGE("[DB]: Failed to get local udid! res: %d", res);
-        HcFree(localUdid);
-        return res;
-    }
-
-    res = GaGetTrustedDeviceEntryById(osAccountId, localUdid, true, groupId, localAuthInfo);
-    HcFree(localUdid);
-    if (res != HC_SUCCESS) {
-        LOGE("Failed to get local device info from database!");
-    }
-    return res;
-}
-
 static int32_t ExtractAndAddParams(int32_t osAccountId, const char *groupId,
     const TrustedGroupEntry *groupInfo, CJson *paramsData)
 {
@@ -154,7 +131,7 @@ static int32_t ExtractAndAddParams(int32_t osAccountId, const char *groupId,
     int32_t groupType = groupInfo->type;
     int32_t authForm = GroupTypeToAuthForm(groupType);
     do {
-        res = GetLocalDeviceInfoFromDatabase(osAccountId, groupId, localAuthInfo);
+        res = GaGetLocalDeviceInfo(osAccountId, groupId, localAuthInfo);
         if (res != HC_SUCCESS) {
             break;
         }
@@ -227,7 +204,7 @@ static void GetCandidateGroupByOrder(int32_t osAccountId, const CJson *param,
     BaseGroupAuth *groupAuth = GetGroupAuth(ACCOUNT_RELATED_GROUP_AUTH_TYPE);
     if (groupAuth != NULL) {
         AccountRelatedGroupAuth *realGroupAuth = (AccountRelatedGroupAuth *)groupAuth;
-        realGroupAuth->getAccountCandidateGroup(param, queryParams, vec);
+        realGroupAuth->getAccountCandidateGroup(osAccountId, param, queryParams, vec);
     }
     queryParams->groupType = PEER_TO_PEER_GROUP;
     if (QueryGroups(osAccountId, queryParams, vec) != HC_SUCCESS) {
@@ -767,14 +744,16 @@ int32_t ProcessTaskStatusForAuth(const AuthSession *session, const CJson *param,
 int32_t CreateAndProcessTask(AuthSession *session, CJson *paramInSession, CJson *out, int32_t *status)
 {
     int32_t moduleType = GetAuthModuleType(paramInSession);
-    const char *pkgName = GetStringFromJson(paramInSession, FIELD_SERVICE_PKG_NAME);
-    if (pkgName == NULL) {
-        LOGE("Pkg name is null!");
-        return HC_ERR_NULL_PTR;
-    }
-    if (AddStringToJson(paramInSession, FIELD_PKG_NAME, pkgName) != HC_SUCCESS) {
-        LOGE("Failed to add pkg name to json!");
-        return HC_ERR_JSON_FAIL;
+    if (moduleType == DAS_MODULE) {
+        const char *pkgName = GetStringFromJson(paramInSession, FIELD_SERVICE_PKG_NAME);
+        if (pkgName == NULL) {
+            LOGE("Pkg name is null!");
+            return HC_ERR_NULL_PTR;
+        }
+        if (AddStringToJson(paramInSession, FIELD_PKG_NAME, pkgName) != HC_SUCCESS) {
+            LOGE("Failed to add pkg name to json!");
+            return HC_ERR_JSON_FAIL;
+        }
     }
     session->curTaskId = 0;
     int32_t res = CreateTask(&(session->curTaskId), paramInSession, out, moduleType);

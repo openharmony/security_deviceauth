@@ -32,10 +32,6 @@ int32_t AddMemberToGroupImpl(int32_t osAccountId, int64_t requestId, const char 
 int32_t DeleteMemberFromGroupImpl(int32_t osAccountId, int64_t requestId, const char *appId, const char *deleteParams);
 int32_t ProcessBindDataImpl(int64_t requestId, const uint8_t *data, uint32_t dataLen);
 int32_t ConfirmRequestImpl(int32_t osAccountId, int64_t requestId, const char *appId, const char *confirmParams);
-int32_t GenerateAccountGroupIdImpl(int32_t groupType, const char *userIdHash, const char *sharedUserIdHash,
-    char **returnGroupId);
-int32_t SyncAcrossAccountGroupImpl(const char *appId, const char *userIdHash, const char *deviceId,
-    const CJson *sharedUserIdHashList);
 int32_t AddGroupManagerImpl(int32_t osAccountId, const char *appId, const char *groupId, const char *managerAppId);
 int32_t AddGroupFriendImpl(int32_t osAccountId, const char *appId, const char *groupId, const char *friendAppId);
 int32_t DeleteGroupManagerImpl(int32_t osAccountId, const char *appId, const char *groupId, const char *managerAppId);

@@ -37,6 +37,7 @@ int32_t HcGetUdid(uint8_t *udid, int32_t udidLen);
 
 const char *GetStoragePath(void);
 const char *GetStorageDirPath(void);
+const char *GetAccountStoragePath(void);
 
 #ifdef __cplusplus
 }

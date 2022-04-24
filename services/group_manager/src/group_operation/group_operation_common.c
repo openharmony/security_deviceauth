@@ -671,19 +671,35 @@ int32_t AddExpireTimeOrDefault(const CJson *jsonParams, TrustedGroupEntry *group
     return HC_SUCCESS;
 }
 
-int32_t AddUserIdHashToGroupParams(const CJson *jsonParams, TrustedGroupEntry *groupParams)
+int32_t AddUserIdToGroupParams(const CJson *jsonParams, TrustedGroupEntry *groupParams)
 {
-    char *userIdHash = NULL;
-    int32_t result = GetUserIdHashFromJson(jsonParams, &userIdHash);
+    char *userId = NULL;
+    int32_t result = GetUserIdFromJson(jsonParams, &userId);
     if (result != HC_SUCCESS) {
         return result;
     }
-    if (!StringSetPointer(&groupParams->userIdHash, userIdHash)) {
-        LOGE("Failed to copy userIdHash!");
-        HcFree(userIdHash);
+    if (!StringSetPointer(&groupParams->userId, userId)) {
+        LOGE("Failed to copy userId!");
+        HcFree(userId);
         return HC_ERR_MEMORY_COPY;
     }
-    HcFree(userIdHash);
+    HcFree(userId);
+    return HC_SUCCESS;
+}
+
+int32_t AddSharedUserIdToGroupParams(const CJson *jsonParams, TrustedGroupEntry *groupParams)
+{
+    char *sharedUserId = NULL;
+    int32_t result = GetSharedUserIdFromJson(jsonParams, &sharedUserId);
+    if (result != HC_SUCCESS) {
+        return result;
+    }
+    if (!StringSetPointer(&groupParams->sharedUserId, sharedUserId)) {
+        LOGE("Failed to copy sharedUserId!");
+        HcFree(sharedUserId);
+        return HC_ERR_MEMORY_COPY;
+    }
+    HcFree(sharedUserId);
     return HC_SUCCESS;
 }
 
@@ -748,27 +764,37 @@ int32_t AddGroupIdToDevParams(const char *groupId, TrustedDeviceEntry *devParams
     return HC_SUCCESS;
 }
 
-int32_t AddUserIdHashToDevParams(const CJson *jsonParams, TrustedDeviceEntry *devParams)
+int32_t AddUserIdToDevParams(const CJson *jsonParams, TrustedDeviceEntry *devParams)
 {
-    char *userIdHash = NULL;
-    int32_t result = GetUserIdHashFromJson(jsonParams, &userIdHash);
+    char *userId = NULL;
+    int32_t result = GetUserIdFromJson(jsonParams, &userId);
     if (result != HC_SUCCESS) {
         return result;
     }
-    if (!StringSetPointer(&devParams->userIdHash, userIdHash)) {
-        LOGE("Failed to copy userIdHash!");
-        HcFree(userIdHash);
+    if (!StringSetPointer(&devParams->userId, userId)) {
+        LOGE("Failed to copy userId!");
+        HcFree(userId);
         return HC_ERR_MEMORY_COPY;
     }
-    HcFree(userIdHash);
+    HcFree(userId);
     return HC_SUCCESS;
 }
 
-int32_t AssertUserIdHashExist(const CJson *jsonParams)
+int32_t AssertUserIdExist(const CJson *jsonParams)
 {
-    const char *userIdHash = GetStringFromJson(jsonParams, FIELD_USER_ID);
-    if (userIdHash == NULL) {
-        LOGE("Failed to get userIdHash from jsonParams!");
+    const char *userId = GetStringFromJson(jsonParams, FIELD_USER_ID);
+    if (userId == NULL) {
+        LOGE("Failed to get userId from jsonParams!");
+        return HC_ERR_JSON_GET;
+    }
+    return HC_SUCCESS;
+}
+
+int32_t AssertSharedUserIdExist(const CJson *jsonParams)
+{
+    const char *sharedUserId = GetStringFromJson(jsonParams, FIELD_PEER_USER_ID);
+    if (sharedUserId == NULL) {
+        LOGE("Failed to get sharedUserId from jsonParams!");
         return HC_ERR_JSON_GET;
     }
     return HC_SUCCESS;
@@ -1034,18 +1060,32 @@ int32_t GetGroupTypeFromDb(int32_t osAccountId, const char *groupId, int32_t *re
     return HC_SUCCESS;
 }
 
-int32_t GetUserIdHashFromJson(const CJson *jsonParams, char **userIdHash)
+int32_t GetUserIdFromJson(const CJson *jsonParams, char **userId)
 {
-    if ((jsonParams == NULL) || (userIdHash == NULL)) {
+    if ((jsonParams == NULL) || (userId == NULL)) {
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
-    const char *oriUserIdHash = GetStringFromJson(jsonParams, FIELD_USER_ID);
-    if (oriUserIdHash == NULL) {
-        LOGE("Failed to get userIdHash from jsonParams!");
+    const char *oriUserId = GetStringFromJson(jsonParams, FIELD_USER_ID);
+    if (oriUserId == NULL) {
+        LOGE("Failed to get userId from jsonParams!");
         return HC_ERR_JSON_GET;
     }
-    return ToUpperCase(oriUserIdHash, userIdHash);
+    return ToUpperCase(oriUserId, userId);
+}
+
+int32_t GetSharedUserIdFromJson(const CJson *jsonParams, char **sharedUserId)
+{
+    if ((jsonParams == NULL) || (sharedUserId == NULL)) {
+        LOGE("The input parameters contains NULL value!");
+        return HC_ERR_INVALID_PARAMS;
+    }
+    const char *oriUserId = GetStringFromJson(jsonParams, FIELD_PEER_USER_ID);
+    if (oriUserId == NULL) {
+        LOGE("Failed to get sharedUserId from jsonParams!");
+        return HC_ERR_JSON_GET;
+    }
+    return ToUpperCase(oriUserId, sharedUserId);
 }
 
 int32_t GetGroupIdFromJson(const CJson *jsonParams, const char **groupId)

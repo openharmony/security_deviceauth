@@ -137,3 +137,24 @@ int32_t GroupTypeToAuthForm(int32_t groupType)
     }
     return authForm;
 }
+
+int32_t AuthFormToGroupType(int32_t authForm)
+{
+    int32_t groupType;
+    switch (authForm) {
+        case AUTH_FORM_ACCOUNT_UNRELATED:
+            groupType = PEER_TO_PEER_GROUP;
+            break;
+        case AUTH_FORM_IDENTICAL_ACCOUNT:
+            groupType = IDENTICAL_ACCOUNT_GROUP;
+            break;
+        case AUTH_FORM_ACROSS_ACCOUNT:
+            groupType = ACROSS_ACCOUNT_AUTHORIZE_GROUP;
+            break;
+        default:
+            LOGE("Invalid auth form!");
+            groupType = GROUP_TYPE_INVALID;
+            break;
+    }
+    return groupType;
+}

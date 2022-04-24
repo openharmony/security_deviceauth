@@ -19,13 +19,13 @@
 #include "device_auth_defines.h"
 #include "hc_log.h"
 #include "hc_types.h"
-#define UID_HASH_HEX_STRING_LEN_MAX 64
-#define UID_HASH_HEX_STRING_LEN_MIN 10
+#define UID_HEX_STRING_LEN_MAX 64
+#define UID_HEX_STRING_LEN_MIN 10
 
-static bool IsPeerUidHashLenValid(uint32_t peerUidHashLen)
+static bool IsPeerUidLenValid(uint32_t peerUserIdLen)
 {
-    if ((peerUidHashLen < UID_HASH_HEX_STRING_LEN_MIN) || (peerUidHashLen > UID_HASH_HEX_STRING_LEN_MAX)) {
-        LOGE("The input uid hash len is invalid, input uid hash in hex string len = %d", peerUidHashLen);
+    if ((peerUserIdLen < UID_HEX_STRING_LEN_MIN) || (peerUserIdLen > UID_HEX_STRING_LEN_MAX)) {
+        LOGE("The input userId len is invalid, input userId in hex string len = %d", peerUserIdLen);
         return false;
     }
     return true;
@@ -143,32 +143,31 @@ int32_t GetGeneralReqParams(const CJson *receiveData, CJson *reqParam)
     return HC_SUCCESS;
 }
 
-bool IsUidHashEqual(const char *uidHashInDb, const char *peerUidHash)
+bool IsUserIdEqual(const char *userIdInDb, const char *peerUserIdInDb)
 {
-    if ((uidHashInDb == NULL) || (peerUidHash == NULL)) {
-        LOGE("Input is null for uid hash!");
+    if ((userIdInDb == NULL) || (peerUserIdInDb == NULL)) {
+        LOGE("Input is null for user id!");
         return false;
     }
-    char *peerUidHashToUpper = NULL;
-    int32_t result = ToUpperCase(peerUidHash, &peerUidHashToUpper);
-    if (result != HC_SUCCESS) {
-        LOGE("Failed to convert the input uidHash to upper case!");
-        return result;
-    }
-    uint32_t uidHashInDbLen = strlen(uidHashInDb);
-    uint32_t peerUidHashLen = strlen(peerUidHash);
-    if (!IsPeerUidHashLenValid(peerUidHashLen)) {
-        HcFree(peerUidHashToUpper);
-        peerUidHashToUpper = NULL;
+    char *peerUidToUpper = NULL;
+    if (ToUpperCase(peerUserIdInDb, &peerUidToUpper) != HC_SUCCESS) {
+        LOGE("Failed to convert the input userId to upper case!");
         return false;
     }
-    uint32_t cmpHashLen = (uidHashInDbLen > peerUidHashLen) ? peerUidHashLen : uidHashInDbLen;
-    if (memcmp(uidHashInDb, peerUidHashToUpper, cmpHashLen) == EOK) {
-        HcFree(peerUidHashToUpper);
-        peerUidHashToUpper = NULL;
+    uint32_t userIdInDbLen = HcStrlen(userIdInDb);
+    uint32_t peerUserIdLen = HcStrlen(peerUserIdInDb);
+    if (!IsPeerUidLenValid(peerUserIdLen)) {
+        HcFree(peerUidToUpper);
+        peerUidToUpper = NULL;
+        return false;
+    }
+    uint32_t cmpLen = (userIdInDbLen > peerUserIdLen) ? peerUserIdLen : userIdInDbLen;
+    if (memcmp(userIdInDb, peerUidToUpper, cmpLen) == EOK) {
+        HcFree(peerUidToUpper);
+        peerUidToUpper = NULL;
         return true;
     }
-    HcFree(peerUidHashToUpper);
-    peerUidHashToUpper = NULL;
+    HcFree(peerUidToUpper);
+    peerUidToUpper = NULL;
     return false;
 }

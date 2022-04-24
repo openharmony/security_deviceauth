@@ -30,10 +30,6 @@ typedef struct {
     int32_t (*deleteMember)(int32_t osAccountId, int64_t requestId, const char *appId, const char *deleteParams);
     int32_t (*processBindData)(int64_t requestId, const uint8_t *data, uint32_t dataLen);
     int32_t (*confirmRequest)(int32_t osAccountId, int64_t requestId, const char *appId, const char *confirmParams);
-    int32_t (*generateAccountGroupId)(int32_t groupType, const char *userIdHash, const char *sharedUserIdHash,
-        char **returnGroupId);
-    int32_t (*syncAcrossAccountGroup)(const char *appId, const char *userIdHash, const char *deviceId,
-        const CJson *sharedUserIdHashList);
     int32_t (*addGroupRole)(int32_t osAccountId, bool isManager, const char *appId, const char *groupId,
         const char *roleAppId);
     int32_t (*deleteGroupRole)(int32_t osAccountId, bool isManager, const char *appId, const char *groupId,

@@ -21,6 +21,7 @@
 #include "hc_types.h"
 
 #define BITS_PER_BYTE 8
+#define ECC_PK_LEN 32
 
 #define CAL_ARRAY_SIZE(arr) ((sizeof(arr)) / (sizeof((arr)[0])))
 

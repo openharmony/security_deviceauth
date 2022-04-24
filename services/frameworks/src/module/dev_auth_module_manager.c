@@ -17,6 +17,7 @@
 #include "common_defs.h"
 #include "das_module.h"
 #include "hc_log.h"
+#include "hc_types.h"
 #include "hc_vector.h"
 #include "account_module.h"
 #include "version_util.h"
@@ -257,6 +258,17 @@ static int32_t InitAccountModule(void)
     return HC_SUCCESS;
 }
 
+static int32_t ProcessCredentials(int32_t osAccountId, int32_t credentialOpCode,
+    const CJson *in, CJson *out, int moduleType)
+{
+    if (moduleType != ACCOUNT_MODULE) {
+        LOGE("Unsupported method in the module, moduleType: %d.", moduleType);
+        return HC_ERR_NOT_SUPPORT;
+    }
+
+    return ProcessAccountCredentials(osAccountId, credentialOpCode, in, out);
+}
+
 int32_t InitModules(void)
 {
     g_authModuleVec = CREATE_HC_VECTOR(AuthModuleVec);
@@ -297,12 +309,35 @@ void DestroyModules(void)
     (void)memset_s(&g_version, sizeof(VersionStruct), 0, sizeof(VersionStruct));
 }
 
-int32_t ProcessCredentials(int credentialOpCode, const CJson *in, CJson *out, int moduleType)
+int32_t GetRegisterInfo(const char *reqJsonStr, char **returnRegisterInfo)
 {
-    if (moduleType != ACCOUNT_MODULE) {
-        LOGE("Unsupported method in the module, moduleType: %d.", moduleType);
-        return HC_ERR_NOT_SUPPORT;
+    if ((reqJsonStr == NULL) || (returnRegisterInfo == NULL)) {
+        LOGE("The input param is NULL!");
+        return HC_ERR_NULL_PTR;
     }
-
-    return ProcessAccountCredentials(credentialOpCode, in, out);
+    CJson *requestJson = CreateJsonFromString(reqJsonStr);
+    if (requestJson == NULL) {
+        LOGE("Failed to create request json!");
+        return HC_ERR_JSON_CREATE;
+    }
+    CJson *registerInfo = CreateJson();
+    if (registerInfo == NULL) {
+        LOGE("Failed to allocate registerInfo memory!");
+        FreeJson(requestJson);
+        return HC_ERR_JSON_CREATE;
+    }
+    int32_t result = ProcessCredentials(0, REQUEST_SIGNATURE, requestJson, registerInfo, ACCOUNT_MODULE);
+    FreeJson(requestJson);
+    if (result != HC_SUCCESS) {
+        LOGE("Failed to get register info!");
+        FreeJson(registerInfo);
+        return result;
+    }
+    *returnRegisterInfo = PackJsonToString(registerInfo);
+    FreeJson(registerInfo);
+    if (*returnRegisterInfo == NULL) {
+        LOGE("Failed to convert json to string!");
+        return HC_ERR_PACKAGE_JSON_TO_STRING_FAIL;
+    }
+    return HC_SUCCESS;
 }
