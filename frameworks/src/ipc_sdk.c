@@ -565,21 +565,7 @@ static int32_t IpcGmProcessData(int64_t requestId, const uint8_t *data, uint32_t
     return ret;
 }
 
-static int32_t IpcGmProcCredential(int32_t operationCode, const char *credential, char **returnJsonStr)
-{
-    LOGI("starting ...");
-    (void)operationCode;
-    (void)returnJsonStr;
-    if (!IS_STRING_VALID(credential)) {
-        LOGE("The input groupType is invalid!");
-        return HC_ERR_INVALID_PARAMS;
-    }
-
-    LOGE("IpcGmProcCredential is currently not supported!");
-    return HC_ERR_NOT_SUPPORT;
-}
-
-static int32_t IpcGmGetRegisterInfo(char **registerInfo)
+static int32_t IpcGmGetRegisterInfo(const char *reqJsonStr, char **registerInfo)
 {
     uintptr_t callCtx = 0x0;
     int32_t ret;
@@ -588,7 +574,8 @@ static int32_t IpcGmGetRegisterInfo(char **registerInfo)
     char *outInfo = NULL;
 
     LOGI("starting ...");
-    if (registerInfo == NULL) {
+    if ((reqJsonStr == NULL) || (registerInfo == NULL)) {
+        LOGE("Invalid params.");
         return HC_ERR_INVALID_PARAMS;
     }
     if (!IsServiceRunning()) {
@@ -599,6 +586,12 @@ static int32_t IpcGmGetRegisterInfo(char **registerInfo)
     if (ret != HC_SUCCESS) {
         LOGE("CreateCallCtx failed, ret %d", ret);
         return HC_ERR_IPC_INIT;
+    }
+    ret = SetCallRequestParamInfo(callCtx, PARAM_TYPE_REQ_JSON, (const uint8_t *)reqJsonStr, strlen(reqJsonStr) + 1);
+    if (ret != HC_SUCCESS) {
+        LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_REQ_JSON);
+        DestroyCallCtx(&callCtx, NULL);
+        return HC_ERR_IPC_BUILD_PARAM;
     }
     ret = DoBinderCall(callCtx, IPC_CALL_ID_APPLY_REG_INFO, true);
     if (ret == HC_ERR_IPC_INTERNAL_FAILED) {
@@ -1372,7 +1365,6 @@ static void InitIpcGmMethods(DeviceGroupManager *gmMethodObj)
     gmMethodObj->addMemberToGroup = IpcGmAddMemberToGroup;
     gmMethodObj->deleteMemberFromGroup = IpcGmDelMemberFromGroup;
     gmMethodObj->processData = IpcGmProcessData;
-    gmMethodObj->processCredential = IpcGmProcCredential;
     gmMethodObj->getRegisterInfo = IpcGmGetRegisterInfo;
     gmMethodObj->checkAccessToGroup = IpcGmCheckAccessToGroup;
     gmMethodObj->getPkInfoList = IpcGmGetPkInfoList;

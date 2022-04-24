@@ -20,8 +20,8 @@
 #include "base_group_auth.h"
 #include "data_manager.h"
 
-typedef void (*GetAccountCandidateGroupFunc)(const CJson *param, const QueryGroupParams *queryParams,
-    GroupEntryVec *vec);
+typedef void (*GetAccountCandidateGroupFunc)(int32_t osAccountId, const CJson *param,
+    QueryGroupParams *queryParams, GroupEntryVec *vec);
 
 typedef struct {
     BaseGroupAuth base;

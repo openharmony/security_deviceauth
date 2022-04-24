@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Huawei Device Co., Ltd.
+ * Copyright (C) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,11 +13,12 @@
  * limitations under the License.
  */
 
-#ifndef MBEDTLS_HASH_TO_POINT_H
-#define MBEDTLS_HASH_TO_POINT_H
+#ifndef MBEDTLS_EC_ADAPTER_H
+#define MBEDTLS_EC_ADAPTER_H
 
 #include <stdint.h>
 #include "string_util.h"
+#include "alg_defs.h"
 
 #define HASH2POINT_PARA_PREPRO 0xc0
 #define BYTE_LENGTH_CURVE_25519 32
@@ -27,6 +28,7 @@ extern "C" {
 #endif
 
 int32_t MbedtlsHashToPoint(const Uint8Buff *hash, Uint8Buff *outEcPoint);
+int32_t MbedtlsAgreeSharedSecret(const KeyBuff *priKey, const KeyBuff *pubKey, Uint8Buff *sharedKey);
 
 #ifdef __cplusplus
 }

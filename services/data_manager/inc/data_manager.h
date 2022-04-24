@@ -33,8 +33,8 @@ typedef struct {
     int32_t type; /* including identical account group(1), peer to peer group(256), across account group(1282) */
     int32_t visibility; /* visibility of the group */
     int32_t expireTime; /* the time of group expired, unit day, user config */
-    HcString userIdHash; /* hash result of the user account id */
-    StringVector sharedUserIdHashVec; /* vector of hash results for shared user account id */
+    HcString userId; /* the user account id */
+    HcString sharedUserId; /* the shared user account id */
     StringVector managers; /* group manager vector, group manager can add and delete members, index 0 is the owner */
     StringVector friends; /* group friend vector, group friend can query group information */
 } TrustedGroupEntry;
@@ -45,11 +45,11 @@ typedef struct {
     HcString groupId;
     HcString udid; /* unique device id */
     HcString authId; /* id by service defined for authentication */
+    HcString userId; /* the user account id */
     HcString serviceType; /* compatible with previous versions, the value is the same as groupId */
     HcParcel ext; /* for caching extern data, user data */
     uint8_t credential; /* 1 - asymmetrical, 2 - symmetrical */
     uint8_t devType; /* 0 - accessory, 1 - controller, 2 - proxy */
-    HcString userIdHash; /* hash result of the user account id */
     uint64_t lastTm; /* accessed time of the device of the auth information, absolute time */
 } TrustedDeviceEntry;
 DECLARE_HC_VECTOR(DeviceEntryVec, TrustedDeviceEntry*)
@@ -58,6 +58,7 @@ typedef struct {
     const char *groupId;
     const char *groupName;
     const char *ownerName;
+    const char *userId;
     int32_t groupType;
     int32_t groupVisibility;
 } QueryGroupParams;

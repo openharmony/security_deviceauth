@@ -56,20 +56,6 @@ int32_t ConfirmRequestImpl(int32_t osAccountId, int64_t requestId, const char *a
         confirmParams) : HC_ERR_NOT_SUPPORT;
 }
 
-int32_t GenerateAccountGroupIdImpl(int32_t groupType, const char *userIdHash, const char *sharedUserIdHash,
-    char **returnGroupId)
-{
-    return IsGroupSupport() ? GetGroupImplInstance()->generateAccountGroupId(groupType, userIdHash, sharedUserIdHash,
-        returnGroupId) : HC_ERR_NOT_SUPPORT;
-}
-
-int32_t SyncAcrossAccountGroupImpl(const char *appId, const char *userIdHash, const char *deviceId,
-    const CJson *sharedUserIdHashList)
-{
-    return IsGroupSupport() ? GetGroupImplInstance()->syncAcrossAccountGroup(appId, userIdHash, deviceId,
-        sharedUserIdHashList) : HC_ERR_NOT_SUPPORT;
-}
-
 int32_t AddGroupManagerImpl(int32_t osAccountId, const char *appId, const char *groupId, const char *managerAppId)
 {
     return IsGroupSupport() ? GetGroupImplInstance()->addGroupRole(osAccountId, true, appId, groupId,

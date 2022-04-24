@@ -26,6 +26,8 @@ ohos_unittest("deviceauth_llt") {
   include_dirs += [
     "./include",
     "//third_party/json/include",
+    "//third_party/mbedtls/include",
+    "//third_party/mbedtls/include/mbedtls",
     "//utils/native/base/include",
     "//foundation/communication/dsoftbus/interfaces/kits/common",
     "//foundation/communication/dsoftbus/interfaces/kits/transport",
@@ -44,6 +46,7 @@ ohos_unittest("deviceauth_llt") {
     "${key_management_adapter_path}/impl/src/alg_loader.c",
     "${key_management_adapter_path}/impl/src/standard/crypto_hash_to_point.c",
     "${key_management_adapter_path}/impl/src/standard/huks_adapter.c",
+    "${key_management_adapter_path}/impl/src/standard/mbedtls_ec_adapter.c",
     "${os_adapter_path}/impl/src/hc_mutex.c",
     "${os_adapter_path}/impl/src/hc_task_thread.c",
     "${os_adapter_path}/impl/src/hc_time.c",
@@ -63,6 +66,7 @@ ohos_unittest("deviceauth_llt") {
     "//third_party/cJSON:cjson_static",
     "//third_party/googletest:gmock_main",
     "//third_party/googletest:gtest_main",
+    "//third_party/mbedtls:mbedtls_shared",
     "//third_party/openssl:libcrypto_static",
     "//utils/native/base:utils",
   ]

@@ -404,50 +404,20 @@ static int32_t IpcServiceGmProcessData(const IpcDataInfo *ipcParams, int32_t par
     return ret;
 }
 
-static int32_t IpcServiceGmSaveCredential(const IpcDataInfo *ipcParams, int32_t paramNum, uintptr_t outCache)
-{
-    int32_t callRet;
-    int32_t ret;
-    int32_t opCode = 0;
-    int32_t inOutLen;
-    const char *credential = NULL;
-    char *returnJsonStr = NULL;
-
-    LOGI("starting ...");
-    inOutLen = sizeof(int32_t);
-    ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_OPCODE, (uint8_t *)&opCode, &inOutLen);
-    if ((inOutLen != sizeof(int32_t)) || (ret != HC_SUCCESS)) {
-        LOGE("get param error, type %d", PARAM_TYPE_OPCODE);
-        return HC_ERR_IPC_BAD_PARAM;
-    }
-    ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_CREDENTIAL, (uint8_t *)&credential, NULL);
-    if ((credential == NULL) || (ret != HC_SUCCESS)) {
-        LOGE("get param error, type %d", PARAM_TYPE_CREDENTIAL);
-        return HC_ERR_IPC_BAD_PARAM;
-    }
-    callRet = g_devGroupMgrMethod.processCredential(opCode, credential, &returnJsonStr);
-    ret = IpcEncodeCallReplay(outCache, PARAM_TYPE_IPC_RESULT, (const uint8_t *)&callRet, sizeof(int32_t));
-    LOGI("process done, call ret %d, ipc ret %d", callRet, ret);
-    if ((ret == HC_SUCCESS) && (returnJsonStr != NULL)) {
-        ret += IpcEncodeCallReplay(outCache, PARAM_TYPE_REG_INFO,
-            (const uint8_t *)returnJsonStr, strlen(returnJsonStr) + 1);
-        g_devGroupMgrMethod.destroyInfo(&returnJsonStr);
-    } else {
-        ret += IpcEncodeCallReplay(outCache, PARAM_TYPE_REG_INFO, NULL, 0);
-    }
-    return (ret == HC_SUCCESS) ? ret : HC_ERROR;
-}
-
 static int32_t IpcServiceGmApplyRegisterInfo(const IpcDataInfo *ipcParams, int32_t paramNum, uintptr_t outCache)
 {
     int32_t callRet;
     int32_t ret;
+    const char *reqJsonStr = NULL;
     char *registerInfo = NULL;
 
-    (void)ipcParams;
-    (void)paramNum;
     LOGI("starting ...");
-    callRet = g_devGroupMgrMethod.getRegisterInfo(&registerInfo);
+    ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_REQ_JSON, (uint8_t *)&reqJsonStr, NULL);
+    if ((reqJsonStr == NULL) || (ret != HC_SUCCESS)) {
+        LOGE("get param error, type %d", PARAM_TYPE_REQ_JSON);
+        return HC_ERR_IPC_BAD_PARAM;
+    }
+    callRet = g_devGroupMgrMethod.getRegisterInfo(reqJsonStr, &registerInfo);
     ret = IpcEncodeCallReplay(outCache, PARAM_TYPE_IPC_RESULT, (const uint8_t *)&callRet, sizeof(int32_t));
     ret += IpcEncodeCallReplay(outCache, PARAM_TYPE_IPC_RESULT_NUM,
                                (const uint8_t *)&g_ipcResultNum1, sizeof(int32_t));
@@ -977,7 +947,6 @@ static int32_t AddMethodMap(uintptr_t ipcInstance)
     ret &= SetIpcCallMap(ipcInstance, IpcServiceGmAddMemberToGroup, IPC_CALL_ID_ADD_GROUP_MEMBER);
     ret &= SetIpcCallMap(ipcInstance, IpcServiceGmDelMemberFromGroup, IPC_CALL_ID_DEL_GROUP_MEMBER);
     ret &= SetIpcCallMap(ipcInstance, IpcServiceGmProcessData, IPC_CALL_ID_GM_PROC_DATA);
-    ret &= SetIpcCallMap(ipcInstance, IpcServiceGmSaveCredential, IPC_CALL_ID_SAVE_CREDENTIAL);
     ret &= SetIpcCallMap(ipcInstance, IpcServiceGmApplyRegisterInfo, IPC_CALL_ID_APPLY_REG_INFO);
     ret &= SetIpcCallMap(ipcInstance, IpcServiceGmCheckAccessToGroup, IPC_CALL_ID_CHECK_ACCESS_TO_GROUP);
     ret &= SetIpcCallMap(ipcInstance, IpcServiceGmGetPkInfoList, IPC_CALL_ID_GET_PK_INFO_LIST);
