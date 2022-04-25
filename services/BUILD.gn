@@ -139,12 +139,7 @@ if (os_level == "mini" || os_level == "small") {
     part_name = "deviceauth_standard"
     include_dirs += [
       "//third_party/cJSON",
-      "//utils/native/base/include",
       "${frameworks_path}/inc/standard",
-      "//foundation/communication/dsoftbus/interfaces/kits/common",
-      "//foundation/communication/dsoftbus/interfaces/kits/transport",
-      "//foundation/communication/dsoftbus/interfaces/inner_kits/transport",
-      "//third_party/json/include",
     ]
 
     sources = deviceauth_files
@@ -161,12 +156,12 @@ if (os_level == "mini" || os_level == "small") {
     deps = [
       "${deps_adapter_path}:${hal_module_name}",
       "//third_party/cJSON:cjson_static",
-      "//utils/native/base:utils",
     ]
 
     external_deps = [
       "dsoftbus_standard:softbus_client",
       "hiviewdfx_hilog_native:libhilog",
+      "utils_base:utils",
     ]
     if (support_jsapi) {
       external_deps += [ "os_account_standard:os_account_innerkits" ]
@@ -191,10 +186,8 @@ if (os_level == "mini" || os_level == "small") {
 
     include_dirs += [
       "//third_party/cJSON",
-      "//utils/native/base/include",
       "${frameworks_path}/inc/standard",
       "${dev_frameworks_path}/inc/permission_adapter",
-      "//utils/system/safwk/native/include",
     ]
 
     sources = deviceauth_ipc_files
@@ -211,7 +204,6 @@ if (os_level == "mini" || os_level == "small") {
       ":deviceauth",
       "${deps_adapter_path}:${hal_module_name}",
       "//third_party/cJSON:cjson_static",
-      "//utils/native/base:utils",
     ]
 
     external_deps = [
@@ -220,6 +212,7 @@ if (os_level == "mini" || os_level == "small") {
       "ipc:ipc_core",
       "safwk:system_ability_fwk",
       "samgr_standard:samgr_proxy",
+      "utils_base:utils",
     ]
   }
 
@@ -230,12 +223,8 @@ if (os_level == "mini" || os_level == "small") {
 
     include_dirs += [
       "//third_party/cJSON",
-      "//utils/native/base/include",
       "${frameworks_path}/inc/standard",
       "${dev_frameworks_path}/inc/permission_adapter",
-      "//utils/system/safwk/native/include",
-      "//foundation/communication/ipc/interfaces/innerkits/ipc_core/include",
-      "//foundation/distributedschedule/samgr/interfaces/innerkits/samgr_proxy/include",
     ]
 
     sources = deviceauth_ipc_files
@@ -255,7 +244,6 @@ if (os_level == "mini" || os_level == "small") {
     deps = [
       "${deps_adapter_path}:${hal_module_name}",
       "//third_party/cJSON:cjson_static",
-      "//utils/native/base:utils",
     ]
 
     external_deps = [
@@ -263,6 +251,7 @@ if (os_level == "mini" || os_level == "small") {
       "hiviewdfx_hilog_native:libhilog",
       "ipc:ipc_core",
       "samgr_standard:samgr_proxy",
+      "utils_base:utils",
     ]
   }
 }
