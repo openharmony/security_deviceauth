@@ -119,7 +119,7 @@ HcBool StringSetPointer(HcString *self, const char *str)
  * @param self: self pointer.
  * @return the pointer data of the string
  */
-const char* StringGet(const HcString *self)
+const char *StringGet(const HcString *self)
 {
     if (self == NULL) {
         return NULL;
@@ -152,7 +152,7 @@ uint32_t StringLength(const HcString *self)
  * Notice: You should delete_string when you don't need the string anymore.
  * @return return the created string.
  */
-HcString CreateString()
+HcString CreateString(void)
 {
     HcString str;
     str.parcel = CreateParcel(0, STRING_ALLOC_SIZE);

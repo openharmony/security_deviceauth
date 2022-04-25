@@ -21,7 +21,7 @@ void *ClibMalloc(uint32_t size, char val)
     if (size == 0 || size > CLIB_MAX_MALLOC_SIZE) {
         return NULL;
     }
-    void* addr = malloc(size);
+    void *addr = malloc(size);
     if (addr != NULL) {
         (void)memset_s(addr, size, val, size);
     }
