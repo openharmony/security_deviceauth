@@ -33,9 +33,8 @@ static int32_t GenerateEsk(PakeBaseParams *params)
 {
     int32_t res;
     if (params->curveType == CURVE_256) {
-        LOGE("CURVE_256 is not supported.");
-        return HC_ERR_NOT_SUPPORT;
-    } else { // CURVE_25519
+        return params->loader->generateRandom(&(params->eskSelf));
+    } else if (params->curveType == CURVE_25519) {
         res = params->loader->generateRandom(&(params->eskSelf));
         if (res != HC_SUCCESS) {
             LOGE("CURVE_25519: GenerateRandom for eskSelf failed, res: %x.", res);
@@ -44,8 +43,11 @@ static int32_t GenerateEsk(PakeBaseParams *params)
         params->eskSelf.val[PAKE_EC_KEY_LEN - 1] &= PAKE_PRIVATE_KEY_AND_MASK_HIGH;
         params->eskSelf.val[0] &= PAKE_PRIVATE_KEY_AND_MASK_LOW;
         params->eskSelf.val[0] |= PAKE_PRIVATE_KEY_OR_MASK_LOW;
+        return HC_SUCCESS;
+    } else {
+        LOGE("Unsupported curve: %d.", params->curveType);
+        return HC_ERR_UNSUPPORTED_CURVE;
     }
-    return res;
 }
 
 static int32_t InitEcPakeParams(PakeBaseParams *params)
@@ -107,11 +109,6 @@ CLEAN_UP:
 
 int32_t AgreeEcSharedSecret(PakeBaseParams *params, Uint8Buff *sharedSecret)
 {
-    if (params->curveType == CURVE_256) {
-        LOGE("CURVE_256 is not supported.");
-        CleanPakeSensitiveKeys(params);
-        return HC_ERR_NOT_SUPPORT;
-    }
     int32_t res;
     /* P256 requires buffer for both X and Y coordinates. */
     uint32_t validKeyBufferLen = (params->curveType == CURVE_256) ? (PAKE_EC_KEY_LEN * 2) : (PAKE_EC_KEY_LEN);
@@ -122,6 +119,11 @@ int32_t AgreeEcSharedSecret(PakeBaseParams *params, Uint8Buff *sharedSecret)
     }
 
     Algorithm alg = (params->curveType == CURVE_256) ? P256 : X25519;
+    if (!params->loader->checkEcPublicKey(&(params->epkPeer), alg)) {
+        LOGE("Check public key failed.");
+        res = HC_ERR_INVALID_PUBLIC_KEY;
+        goto CLEAN_UP;
+    }
     KeyBuff eskSelfBuff = { params->eskSelf.val, params->eskSelf.length, false };
     KeyBuff epkPeerBuff = { params->epkPeer.val, params->epkPeer.length, false };
     res = params->loader->agreeSharedSecret(&eskSelfBuff, &epkPeerBuff, alg, sharedSecret);

@@ -18,7 +18,7 @@
 #include "hks_api.h"
 #include "hks_param.h"
 #include "hks_type.h"
-#include "mbedtls_hash_to_point.h"
+#include "mbedtls_ec_adapter.h"
 #include "string_util.h"
 
 static enum HksKeyAlg g_algToHksAlgorithm[] = {
@@ -619,6 +619,9 @@ static int32_t ConstructGenerateKeyPairWithStorageParams(struct HksParamSet **pa
         }, {
             .tag = HKS_TAG_KEY_AUTH_ID,
             .blob = *authIdBlob
+        }, {
+            .tag = HKS_TAG_DIGEST,
+            .uint32Param = HKS_DIGEST_SHA256
         }
     };
 
@@ -804,7 +807,10 @@ static int32_t ConstructSignParams(struct HksParamSet **paramSet, Algorithm algo
             .uint32Param = HKS_KEY_PURPOSE_SIGN
         }, {
             .tag = HKS_TAG_ALGORITHM,
-            .uint32Param = g_algToHksAlgorithm[algo] // only support HKS_ALG_ED25519
+            .uint32Param = g_algToHksAlgorithm[algo] // only support HKS_ALG_ED25519 and HKS_ALG_ECC.
+        }, {
+            .tag = HKS_TAG_DIGEST,
+            .uint32Param = HKS_DIGEST_SHA256
         }
     };
 
@@ -826,7 +832,6 @@ static int32_t Sign(const Uint8Buff *keyAlias, const Uint8Buff *message, Algorit
     if (ret != HAL_SUCCESS) {
         return ret;
     }
-    CHECK_LEN_EQUAL_RETURN(outSignature->length, SIGNATURE_LEN, "outSignature->length");
 
     struct HksBlob keyAliasBlob = { keyAlias->length, keyAlias->val };
     Uint8Buff messageHash = { NULL, 0 };
@@ -851,11 +856,12 @@ static int32_t Sign(const Uint8Buff *keyAlias, const Uint8Buff *message, Algorit
     }
 
     ret = HksSign(&keyAliasBlob, paramSet, &messageBlob, &signatureBlob);
-    if ((ret != HKS_SUCCESS) || (signatureBlob.size != SIGNATURE_LEN)) {
+    if (ret != HKS_SUCCESS) {
         LOGE("Hks sign failed.");
         ret = HAL_FAILED;
         goto ERR;
     }
+    outSignature->length = signatureBlob.size;
     ret = HAL_SUCCESS;
 ERR:
     HksFreeParamSet(&paramSet);
@@ -871,10 +877,13 @@ static int32_t ConstructVerifyParams(struct HksParamSet **paramSet, Algorithm al
             .uint32Param = HKS_KEY_PURPOSE_VERIFY
         }, {
             .tag = HKS_TAG_ALGORITHM,
-            .uint32Param = g_algToHksAlgorithm[algo] // only support HKS_ALG_ED25519
+            .uint32Param = g_algToHksAlgorithm[algo] // only support HKS_ALG_ED25519 and HKS_ALG_ECC.
         }, {
             .tag = HKS_TAG_IS_KEY_ALIAS,
             .boolParam = isAlias
+        }, {
+            .tag = HKS_TAG_DIGEST,
+            .uint32Param = HKS_DIGEST_SHA256
         }
     };
 
@@ -896,7 +905,6 @@ static int32_t Verify(const Uint8Buff *key, const Uint8Buff *message, Algorithm 
     if (ret != HAL_SUCCESS) {
         return ret;
     }
-    CHECK_LEN_EQUAL_RETURN(signature->length, SIGNATURE_LEN, "signature");
 
     struct HksBlob keyAliasBlob = { key->length, key->val };
     Uint8Buff messageHash = { NULL, 0 };
@@ -936,6 +944,9 @@ ERR:
 static int32_t ConstructImportPublicKeyParams(struct HksParamSet **paramSet, Algorithm algo, uint32_t keyLen,
     const struct HksBlob *authIdBlob, const union KeyRoleInfoUnion *roleInfoUnion)
 {
+    if (g_algToHksAlgorithm[algo] == HKS_ALG_ECC) {
+        keyLen = ECC_PK_LEN;
+    }
     struct HksParam importParam[] = {
         {
             .tag = HKS_TAG_ALGORITHM,

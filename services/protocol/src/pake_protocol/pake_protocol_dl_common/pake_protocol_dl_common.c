@@ -94,7 +94,7 @@ static int FillDlKeysLenAccordingToMod(PakeBaseParams *params)
 
 static int32_t InitDlPakeParams(PakeBaseParams *params)
 {
-    int res;
+    int32_t res;
     if (params->isClient) {
         res = FillDlKeysLenAccordingToEpkPeer(params);
     } else {

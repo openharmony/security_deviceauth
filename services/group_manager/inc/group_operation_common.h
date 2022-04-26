@@ -35,7 +35,8 @@ bool IsGroupVisibilityValid(int groupVisibility);
 int32_t ProcessKeyPair(int action, const CJson *jsonParams, const char *groupId);
 int32_t GetHashMessage(const Uint8Buff *first, const Uint8Buff *second, uint8_t **hashMessage, uint32_t *messageSize);
 
-int32_t AssertUserIdHashExist(const CJson *jsonParams);
+int32_t AssertUserIdExist(const CJson *jsonParams);
+int32_t AssertSharedUserIdExist(const CJson *jsonParams);
 int32_t CheckGroupExist(int32_t osAccountId, const char *groupId);
 int32_t CheckGroupNumLimit(int32_t osAccountId, int32_t groupType, const char *appId);
 int32_t CheckDeviceNumLimit(int32_t osAccountId, const char *groupId, const char *peerUdid);
@@ -50,14 +51,15 @@ int32_t AddGroupOwnerToParams(const char *owner, TrustedGroupEntry *groupParams)
 int32_t AddGroupTypeToParams(int groupType, TrustedGroupEntry *groupParams);
 int32_t AddGroupVisibilityOrDefault(const CJson *jsonParams, TrustedGroupEntry *groupParams);
 int32_t AddExpireTimeOrDefault(const CJson *jsonParams, TrustedGroupEntry *groupParams);
-int32_t AddUserIdHashToGroupParams(const CJson *jsonParams, TrustedGroupEntry *groupParams);
+int32_t AddUserIdToGroupParams(const CJson *jsonParams, TrustedGroupEntry *groupParams);
+int32_t AddSharedUserIdToGroupParams(const CJson *jsonParams, TrustedGroupEntry *groupParams);
 
 int32_t AddUdidToParams(TrustedDeviceEntry *devParams);
 int32_t AddAuthIdToParamsOrDefault(const CJson *jsonParams, TrustedDeviceEntry *devParams);
 int32_t AddUserTypeToParamsOrDefault(const CJson *jsonParams, TrustedDeviceEntry *devParams);
 int32_t AddServiceTypeToParams(const char *groupId, TrustedDeviceEntry *devParams);
 int32_t AddGroupIdToDevParams(const char *groupId, TrustedDeviceEntry *devParams);
-int32_t AddUserIdHashToDevParams(const CJson *jsonParams, TrustedDeviceEntry *devParams);
+int32_t AddUserIdToDevParams(const CJson *jsonParams, TrustedDeviceEntry *devParams);
 
 int32_t AddGroupToDatabaseByJson(int32_t osAccountId, int32_t (*generateGroupParams)(const CJson*,
     const char *, TrustedGroupEntry*), const CJson *jsonParams, const char *groupId);
@@ -70,7 +72,8 @@ int32_t GenerateBindSuccessData(const char *peerAuthId, const char *groupId, cha
 int32_t GenerateUnbindSuccessData(const char *peerAuthId, const char *groupId, char **returnDataStr);
 
 int32_t GetGroupTypeFromDb(int32_t osAccountId, const char *groupId, int32_t *returnGroupType);
-int32_t GetUserIdHashFromJson(const CJson *jsonParams, char **userIdHash);
+int32_t GetUserIdFromJson(const CJson *jsonParams, char **userId);
+int32_t GetSharedUserIdFromJson(const CJson *jsonParams, char **sharedUserId);
 int32_t GetGroupIdFromJson(const CJson *jsonParams, const char **groupId);
 int32_t GetAppIdFromJson(const CJson *jsonParams, const char **appId);
 

@@ -38,7 +38,6 @@
 #define FIELD_DELETE_ID "deleteId"
 #define FIELD_APP_ID "appId"
 #define FIELD_SERVICE_TYPE "serviceType"
-#define FIELD_PEER_AUTH_STATE "peerAuthState"
 #define FIELD_IS_DEVICE_LEVEL "isDeviceLevel"
 #define FIELD_ALTERNATIVE "alternative"
 #define FIELD_PEER_UDID "peerUdid"
@@ -58,7 +57,6 @@
 #define FIELD_SHARED_USER_ID "sharedUserId"
 #define FIELD_OWNER_USER_ID "ownerUserId"
 #define FIELD_DEVICE_ID "deviceId"
-#define FIELD_UID_HASH "uidHash"
 #define FIELD_PIN_CODE "pinCode"
 #define FIELD_AUTH_ID "authId"
 #define FIELD_UDID "udid"
@@ -76,6 +74,7 @@ typedef enum {
 } OsAccountEnum;
 
 typedef enum {
+    GROUP_TYPE_INVALID = -1,
     ALL_GROUP = 0,
     IDENTICAL_ACCOUNT_GROUP = 1,
     PEER_TO_PEER_GROUP = 256,
@@ -173,8 +172,7 @@ typedef struct {
     int32_t (*deleteMemberFromGroup)(int32_t osAccountId, int64_t requestId, const char *appId,
         const char *deleteParams);
     int32_t (*processData)(int64_t requestId, const uint8_t *data, uint32_t dataLen);
-    int32_t (*processCredential)(int operationCode, const char *reqJsonStr, char **returnJsonStr);
-    int32_t (*getRegisterInfo)(char **returnRegisterInfo);
+    int32_t (*getRegisterInfo)(const char *reqJsonStr, char **returnRegisterInfo);
     int32_t (*checkAccessToGroup)(int32_t osAccountId, const char *appId, const char *groupId);
     int32_t (*getPkInfoList)(int32_t osAccountId, const char *appId, const char *queryParams, char **returnInfoList,
         uint32_t *returnInfoNum);

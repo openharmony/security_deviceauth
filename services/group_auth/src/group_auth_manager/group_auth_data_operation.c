@@ -18,8 +18,10 @@
 #include "common_defs.h"
 #include "device_auth.h"
 #include "device_auth_defines.h"
+#include "hc_dev_info.h"
 #include "hc_log.h"
 #include "hc_string.h"
+#include "hc_types.h"
 #include "hc_vector.h"
 
 static bool GaDeepCopyDeviceEntry(const TrustedDeviceEntry *entry, TrustedDeviceEntry *returnEntry)
@@ -41,8 +43,8 @@ static bool GaDeepCopyDeviceEntry(const TrustedDeviceEntry *entry, TrustedDevice
         LOGE("[GA]: Failed to copy serviceType!");
         return false;
     }
-    if (!StringSet(&returnEntry->userIdHash, entry->userIdHash)) {
-        LOGE("[GA]: Failed to copy userIdHash!");
+    if (!StringSet(&returnEntry->userId, entry->userId)) {
+        LOGE("[GA]: Failed to copy userId!");
         return false;
     }
     returnEntry->credential = entry->credential;
@@ -66,8 +68,8 @@ static bool GaDeepCopyGroupEntry(const TrustedGroupEntry *entry, TrustedGroupEnt
         LOGE("[GA]: Failed to copy groupId!");
         return false;
     }
-    if (!StringSet(&returnEntry->userIdHash, entry->userIdHash)) {
-        LOGE("[GA]: Failed to copy userIdHash!");
+    if (!StringSet(&returnEntry->userId, entry->userId)) {
+        LOGE("[GA]: Failed to copy userId!");
         return false;
     }
     returnEntry->type = entry->type;
@@ -235,4 +237,25 @@ bool GaIsDeviceInGroup(int32_t groupType, int32_t osAccountId, const char *peerU
         return false;
     }
     return true;
+}
+
+int32_t GaGetLocalDeviceInfo(int32_t osAccountId, const char *groupId, TrustedDeviceEntry *localAuthInfo)
+{
+    char *localUdid = (char *)HcMalloc(INPUT_UDID_LEN, 0);
+    if (localUdid == NULL) {
+        LOGE("Failed to malloc for local udid!");
+        return HC_ERR_ALLOC_MEMORY;
+    }
+    int32_t res = HcGetUdid((uint8_t *)localUdid, INPUT_UDID_LEN);
+    if (res != HC_SUCCESS) {
+        LOGE("Failed to get local udid!");
+        HcFree(localUdid);
+        return res;
+    }
+    res = GaGetTrustedDeviceEntryById(osAccountId, localUdid, true, groupId, localAuthInfo);
+    HcFree(localUdid);
+    if (res != HC_SUCCESS) {
+        LOGE("Failed to get local device info from database!");
+    }
+    return res;
 }

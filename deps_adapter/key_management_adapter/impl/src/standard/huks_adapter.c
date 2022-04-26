@@ -19,10 +19,12 @@
 #include "hks_api.h"
 #include "hks_param.h"
 #include "hks_type.h"
+#include "mbedtls_ec_adapter.h"
 #include "string_util.h"
 
 #define BASE_IMPORT_PARAMS_LEN 7
 #define EXT_IMPORT_PARAMS_LEN 2
+#define ECDH_COMMON_SIZE_P256 512
 
 static enum HksKeyPurpose g_purposeToHksKeyPurpose[] = {
     HKS_KEY_PURPOSE_MAC,
@@ -419,27 +421,133 @@ static int32_t AesGcmDecrypt(const Uint8Buff *key, const Uint8Buff *cipher,
 static int32_t HashToPoint(const Uint8Buff *hash, Algorithm algo, Uint8Buff *outEcPoint)
 {
     CHECK_PTR_RETURN_HAL_ERROR_CODE(hash, "hash");
-    CHECK_PTR_RETURN_HAL_ERROR_CODE(hash->val, "hash->va");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(hash->val, "hash->val");
     CHECK_LEN_EQUAL_RETURN(hash->length, SHA256_LEN, "hash->length");
     CHECK_PTR_RETURN_HAL_ERROR_CODE(outEcPoint, "outEcPoint");
-    CHECK_PTR_RETURN_HAL_ERROR_CODE(outEcPoint->val, "outEcPoint->va");
-    CHECK_LEN_EQUAL_RETURN(outEcPoint->length, SHA256_LEN, "outEcPoint->length");
+    CHECK_PTR_RETURN_HAL_ERROR_CODE(outEcPoint->val, "outEcPoint->val");
 
-    if (algo != X25519) {
-        LOGE("Invalid algo: %d.", algo);
+    if (algo != X25519 && algo != P256) {
+        LOGE("Compute algo: %d.", algo);
         return HAL_ERR_INVALID_PARAM;
     }
+    if (algo == P256) {
+        LOGI("Compute HashToPoint for P256");
+        return MbedtlsHashToPoint(hash, outEcPoint);
+    }
 
+    CHECK_LEN_EQUAL_RETURN(outEcPoint->length, SHA256_LEN, "outEcPoint->length");
     struct HksBlob hashBlob = { hash->length, hash->val };
     struct HksBlob pointBlob = { outEcPoint->length, outEcPoint->val };
 
     int32_t ret = OpensslHashToPoint(&hashBlob, &pointBlob);
     if (ret != HAL_SUCCESS || pointBlob.size != SHA256_LEN) {
-        LOGE("Hks hashToPoint failed, ret: %d", ret);
+        LOGE("HashToPoint for x25519 failed, ret: %d", ret);
         return HAL_FAILED;
     }
 
     return HAL_SUCCESS;
+}
+
+static int32_t ConstructInitParamsP256(struct HksParamSet **initParamSet)
+{
+    struct HksParam agreeParamInit[] = {
+        {
+            .tag = HKS_TAG_ALGORITHM,
+            .uint32Param = HKS_ALG_ECDH
+        }, {
+            .tag = HKS_TAG_PURPOSE,
+            .uint32Param = HKS_KEY_PURPOSE_AGREE
+        }, {
+            .tag = HKS_TAG_KEY_SIZE,
+            .uint32Param = HKS_ECC_KEY_SIZE_256
+        }
+    };
+    int32_t ret = ConstructParamSet(initParamSet, agreeParamInit, CAL_ARRAY_SIZE(agreeParamInit));
+    if (ret != HAL_SUCCESS) {
+        LOGE("Construct init param set failed for P256, ret = %d", ret);
+    }
+    return ret;
+}
+
+static int32_t ConstructFinishParamsP256(struct HksParamSet **finishParamSet,
+    const struct HksBlob *sharedKeyAliasBlob)
+{
+    struct HksParam agreeParamFinish[] = {
+        {
+            .tag = HKS_TAG_KEY_STORAGE_FLAG,
+            .uint32Param = HKS_STORAGE_PERSISTENT
+        }, {
+            .tag = HKS_TAG_IS_KEY_ALIAS,
+            .boolParam = true
+        }, {
+            .tag = HKS_TAG_ALGORITHM,
+            .uint32Param = HKS_ALG_AES
+        }, {
+            .tag = HKS_TAG_KEY_SIZE,
+            .uint32Param = HKS_AES_KEY_SIZE_256
+        }, {
+            .tag = HKS_TAG_PURPOSE,
+            .uint32Param = HKS_KEY_PURPOSE_DERIVE
+        }, {
+            .tag = HKS_TAG_DIGEST,
+            .uint32Param = HKS_DIGEST_SHA256
+        }, {
+            .tag = HKS_TAG_KEY_ALIAS,
+            .blob = *sharedKeyAliasBlob
+        }
+    };
+    int32_t ret = ConstructParamSet(finishParamSet, agreeParamFinish, CAL_ARRAY_SIZE(agreeParamFinish));
+    if (ret != HAL_SUCCESS) {
+        LOGE("Construct finish param set failed for P256, ret = %d", ret);
+    }
+    return ret;
+}
+
+static int32_t AgreeSharedSecretWithStorageP256(const KeyBuff *priKeyAlias, const KeyBuff *pubKey,
+    const struct HksBlob *sharedKeyAliasBlob)
+{
+    struct HksParamSet *initParamSet = NULL;
+    struct HksParamSet *finishParamSet = NULL;
+    int32_t ret = ConstructInitParamsP256(&initParamSet);
+    if (ret != HAL_SUCCESS) {
+        return ret;
+    }
+    ret = ConstructFinishParamsP256(&finishParamSet, sharedKeyAliasBlob);
+    if (ret != HAL_SUCCESS) {
+        HksFreeParamSet(&initParamSet);
+        return ret;
+    }
+    struct HksBlob priKeyAliasBlob = { priKeyAlias->keyLen, priKeyAlias->key };
+    struct HksBlob pubKeyBlob = { pubKey->keyLen, pubKey->key };
+    uint8_t handle[sizeof(uint64_t)] = { 0 };
+    struct HksBlob handleBlob = { sizeof(uint64_t), handle };
+    uint8_t outDataUpdate[ECDH_COMMON_SIZE_P256] = { 0 };
+    struct HksBlob outDataUpdateBlob = { ECDH_COMMON_SIZE_P256, outDataUpdate };
+    uint8_t outDataFinish[ECDH_COMMON_SIZE_P256] = { 0 };
+    struct HksBlob outDataFinishBlob = { ECDH_COMMON_SIZE_P256, outDataFinish };
+    do {
+        ret = HksInit(&priKeyAliasBlob, initParamSet, &handleBlob);
+        if (ret != HKS_SUCCESS) {
+            LOGE("Huks agree P256 key: HksInit failed, ret = %d", ret);
+            ret = HAL_ERR_HUKS;
+            break;
+        }
+        ret = HksUpdate(&handleBlob, initParamSet, &pubKeyBlob, &outDataUpdateBlob);
+        if (ret != HKS_SUCCESS) {
+            LOGE("Huks agree P256 key: HksUpdate failed, ret = %d", ret);
+            ret = HAL_ERR_HUKS;
+            break;
+        }
+        ret = HksFinish(&handleBlob, finishParamSet, &pubKeyBlob, &outDataFinishBlob);
+        if (ret != HKS_SUCCESS) {
+            LOGE("Huks agree P256 key: HksFinish failed, ret = %d", ret);
+            ret = HAL_ERR_HUKS;
+            break;
+        }
+    } while (0);
+    HksFreeParamSet(&initParamSet);
+    HksFreeParamSet(&finishParamSet);
+    return ret;
 }
 
 static int32_t ConstructAgreeWithStorageParams(struct HksParamSet **paramSet, uint32_t keyLen, Algorithm algo,
@@ -465,7 +573,7 @@ static int32_t ConstructAgreeWithStorageParams(struct HksParamSet **paramSet, ui
             .uint32Param = HKS_KEY_GENERATE_TYPE_AGREE
         }, {
             .tag = HKS_TAG_AGREE_ALG,
-            .uint32Param = g_algToHksAlgorithm[algo]
+            .uint32Param = g_algToHksAlgorithm[algo] // only support HKS_ALG_ED25519 and HKS_ALG_X25519
         }, {
             .tag = HKS_TAG_AGREE_PRIVATE_KEY_ALIAS,
             .blob = priKeyBlob
@@ -481,7 +589,6 @@ static int32_t ConstructAgreeWithStorageParams(struct HksParamSet **paramSet, ui
     int32_t ret = ConstructParamSet(paramSet, agreeParam, CAL_ARRAY_SIZE(agreeParam));
     if (ret != HAL_SUCCESS) {
         LOGE("Construct param set failed, ret = %d", ret);
-        return ret;
     }
     return ret;
 }
@@ -501,6 +608,10 @@ static int32_t AgreeSharedSecretWithStorage(const KeyBuff *priKey, const KeyBuff
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(sharedKeyLen, "sharedKeyLen");
 
     struct HksBlob sharedKeyAliasBlob = { sharedKeyAlias->length, sharedKeyAlias->val };
+    if (g_algToHksAlgorithm[algo] == HKS_ALG_ECC) {
+        LOGI("Hks agree key with storage for P256.");
+        return AgreeSharedSecretWithStorageP256(priKey, pubKey, &sharedKeyAliasBlob);
+    }
     struct HksParamSet *paramSet = NULL;
     int32_t ret = ConstructAgreeWithStorageParams(&paramSet, sharedKeyLen, algo, priKey, pubKey);
     if (ret != HAL_SUCCESS) {
@@ -529,6 +640,11 @@ static int32_t AgreeSharedSecret(const KeyBuff *priKey, const KeyBuff *pubKey, A
     CHECK_PTR_RETURN_HAL_ERROR_CODE(sharedKey, "sharedKey");
     CHECK_PTR_RETURN_HAL_ERROR_CODE(sharedKey->val, "sharedKey->val");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(sharedKey->length, "sharedKey->length");
+
+    if (g_algToHksAlgorithm[algo] == HKS_ALG_ECC) {
+        LOGI("Hks agree key for P256.");
+        return MbedtlsAgreeSharedSecret(priKey, pubKey, sharedKey);
+    }
 
     struct HksBlob priKeyBlob = { priKey->keyLen, priKey->key };
     struct HksBlob pubKeyBlob = { pubKey->keyLen, pubKey->key };
@@ -630,6 +746,9 @@ static int32_t ConstructGenerateKeyPairWithStorageParams(struct HksParamSet **pa
         }, {
             .tag = HKS_TAG_KEY_AUTH_ID,
             .blob = *authIdBlob
+        }, {
+            .tag = HKS_TAG_DIGEST,
+            .uint32Param = HKS_DIGEST_SHA256
         }
     };
 
@@ -815,7 +934,10 @@ static int32_t ConstructSignParams(struct HksParamSet **paramSet, Algorithm algo
             .uint32Param = HKS_KEY_PURPOSE_SIGN
         }, {
             .tag = HKS_TAG_ALGORITHM,
-            .uint32Param = g_algToHksAlgorithm[algo] // only support HKS_ALG_ED25519
+            .uint32Param = g_algToHksAlgorithm[algo] // only support HKS_ALG_ED25519 and HKS_ALG_ECC.
+        }, {
+            .tag = HKS_TAG_DIGEST,
+            .uint32Param = HKS_DIGEST_SHA256
         }
     };
 
@@ -837,7 +959,6 @@ static int32_t Sign(const Uint8Buff *keyAlias, const Uint8Buff *message, Algorit
     if (ret != HAL_SUCCESS) {
         return ret;
     }
-    CHECK_LEN_EQUAL_RETURN(outSignature->length, SIGNATURE_LEN, "outSignature->length");
 
     struct HksBlob keyAliasBlob = { keyAlias->length, keyAlias->val };
     Uint8Buff messageHash = { NULL, 0 };
@@ -862,11 +983,12 @@ static int32_t Sign(const Uint8Buff *keyAlias, const Uint8Buff *message, Algorit
     }
 
     ret = HksSign(&keyAliasBlob, paramSet, &messageBlob, &signatureBlob);
-    if ((ret != HKS_SUCCESS) || (signatureBlob.size != SIGNATURE_LEN)) {
+    if (ret != HKS_SUCCESS) {
         LOGE("Hks sign failed.");
         ret = HAL_FAILED;
         goto ERR;
     }
+    outSignature->length = signatureBlob.size;
     ret = HAL_SUCCESS;
 ERR:
     HksFreeParamSet(&paramSet);
@@ -882,10 +1004,13 @@ static int32_t ConstructVerifyParams(struct HksParamSet **paramSet, Algorithm al
             .uint32Param = HKS_KEY_PURPOSE_VERIFY
         }, {
             .tag = HKS_TAG_ALGORITHM,
-            .uint32Param = g_algToHksAlgorithm[algo] // only support HKS_ALG_ED25519
+            .uint32Param = g_algToHksAlgorithm[algo] // only support HKS_ALG_ED25519 and HKS_ALG_ECC.
         }, {
             .tag = HKS_TAG_IS_KEY_ALIAS,
             .boolParam = isAlias
+        }, {
+            .tag = HKS_TAG_DIGEST,
+            .uint32Param = HKS_DIGEST_SHA256
         }
     };
 
@@ -907,7 +1032,6 @@ static int32_t Verify(const Uint8Buff *key, const Uint8Buff *message, Algorithm 
     if (ret != HAL_SUCCESS) {
         return ret;
     }
-    CHECK_LEN_EQUAL_RETURN(signature->length, SIGNATURE_LEN, "signature");
 
     struct HksBlob keyAliasBlob = { key->length, key->val };
     Uint8Buff messageHash = { NULL, 0 };
@@ -947,6 +1071,9 @@ ERR:
 static int32_t ConstructImportPublicKeyParams(struct HksParamSet **paramSet, Algorithm algo, uint32_t keyLen,
     const struct HksBlob *authIdBlob, const union KeyRoleInfoUnion *roleInfoUnion)
 {
+    if (g_algToHksAlgorithm[algo] == HKS_ALG_ECC) {
+        keyLen = ECC_PK_LEN;
+    }
     struct HksParam importParam[] = {
         {
             .tag = HKS_TAG_ALGORITHM,
@@ -1129,6 +1256,13 @@ static bool CheckDlPublicKey(const Uint8Buff *key, const char *primeHex)
     return true;
 }
 
+static bool CheckEcPublicKeyFuncFake(const Uint8Buff *pubKey, Algorithm algo)
+{
+    (void)pubKey;
+    (void)algo;
+    return true;
+}
+
 static int32_t CheckImportSymmetricKeyParam(const Uint8Buff *keyAlias, const Uint8Buff *authToken)
 {
     const Uint8Buff *inParams[] = { keyAlias, authToken };
@@ -1244,7 +1378,7 @@ static const AlgLoader g_huksLoader = {
     .verify = Verify,
     .importPublicKey = ImportPublicKey,
     .checkDlPublicKey = CheckDlPublicKey,
-    .checkEcPublicKey = NULL,
+    .checkEcPublicKey = CheckEcPublicKeyFuncFake,
     .bigNumCompare = BigNumCompare
 };
 

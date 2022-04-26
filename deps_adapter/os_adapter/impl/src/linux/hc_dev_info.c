@@ -58,6 +58,17 @@ const char *GetStorageDirPath(void)
     return storageFile;
 }
 
+const char *GetAccountStoragePath(void)
+{
+#ifndef LITE_DEVICE
+    const char *storageFile = "/data/data/deviceauth/account";
+#else
+    const char *storageFile = "/storage/deviceauth/account";
+#endif
+    LOGI("[OS]: Account storage dir: %s", storageFile);
+    return storageFile;
+}
+
 #ifdef __cplusplus
 }
 #endif

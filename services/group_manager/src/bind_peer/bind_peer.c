@@ -138,7 +138,8 @@ int32_t RequestBindPeer(int64_t requestId, const char *appId, const char *bindPa
         FreeJson(params);
         return HC_ERR_JSON_FAIL;
     }
-    if (InitAndPushGMTask(OP_BIND, requestId, params, DoClientTask) != HC_SUCCESS) {
+    int32_t osAccountId = ANY_OS_ACCOUNT;
+    if (InitAndPushGMTask(osAccountId, OP_BIND, requestId, params, DoClientTask) != HC_SUCCESS) {
         FreeJson(params);
         return HC_ERR_INIT_TASK_FAIL;
     }
@@ -162,7 +163,8 @@ int32_t RequestUnbindPeer(int64_t requestId, const char *appId, const char *unbi
         FreeJson(params);
         return HC_ERR_JSON_FAIL;
     }
-    if (InitAndPushGMTask(OP_UNBIND, requestId, params, DoClientTask) != HC_SUCCESS) {
+    int32_t osAccountId = ANY_OS_ACCOUNT;
+    if (InitAndPushGMTask(osAccountId, OP_UNBIND, requestId, params, DoClientTask) != HC_SUCCESS) {
         FreeJson(params);
         return HC_ERR_INIT_TASK_FAIL;
     }
@@ -186,7 +188,8 @@ int32_t RequestProcessLiteData(int64_t requestId, const char *appId, const uint8
         FreeJson(params);
         return HC_ERR_JSON_FAIL;
     }
-    if (InitAndPushGMTask(GetOpCodeWhenLite(params), requestId, params, DoServerTask) != HC_SUCCESS) {
+    int32_t osAccountId = ANY_OS_ACCOUNT;
+    if (InitAndPushGMTask(osAccountId, GetOpCodeWhenLite(params), requestId, params, DoServerTask) != HC_SUCCESS) {
         FreeJson(params);
         return HC_ERR_INIT_TASK_FAIL;
     }

@@ -27,6 +27,7 @@ int32_t GaGetTrustedDeviceEntryById(int32_t osAccountId, const char *deviceId,
     bool isUdid, const char *groupId, TrustedDeviceEntry *returnDeviceEntry);
 bool GaIsDeviceInGroup(int32_t groupType, int32_t osAccountId, const char *peerUdid, const char *peerAuthId,
     const char *groupId);
+int32_t GaGetLocalDeviceInfo(int32_t osAccountId, const char *groupId, TrustedDeviceEntry *localAuthInfo);
 
 #ifdef __cplusplus
 }

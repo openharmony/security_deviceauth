@@ -56,7 +56,7 @@ int32_t DeletePeerAuthInfo(const char *pkgName, const char *serviceType, Uint8Bu
 int32_t GetPublicKey(int moduleType, AuthModuleParams *params, Uint8Buff *returnPk);
 
 // for ACCOUNT
-int32_t ProcessCredentials(int credentialOpCode, const CJson *in, CJson *out, int moduleType);
+int32_t GetRegisterInfo(const char *reqJsonStr, char **returnRegisterInfo);
 
 #ifdef __cplusplus
 }

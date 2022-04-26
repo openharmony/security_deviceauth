@@ -108,7 +108,8 @@ int32_t RequestAuthKeyAgree(int64_t requestId, const char *appId, const char *ag
         FreeJson(params);
         return HC_ERR_JSON_FAIL;
     }
-    if (InitAndPushGMTask(AUTH_KEY_AGREEMENT, requestId, params, DoClientTask) != HC_SUCCESS) {
+    int32_t osAccountId = ANY_OS_ACCOUNT;
+    if (InitAndPushGMTask(osAccountId, AUTH_KEY_AGREEMENT, requestId, params, DoClientTask) != HC_SUCCESS) {
         FreeJson(params);
         return HC_ERR_INIT_TASK_FAIL;
     }
@@ -132,7 +133,8 @@ int32_t RequestProcessKeyAgreeData(int64_t requestId, const char *appId, const u
         FreeJson(params);
         return HC_ERR_JSON_FAIL;
     }
-    if (InitAndPushGMTask(AUTH_KEY_AGREEMENT, requestId, params, DoServerTask) != HC_SUCCESS) {
+    int32_t osAccountId = ANY_OS_ACCOUNT;
+    if (InitAndPushGMTask(osAccountId, AUTH_KEY_AGREEMENT, requestId, params, DoServerTask) != HC_SUCCESS) {
         FreeJson(params);
         return HC_ERR_INIT_TASK_FAIL;
     }
