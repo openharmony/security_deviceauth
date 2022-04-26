@@ -25,7 +25,6 @@
 #include "hc_init_protection.h"
 #include "hc_log.h"
 #include "json_utils.h"
-#include "lcm_adapter.h"
 #include "os_account_adapter.h"
 #include "session_manager.h"
 #include "task_manager.h"
@@ -280,7 +279,6 @@ DEVICE_AUTH_API_PUBLIC const DeviceGroupManager *GetGmInstance(void)
     g_groupManagerInstance->addMemberToGroup = AddMemberToGroupImpl;
     g_groupManagerInstance->deleteMemberFromGroup = DeleteMemberFromGroupImpl;
     g_groupManagerInstance->processData = ProcessBindDataImpl;
-    g_groupManagerInstance->processCredential = ProcessCredential;
     g_groupManagerInstance->getRegisterInfo = GetRegisterInfo;
     g_groupManagerInstance->checkAccessToGroup = CheckAccessToGroupImpl;
     g_groupManagerInstance->getPkInfoList = GetPkInfoListImpl;

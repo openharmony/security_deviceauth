@@ -1,0 +1,47 @@
+# Copyright (C) 2022 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//base/security/deviceauth/deviceauth_env.gni")
+
+account_related_defines = []
+account_related_inc_path = []
+
+deviceauth_account_group_manager_path = "${services_path}/group_manager"
+deviceauth_account_group_auth_path = "${services_path}/group_auth"
+
+group_manager_identical_account_files = [ "${deviceauth_account_group_manager_path}/src/group_operation/identical_account_group/identical_account_group.c" ]
+group_manager_across_account_files = [ "${deviceauth_account_group_manager_path}/src/group_operation/across_account_group/across_account_group.c" ]
+
+group_auth_account_related_files = [ "${deviceauth_account_group_auth_path}/src/group_auth_manager/account_related_group_auth/account_related_group_auth.c" ]
+
+account_related_inc_path += [
+  "${services_path}/authenticators/inc",
+  "${services_path}/authenticators/inc/account_related",
+  "${services_path}/authenticators/inc/account_related/auth/pake_v2_auth_task",
+  "${services_path}/authenticators/inc/account_related/creds_manager/asysmetric_token_manager",
+]
+
+authenticators_account_related_files = [
+  "${services_path}/authenticators/src/account_related/account_module.c",
+  "${services_path}/authenticators/src/account_related/account_multi_task_manager.c",
+  "${services_path}/authenticators/src/account_related/account_task_main.c",
+  "${services_path}/authenticators/src/account_related/account_version_util.c",
+  "${services_path}/authenticators/src/account_related/creds_manager/asysmetric_token_manager/asy_token_manager.c",
+  "${services_path}/authenticators/src/account_related/auth/pake_v2_auth_task/pake_v2_auth_task_common.c",
+  "${services_path}/authenticators/src/account_related/auth/pake_v2_auth_task/pake_v2_auth_client_task.c",
+  "${services_path}/authenticators/src/account_related/auth/pake_v2_auth_task/pake_v2_auth_server_task.c",
+]
+
+account_related_files =
+    group_auth_account_related_files + group_manager_identical_account_files +
+    group_manager_across_account_files + authenticators_account_related_files

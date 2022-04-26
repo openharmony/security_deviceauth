@@ -34,8 +34,8 @@ typedef struct {
     TlvUint32 type;
     TlvInt32 visibility;
     TlvInt32 expireTime;
-    TlvString userIdHash;
-    TlvBuffer sharedUserIdHashVec;
+    TlvString userId;
+    TlvString sharedUserId;
     TlvBuffer managers;
     TlvBuffer friends;
 } TlvGroupElement;
@@ -56,10 +56,10 @@ typedef struct {
     TlvString groupId;
     TlvString udid;
     TlvString authId;
+    TlvString userId;
     TlvString serviceType;
     TlvBuffer ext;
     TlvDevAuthFixedLenInfo info;
-    TlvString userIdHash;
 } TlvDeviceElement;
 DECLEAR_INIT_FUNC(TlvDeviceElement)
 DECLARE_TLV_VECTOR(TlvDeviceVec, TlvDeviceElement)
@@ -80,8 +80,8 @@ BEGIN_TLV_STRUCT_DEFINE(TlvGroupElement, 0x0001)
     TLV_MEMBER(TlvUint32, type, 0x4003)
     TLV_MEMBER(TlvInt32, visibility, 0x4004)
     TLV_MEMBER(TlvInt32, expireTime, 0x4005)
-    TLV_MEMBER(TlvString, userIdHash, 0x4006)
-    TLV_MEMBER(TlvBuffer, sharedUserIdHashVec, 0x4007)
+    TLV_MEMBER(TlvString, userId, 0x4006)
+    TLV_MEMBER(TlvString, sharedUserId, 0x4007)
     TLV_MEMBER(TlvBuffer, managers, 0x4008)
     TLV_MEMBER(TlvBuffer, friends, 0x4009)
 END_TLV_STRUCT_DEFINE()
@@ -91,7 +91,7 @@ BEGIN_TLV_STRUCT_DEFINE(TlvDeviceElement, 0x0002)
     TLV_MEMBER(TlvString, groupId, 0x4101)
     TLV_MEMBER(TlvString, udid, 0x4102)
     TLV_MEMBER(TlvString, authId, 0x4103)
-    TLV_MEMBER(TlvString, userIdHash, 0x4107)
+    TLV_MEMBER(TlvString, userId, 0x4107)
     TLV_MEMBER(TlvString, serviceType, 0x4104)
     TLV_MEMBER(TlvBuffer, ext, 0x4105)
     TLV_MEMBER(TlvDevAuthFixedLenInfo, info, 0x4106)
@@ -229,8 +229,12 @@ bool GenerateGroupEntryFromEntry(const TrustedGroupEntry *entry, TrustedGroupEnt
         LOGE("[DB]: Failed to copy groupId!");
         return false;
     }
-    if (!StringSet(&returnEntry->userIdHash, entry->userIdHash)) {
-        LOGE("[DB]: Failed to copy userIdHash!");
+    if (!StringSet(&returnEntry->userId, entry->userId)) {
+        LOGE("[DB]: Failed to copy userId!");
+        return false;
+    }
+    if (!StringSet(&returnEntry->sharedUserId, entry->sharedUserId)) {
+        LOGE("[DB]: Failed to copy sharedUserId!");
         return false;
     }
     returnEntry->type = entry->type;
@@ -265,12 +269,12 @@ bool GenerateDeviceEntryFromEntry(const TrustedDeviceEntry *entry, TrustedDevice
         LOGE("[DB]: Failed to copy authId!");
         return false;
     }
-    if (!StringSet(&returnEntry->serviceType, entry->serviceType)) {
-        LOGE("[DB]: Failed to copy serviceType!");
+    if (!StringSet(&returnEntry->userId, entry->userId)) {
+        LOGE("[DB]: Failed to copy userId!");
         return false;
     }
-    if (!StringSet(&returnEntry->userIdHash, entry->userIdHash)) {
-        LOGE("[DB]: Failed to copy userIdHash!");
+    if (!StringSet(&returnEntry->serviceType, entry->serviceType)) {
+        LOGE("[DB]: Failed to copy serviceType!");
         return false;
     }
     returnEntry->credential = entry->credential;
@@ -281,22 +285,28 @@ bool GenerateDeviceEntryFromEntry(const TrustedDeviceEntry *entry, TrustedDevice
 
 static bool GenerateGroupEntryFromTlv(TlvGroupElement *group, TrustedGroupEntry *entry)
 {
-    if (!LoadStringVectorFromParcel(&entry->managers, &group->managers.data)) {
-        return false;
-    }
-    if (!LoadStringVectorFromParcel(&entry->friends, &group->friends.data)) {
-        return false;
-    }
-    if (!LoadStringVectorFromParcel(&entry->sharedUserIdHashVec, &group->sharedUserIdHashVec.data)) {
-        return false;
-    }
     if (!StringSet(&entry->name, group->name.data)) {
+        LOGE("[DB]: Failed to load groupName from tlv!");
         return false;
     }
     if (!StringSet(&entry->id, group->id.data)) {
+        LOGE("[DB]: Failed to load groupId from tlv!");
         return false;
     }
-    if (!StringSet(&entry->userIdHash, group->userIdHash.data)) {
+    if (!StringSet(&entry->userId, group->userId.data)) {
+        LOGE("[DB]: Failed to load userId from tlv!");
+        return false;
+    }
+    if (!StringSet(&entry->sharedUserId, group->sharedUserId.data)) {
+        LOGE("[DB]: Failed to load sharedUserId from tlv!");
+        return false;
+    }
+    if (!LoadStringVectorFromParcel(&entry->managers, &group->managers.data)) {
+        LOGE("[DB]: Failed to load managers from tlv!");
+        return false;
+    }
+    if (!LoadStringVectorFromParcel(&entry->friends, &group->friends.data)) {
+        LOGE("[DB]: Failed to load friends from tlv!");
         return false;
     }
     entry->type = group->type.data;
@@ -309,21 +319,27 @@ static bool GenerateDeviceEntryFromTlv(TlvDeviceElement *device, TrustedDeviceEn
 {
     deviceEntry->groupEntry = NULL;
     if (!StringSet(&deviceEntry->groupId, device->groupId.data)) {
+        LOGE("[DB]: Failed to load groupId from tlv!");
         return false;
     }
     if (!StringSet(&deviceEntry->udid, device->udid.data)) {
+        LOGE("[DB]: Failed to load udid from tlv!");
         return false;
     }
     if (!StringSet(&deviceEntry->authId, device->authId.data)) {
+        LOGE("[DB]: Failed to load authId from tlv!");
+        return false;
+    }
+    if (!StringSet(&deviceEntry->userId, device->userId.data)) {
+        LOGE("[DB]: Failed to load userId from tlv!");
         return false;
     }
     if (!StringSet(&deviceEntry->serviceType, device->serviceType.data)) {
-        return false;
-    }
-    if (!StringSet(&deviceEntry->userIdHash, device->userIdHash.data)) {
+        LOGE("[DB]: Failed to load serviceType from tlv!");
         return false;
     }
     if (!ParcelCopy(&device->ext.data, &deviceEntry->ext)) {
+        LOGE("[DB]: Failed to load external data from tlv!");
         return false;
     }
     deviceEntry->credential = device->info.data.credential;
@@ -497,24 +513,30 @@ static void LoadDeviceAuthDb(void)
 static bool SetGroupElement(TlvGroupElement *element, TrustedGroupEntry *entry)
 {
     if (!StringSet(&element->name.data, entry->name)) {
+        LOGE("[DB]: Failed to copy groupName!");
         return false;
     }
     if (!StringSet(&element->id.data, entry->id)) {
+        LOGE("[DB]: Failed to copy groupId!");
         return false;
     }
-    if (!StringSet(&element->userIdHash.data, entry->userIdHash)) {
+    if (!StringSet(&element->userId.data, entry->userId)) {
+        LOGE("[DB]: Failed to copy userId!");
+        return false;
+    }
+    if (!StringSet(&element->sharedUserId.data, entry->sharedUserId)) {
+        LOGE("[DB]: Failed to copy sharedUserId!");
         return false;
     }
     element->type.data = entry->type;
     element->visibility.data = entry->visibility;
     element->expireTime.data = entry->expireTime;
     if (!SaveStringVectorToParcel(&entry->managers, &element->managers.data)) {
+        LOGE("[DB]: Failed to copy managers!");
         return false;
     }
     if (!SaveStringVectorToParcel(&entry->friends, &element->friends.data)) {
-        return false;
-    }
-    if (!SaveStringVectorToParcel(&entry->sharedUserIdHashVec, &element->sharedUserIdHashVec.data)) {
+        LOGE("[DB]: Failed to copy friends!");
         return false;
     }
     return true;
@@ -523,21 +545,27 @@ static bool SetGroupElement(TlvGroupElement *element, TrustedGroupEntry *entry)
 static bool SetDeviceElement(TlvDeviceElement *element, TrustedDeviceEntry *entry)
 {
     if (!StringSet(&element->groupId.data, entry->groupId)) {
+        LOGE("[DB]: Failed to copy groupId!");
         return false;
     }
     if (!StringSet(&element->udid.data, entry->udid)) {
+        LOGE("[DB]: Failed to copy udid!");
         return false;
     }
     if (!StringSet(&element->authId.data, entry->authId)) {
+        LOGE("[DB]: Failed to copy authId!");
+        return false;
+    }
+    if (!StringSet(&element->userId.data, entry->userId)) {
+        LOGE("[DB]: Failed to copy userId!");
         return false;
     }
     if (!StringSet(&element->serviceType.data, entry->serviceType)) {
-        return false;
-    }
-    if (!StringSet(&element->userIdHash.data, entry->userIdHash)) {
+        LOGE("[DB]: Failed to copy serviceType!");
         return false;
     }
     if (!ParcelCopy(&element->ext.data, &entry->ext)) {
+        LOGE("[DB]: Failed to copy external data!");
         return false;
     }
     element->info.data.credential = entry->credential;
@@ -637,6 +665,9 @@ static bool CompareQueryGroupParams(const QueryGroupParams *params, const Truste
         return false;
     }
     if ((params->groupName != NULL) && (strcmp(params->groupName, StringGet(&entry->name)) != 0)) {
+        return false;
+    }
+    if ((params->userId != NULL) && (strcmp(params->userId, StringGet(&entry->userId)) != 0)) {
         return false;
     }
     if ((params->groupType != ALL_GROUP) && (params->groupType != entry->type)) {
@@ -747,6 +778,7 @@ QueryGroupParams InitQueryGroupParams(void)
         .groupId = NULL,
         .groupName = NULL,
         .ownerName = NULL,
+        .userId = NULL,
         .groupType = ALL_GROUP,
         .groupVisibility = ALL_GROUP_VISIBILITY
     };
@@ -772,8 +804,8 @@ TrustedGroupEntry *CreateGroupEntry(void)
     }
     ptr->name = CreateString();
     ptr->id = CreateString();
-    ptr->userIdHash = CreateString();
-    ptr->sharedUserIdHashVec = CreateStrVector();
+    ptr->userId = CreateString();
+    ptr->sharedUserId = CreateString();
     ptr->managers = CreateStrVector();
     ptr->friends = CreateStrVector();
     return ptr;
@@ -783,10 +815,10 @@ void DestroyGroupEntry(TrustedGroupEntry *groupEntry)
 {
     DeleteString(&groupEntry->name);
     DeleteString(&groupEntry->id);
-    DeleteString(&groupEntry->userIdHash);
+    DeleteString(&groupEntry->userId);
+    DeleteString(&groupEntry->sharedUserId);
     DestroyStrVector(&groupEntry->managers);
     DestroyStrVector(&groupEntry->friends);
-    DestroyStrVector(&groupEntry->sharedUserIdHashVec);
     HcFree(groupEntry);
 }
 
@@ -813,8 +845,8 @@ TrustedDeviceEntry *CreateDeviceEntry(void)
     ptr->groupId = CreateString();
     ptr->udid = CreateString();
     ptr->authId = CreateString();
+    ptr->userId = CreateString();
     ptr->serviceType = CreateString();
-    ptr->userIdHash = CreateString();
     ptr->ext = CreateParcel(0, 0);
     return ptr;
 }
@@ -824,8 +856,8 @@ void DestroyDeviceEntry(TrustedDeviceEntry *deviceEntry)
     DeleteString(&deviceEntry->groupId);
     DeleteString(&deviceEntry->udid);
     DeleteString(&deviceEntry->authId);
+    DeleteString(&deviceEntry->userId);
     DeleteString(&deviceEntry->serviceType);
-    DeleteString(&deviceEntry->userIdHash);
     DeleteParcel(&deviceEntry->ext);
     HcFree(deviceEntry);
 }

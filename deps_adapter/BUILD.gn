@@ -1,4 +1,4 @@
-# Copyright (C) 2021 Huawei Device Co., Ltd.
+# Copyright (C) 2021-2022 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -63,12 +63,13 @@ if (defined(ohos_lite)) {
         "//base/hiviewdfx/hilog_lite/interfaces/native/innerkits/hilog",
         "//third_party/bounds_checking_function/include",
         "//base/startup/syspara_lite/interfaces/kits/",
+        "//third_party/mbedtls/include",
       ]
 
       sources = hal_common_files
       sources += [
         "${key_management_adapter_path}/impl/src/small/huks_adapter.c",
-        "${key_management_adapter_path}/impl/src/small/mbedtls_hash_to_point.c",
+        "${key_management_adapter_path}/impl/src/small/mbedtls_ec_adapter.c",
         "${os_adapter_path}/impl/src/linux/hc_condition.c",
         "${os_adapter_path}/impl/src/linux/hc_dev_info.c",
         "${os_adapter_path}/impl/src/linux/hc_file.c",
@@ -79,7 +80,6 @@ if (defined(ohos_lite)) {
 
       cflags = [ "-DHILOG_ENABLE" ]
       defines = [ "LITE_DEVICE" ]
-
       deps = [
         "//base/hiviewdfx/hilog_lite/frameworks/featured:hilog_shared",
         "//base/security/huks/interfaces/innerkits/huks_lite:huks_3.0_sdk",
@@ -102,12 +102,15 @@ if (defined(ohos_lite)) {
       "//third_party/openssl/include/",
       "//base/security/huks/interfaces/innerkits/huks_standard/main/include",
       "//base/startup/syspara_lite/interfaces/innerkits/native/syspara/include",
+      "//third_party/mbedtls/include",
+      "//third_party/mbedtls/include/mbedtls",
     ]
 
     sources = hal_common_files
     sources += [
       "${key_management_adapter_path}/impl/src/standard/crypto_hash_to_point.c",
       "${key_management_adapter_path}/impl/src/standard/huks_adapter.c",
+      "${key_management_adapter_path}/impl/src/standard/mbedtls_ec_adapter.c",
       "${os_adapter_path}/impl/src/linux/hc_condition.c",
       "${os_adapter_path}/impl/src/linux/hc_dev_info.c",
       "${os_adapter_path}/impl/src/linux/hc_file.c",
@@ -120,6 +123,7 @@ if (defined(ohos_lite)) {
       "//base/security/huks/interfaces/innerkits/huks_standard/main:libhukssdk",
       "//base/startup/syspara_lite/interfaces/innerkits/native/syspara:syspara",
       "//third_party/cJSON:cjson_static",
+      "//third_party/mbedtls:mbedtls_shared",
       "//third_party/openssl:libcrypto_static",
       "//utils/native/base:utils",
     ]

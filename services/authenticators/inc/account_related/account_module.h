@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Huawei Device Co., Ltd.
+ * Copyright (C) 2021-2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,12 +17,11 @@
 #define ACCOUNT_MODULE_H
 
 #include "dev_auth_module_manager.h"
-#include "hc_types.h"
 #include "json_utils.h"
 
 int32_t CheckAccountMsgRepeatability(const CJson *in);
 bool IsAccountSupported(void);
 AuthModuleBase *CreateAccountModule(void);
-int32_t ProcessAccountCredentials(int credentialOpCode, const CJson *in, CJson *out);
+int32_t ProcessAccountCredentials(int32_t osAccountId, int32_t credentialOpCode, const CJson *in, CJson *out);
 
 #endif

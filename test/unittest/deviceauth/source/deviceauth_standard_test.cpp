@@ -554,7 +554,7 @@ HWTEST_F(GmGetJoinedGroupsTest, GmGetJoinedGroupsTest002, TestSize.Level0)
     char *returnData = NULL;
     uint32_t returnNum = 0;
     int32_t ret = gm->getJoinedGroups(TEST_REQ_ID, TEST_APP_ID, IDENTICAL_ACCOUNT_GROUP, &returnData, &returnNum);
-    EXPECT_NE(ret, HC_SUCCESS);
+    EXPECT_EQ(ret, HC_SUCCESS);
 }
 
 class GmGetRelatedGroupsTest : public testing::Test {

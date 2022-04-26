@@ -26,7 +26,7 @@ extern "C" {
 char *GetServerConfirmation(const CJson *paramsFromClient, const CJson *reqParam,
     const DeviceAuthCallback *callback);
 int32_t GetGeneralReqParams(const CJson *receiveData, CJson *reqParam);
-bool IsUidHashEqual(const char *uidHashInDb, const char *peerUidHash);
+bool IsUserIdEqual(const char *userIdInDb, const char *peerUserIdInDb);
 #ifdef __cplusplus
 }
 #endif
