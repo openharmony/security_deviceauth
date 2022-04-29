@@ -151,7 +151,7 @@ int32_t ExtractPakePeerId(PakeAuthParams *params, const CJson *in)
         LOGE("Input params is invalid.");
         return HC_ERR_INVALID_PARAMS;
     }
-    int32_t deviceIdPeerLen = HcStrlen((const char *)params->deviceIdPeer.val);
+    uint32_t deviceIdPeerLen = HcStrlen((const char *)params->deviceIdPeer.val);
     if (InitCharStringBuff(&params->pakeParams.idPeer,
         params->devIdPeer.length + deviceIdPeerLen) != HC_SUCCESS) {
         LOGE("InitCharStringBuff: idPeer failed.");
@@ -170,7 +170,7 @@ int32_t ExtractPakeSelfId(PakeAuthParams *params)
         LOGE("Input params NULL.");
         return HC_ERR_INVALID_PARAMS;
     }
-    int32_t deviceIdSelfLen = HcStrlen((const char *)params->deviceIdSelf.val);
+    uint32_t deviceIdSelfLen = HcStrlen((const char *)params->deviceIdSelf.val);
     if (InitCharStringBuff(&params->pakeParams.idSelf,
         params->devIdSelf.length + deviceIdSelfLen) != HC_SUCCESS) {
         LOGE("InitCharStringBuff: idSelf failed.");
@@ -225,7 +225,7 @@ int32_t ExtractPeerDeviceId(PakeAuthParams *params, const CJson *in)
         LOGE("Get peer deviceId failed.");
         return HC_ERR_JSON_GET;
     }
-    int32_t len = HcStrlen(deviceId);
+    uint32_t len = HcStrlen(deviceId);
     if (InitCharStringBuff(&params->deviceIdPeer, len) != HC_SUCCESS) {
         LOGE("InitCharStringBuff: deviceIdPeer failed.");
         return HC_ERR_AUTH_INTERNAL;
@@ -237,7 +237,7 @@ int32_t ExtractPeerDeviceId(PakeAuthParams *params, const CJson *in)
     for (uint32_t i = 0; i < params->deviceIdPeer.length; i++) {
         // Change a - f charactor to upper charactor.
         if (params->deviceIdPeer.val[i] >= 'a' && params->deviceIdPeer.val[i] <= 'f') {
-            params->deviceIdPeer.val[i] = toupper(params->deviceIdPeer.val[i]);
+            params->deviceIdPeer.val[i] = (uint8_t)toupper(params->deviceIdPeer.val[i]);
         }
     }
     return HC_SUCCESS;
@@ -279,7 +279,7 @@ int32_t ExtractPeerDevId(PakeAuthParams *params, const CJson *in)
         LOGE("Get PeerDevId failed.");
         return HC_ERR_JSON_GET;
     }
-    int32_t len = HcStrlen(devId);
+    uint32_t len = HcStrlen(devId);
     // Peer devId type is hex string, no need to transfer.
     if (InitCharStringBuff(&params->devIdPeer, len) != HC_SUCCESS) {
         LOGE("InitCharStringBuff: idPeer failed.");
@@ -304,7 +304,7 @@ int32_t GetPkInfoPeer(PakeAuthParams *params, const CJson *in)
         LOGE("Failed to get peer pkInfo string.");
         return HC_ERR_JSON_GET;
     }
-    int32_t len = HcStrlen(pkInfoPeerStr) + 1;
+    uint32_t len = HcStrlen(pkInfoPeerStr) + 1;
     if (InitSingleParam(&params->pkInfoPeer, len) != HC_SUCCESS) {
         LOGE("Failed to malloc for peer pkInfo.");
         return HC_ERR_ALLOC_MEMORY;
@@ -347,7 +347,7 @@ static int32_t GetAsyPubKeyInfo(PakeAuthParams *params)
             LOGE("Get token from local error.");
             break;
         }
-        int32_t pkInfoLen = token->pkInfoStr.length;
+        uint32_t pkInfoLen = token->pkInfoStr.length;
         if (pkInfoLen >= PUBLIC_KEY_INFO_SIZE) {
             LOGE("Length of pkInfo from local is error.");
             break;
@@ -411,7 +411,7 @@ int32_t InitPakeAuthParams(const CJson *in, PakeAuthParams *params, const Accoun
         LOGE("Self deviceId is NULL.");
         return HC_ERR_INVALID_PARAMS;
     }
-    int32_t deviceIdLen = HcStrlen(deviceId);
+    uint32_t deviceIdLen = HcStrlen(deviceId);
     GOTO_IF_ERR(GetIntFromJson(in, FIELD_OS_ACCOUNT_ID, &params->osAccountId));
     GOTO_IF_ERR(InitPakeV2BaseParams(&params->pakeParams));
     GOTO_IF_ERR(InitSingleParam(&params->pakeParams.epkPeer, P256_PUBLIC_SIZE));

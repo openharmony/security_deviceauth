@@ -260,7 +260,7 @@ static int32_t WriteTokensJsonToFile(int32_t osAccountId, CJson *tokensJson)
         FreeJsonString(storeJsonString);
         return ret;
     }
-    int32_t fileSize = HcStrlen(storeJsonString) + 1;
+    int32_t fileSize = (int32_t)(HcStrlen(storeJsonString) + 1);
     if (HcFileWrite(file, storeJsonString, fileSize) == fileSize) {
         ret = HC_SUCCESS;
     } else {

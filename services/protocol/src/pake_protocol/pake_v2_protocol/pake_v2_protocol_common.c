@@ -334,7 +334,7 @@ static int32_t ComputeSharedSecret(PakeBaseParams *params, const Uint8Buff *sid,
         return HC_ERR_ALLOC_MEMORY;
     }
 
-    int32_t usedLen = 0;
+    uint32_t usedLen = 0;
     if (memcpy_s(sharedSecretMsg.val, sharedSecretMsg.length, sid->val, sid->length) != EOK) {
         LOGE("Memcpy for sidHex failed.");
         res = HC_ERR_MEMORY_COPY;
