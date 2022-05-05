@@ -164,7 +164,7 @@ if (os_level == "mini" || os_level == "small") {
       "utils_base:utils",
     ]
     if (support_jsapi) {
-      external_deps += [ "os_account_standard:os_account_innerkits" ]
+      external_deps += [ "os_account:os_account_innerkits" ]
     }
   }
 
