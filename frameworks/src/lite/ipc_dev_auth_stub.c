@@ -20,7 +20,7 @@
 #include "hc_log.h"
 #include "hc_mutex.h"
 #include "hc_types.h"
-#include "liteipc_adapter.h"
+#include "ipc_skeleton.h"
 #include "ipc_adapt.h"
 #include "ipc_callback_proxy.h"
 #include "ipc_sdk.h"
@@ -49,27 +49,20 @@ int32_t g_callMapElemNum = 0;
 
 #define IPC_IO_BUFF_SZ 1024
 
-static int32_t BinderLiteProcess(SvcIdentity **svc, int32_t procType)
+static int32_t BinderLiteProcess(SvcIdentity svc, int32_t procType)
 {
-    int32_t ret = 0;
-#ifdef __LINUX__
     switch (procType) {
         case BINDER_TYPE_ACQUIRE:
-            ret = BinderAcquire((*svc)->ipcContext, (*svc)->handle);
             break;
         case BINDER_TYPE_ACQUIRE_AND_FREE:
-            ret = BinderAcquire((*svc)->ipcContext, (*svc)->handle);
-            HcFree((void *)(*svc));
-            *svc = NULL;
             break;
         case BINDER_TYPE_RELEASE:
-            (void)BinderRelease((*svc)->ipcContext, (*svc)->handle);
+            (void)ReleaseSvc(svc);
             break;
         default:
             LOGW("internal error: unknown processing type");
     }
-#endif
-    return (ret == 0) ? HC_SUCCESS : HC_ERROR;
+    return HC_SUCCESS;
 }
 
 void ResetCallMap(void)
@@ -104,19 +97,20 @@ static int32_t DecodeCallRequest(IpcIo *data, IpcDataInfo *paramsCache, int32_t 
     int32_t i;
     int32_t ret;
 
-    dataLen = IpcIoPopInt32(data);
+    ReadInt32(data, &dataLen);
     if (dataLen <= 0) {
         return HC_ERR_IPC_BAD_MESSAGE_LENGTH;
     }
 
-    *inParamNum = IpcIoPopInt32(data);
+    ReadInt32(data, inParamNum);
     if ((*inParamNum < 0) || (*inParamNum > cacheNum)) {
         LOGE("param number invalid, inParamNum(%d)", *inParamNum);
         return HC_ERR_IPC_BAD_PARAM_NUM;
     }
     LOGI("request data length(%d), param number: %d", dataLen - sizeof(int32_t), *inParamNum);
 
-    (void)IpcIoPopUint32(data); /* skip flat object length information */
+    uint32_t len = 0;
+    ReadUint32(data, &len); /* skip flat object length information */
     for (i = 0; i < *inParamNum; i++) {
         ret = DecodeIpcData((uintptr_t)data, &(paramsCache[i].type), &(paramsCache[i].val), &(paramsCache[i].valSz));
         if (ret != HC_SUCCESS) {
@@ -130,7 +124,7 @@ static int32_t DecodeCallRequest(IpcIo *data, IpcDataInfo *paramsCache, int32_t 
 
 static int32_t GetMethodId(IpcIo *data, int32_t *methodId)
 {
-    *methodId = IpcIoPopInt32(data);
+    ReadInt32(data, methodId);
     LOGI("GetMethodId, id code %d", *methodId);
     return HC_SUCCESS;
 }
@@ -138,23 +132,23 @@ static int32_t GetMethodId(IpcIo *data, int32_t *methodId)
 static void WithObject(int32_t methodId, IpcIo *data, IpcDataInfo *ipcData, int32_t *cnt)
 {
     if (IsCallbackMethod(methodId)) {
-        ipcData->type = IpcIoPopInt32(data);
+        ReadInt32(data, &(ipcData->type));
         ipcData->valSz = 0;
-        SvcIdentity *tmp = IpcIoPopSvc(data);
-        if (!tmp || (ipcData->type != PARAM_TYPE_CB_OBJECT)) {
+        SvcIdentity tmp;
+        bool ret = ReadRemoteObject(data, &tmp);
+        if (!ret || (ipcData->type != PARAM_TYPE_CB_OBJECT)) {
             LOGE("should with remote object, but failed, param type %d", ipcData->type);
             return;
         }
-        ShowIpcSvcInfo(tmp);
-        ipcData->idx = SetRemoteObject(tmp);
+        ShowIpcSvcInfo(&tmp);
+        ipcData->idx = SetRemoteObject(&tmp);
         if (ipcData->idx >= 0) {
-            if (BinderLiteProcess(&tmp, BINDER_TYPE_ACQUIRE_AND_FREE) == HC_SUCCESS) {
+            if (BinderLiteProcess(tmp, BINDER_TYPE_ACQUIRE_AND_FREE) == HC_SUCCESS) {
                 ipcData->val = (uint8_t *)(&(ipcData->idx));
                 LOGI("object trans success, set id %d", ipcData->idx);
                 (*cnt)++;
             }
         }
-        tmp = NULL;
     }
     return;
 }
@@ -214,7 +208,7 @@ static struct {
     {DevAuthRequestCall, DEV_AUTH_CALL_REQUEST},
 };
 
-int32_t OnRemoteRequest(IServerProxy *iProxy, int32_t reqId, void *origin, IpcIo *req, IpcIo *reply)
+int32_t OnRemoteInvoke(IServerProxy *iProxy, int32_t reqId, void *origin, IpcIo *req, IpcIo *reply)
 {
     int32_t i;
     int32_t n;
@@ -238,11 +232,16 @@ int32_t OnRemoteRequest(IServerProxy *iProxy, int32_t reqId, void *origin, IpcIo
     if (callCtx) {
         ret = callCtx(origin, req, &replyTmp);
     }
-    IpcIoPushInt32(reply, ret);
+    WriteInt32(reply, ret);
     if (reply != NULL) {
         n = GetIpcIoDataLength(&replyTmp);
         if (n > 0) {
-            IpcIoPushFlatObj(reply, (const void *)(replyTmp.bufferBase + IpcIoBufferOffset()), n);
+            WriteUint32(reply, n);
+            bool ret = WriteBuffer(reply, (const void *)(replyTmp.bufferBase + IpcIoBufferOffset()), n);
+            if (!ret) {
+                LOGI("WriteBuffer faild");
+                return HC_ERROR;
+            }
             LOGI("form service result done, result length(%d)", n);
         }
     }
@@ -253,7 +252,6 @@ int32_t OnRemoteRequest(IServerProxy *iProxy, int32_t reqId, void *origin, IpcIo
 int32_t SetCallMap(IpcServiceCall method, int32_t methodId)
 {
     int32_t len;
-    errno_t eno;
     IpcServiceCallMap *callMapTmp = NULL;
 
     if ((1 + g_callMapElemNum) > g_maxCallMapSz) {
@@ -271,7 +269,7 @@ int32_t SetCallMap(IpcServiceCall method, int32_t methodId)
         }
         (void)memset_s(g_callMapTable, len, 0, len);
         if (callMapTmp != NULL) {
-            eno = memcpy_s(g_callMapTable, len, callMapTmp, (sizeof(IpcServiceCallMap) * g_callMapElemNum));
+            errno_t eno = memcpy_s(g_callMapTable, len, callMapTmp, (sizeof(IpcServiceCallMap) * g_callMapElemNum));
             if (eno != EOK) {
                 HcFree((void *)g_callMapTable);
                 g_callMapTable = callMapTmp;
@@ -313,13 +311,12 @@ int32_t SetRemoteObject(const SvcIdentity *object)
     return idx;
 }
 
-static int32_t ClientDeathCallback(const IpcContext *context, void *ipcMsg, IpcIo *data, void *arg)
+static void ClientDeathCallback(void *arg)
 {
     int32_t callbackIdx = (int32_t)arg;
 
     LOGI("remote is not actively, to reset local resource");
     ResetIpcCallBackNodeByNodeId(callbackIdx);
-    return 0;
 }
 
 void AddCbDeathRecipient(int32_t objIdx, int32_t cbDataIdx)
@@ -335,7 +332,7 @@ void AddCbDeathRecipient(int32_t objIdx, int32_t cbDataIdx)
         UnLockCbStubTable();
         return;
     }
-    ret = RegisterDeathCallback(NULL, g_cbStub[objIdx].cbStub, ClientDeathCallback, (void *)cbDataIdx, &cbId);
+    ret = AddDeathRecipient(g_cbStub[objIdx].cbStub, ClientDeathCallback, (void *)cbDataIdx, &cbId);
     if (ret == 0) {
         g_cbStub[objIdx].cbDieId = cbId;
     }
@@ -353,9 +350,9 @@ void ResetRemoteObject(int32_t idx)
             UnLockCbStubTable();
             return;
         }
-        UnregisterDeathCallback(g_cbStub[idx].cbStub, g_cbStub[idx].cbDieId);
-        SvcIdentity *tmpStub = &g_cbStub[idx].cbStub;
-        (void)BinderLiteProcess(&tmpStub, BINDER_TYPE_RELEASE);
+        RemoveDeathRecipient(g_cbStub[idx].cbStub, g_cbStub[idx].cbDieId);
+        SvcIdentity tmpStub = g_cbStub[idx].cbStub;
+        (void)BinderLiteProcess(tmpStub, BINDER_TYPE_RELEASE);
         (void)memset_s(&(g_cbStub[idx].cbStub), sizeof(g_cbStub[idx].cbStub), 0, sizeof(g_cbStub[idx].cbStub));
         g_cbStub[idx].inUse = false;
         UnLockCbStubTable();

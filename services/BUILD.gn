@@ -73,7 +73,6 @@ if (os_level == "mini" || os_level == "small") {
         "//base/hiviewdfx/hilog_lite/interfaces/native/innerkits/hilog",
         "//third_party/bounds_checking_function/include",
         "${frameworks_path}/inc/lite",
-        "//foundation/communication/ipc_lite/interfaces/kits",
         "//foundation/distributedschedule/samgr_lite/interfaces/kits/samgr",
       ]
 
@@ -94,7 +93,7 @@ if (os_level == "mini" || os_level == "small") {
         "${deps_adapter_path}:${hal_module_name}",
         "//base/hiviewdfx/hilog_lite/frameworks/featured:hilog_shared",
         "//build/lite/config/component/cJSON:cjson_shared",
-        "//foundation/communication/ipc_lite:liteipc_adapter",
+        "//foundation/communication/ipc/interfaces/innerkits/c/ipc:ipc_single",
         "//foundation/distributedschedule/samgr_lite/samgr:samgr",
         "//third_party/bounds_checking_function:libsec_shared",
         "//utils/native/lite:utils",
@@ -109,7 +108,7 @@ if (os_level == "mini" || os_level == "small") {
         "//base/hiviewdfx/hilog_lite/interfaces/native/innerkits/hilog",
         "//third_party/bounds_checking_function/include",
         "${frameworks_path}/inc/lite",
-        "//foundation/communication/ipc_lite/interfaces/kits",
+        "//foundation/communication/ipc/interfaces/innerkits/c/ipc/include",
         "//foundation/distributedschedule/samgr_lite/interfaces/kits/samgr",
       ]
 
@@ -126,7 +125,7 @@ if (os_level == "mini" || os_level == "small") {
       deps = [
         "${deps_adapter_path}:${hal_module_name}",
         "//base/hiviewdfx/hilog_lite/frameworks/featured:hilog_shared",
-        "//foundation/communication/ipc_lite:liteipc_adapter",
+        "//foundation/communication/ipc/interfaces/innerkits/c/ipc:ipc_single",
         "//foundation/distributedschedule/samgr_lite/samgr:samgr",
         "//third_party/bounds_checking_function:libsec_shared",
         "//utils/native/lite:utils",

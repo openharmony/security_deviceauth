@@ -18,7 +18,7 @@
 #include "common_defs.h"
 #include "device_auth_defines.h"
 #include "hc_log.h"
-#include "liteipc_adapter.h"
+#include "ipc_skeleton.h"
 #include "ipc_adapt.h"
 #include "ipc_sdk.h"
 #include "securec.h"
@@ -51,11 +51,11 @@ int32_t EncodeCallRequest(ProxyDevAuthData *dataCtx, int32_t type, const uint8_t
     IpcIo *ioPtr = NULL;
     LOGI("type %d, paramSz %d", type, paramSz);
     ioPtr = dataCtx->tmpData;
-    IpcIoPushInt32(ioPtr, type);
-    IpcIoPushFlatObj(ioPtr, param, paramSz);
-    if (!IpcIoAvailable(ioPtr)) {
-        LOGE("request data serialized failed");
-        return HC_ERROR;
+    WriteInt32(ioPtr, type);
+    WriteUint32(ioPtr, paramSz);
+    bool ret = WriteBuffer(ioPtr, param, paramSz);
+    if (!ret) {
+        return HC_FALSE;
     }
     dataCtx->paramCnt++;
     return HC_SUCCESS;
@@ -75,10 +75,14 @@ int32_t FinalCallRequest(ProxyDevAuthData *dataCtx, int32_t methodId)
     LOGI("method id %d, param num %d, data length %d, flag %u, io offset %d",
         methodId, dataCtx->paramCnt, dataLen, ioPtr->flag, dataCtx->ioBuffOffset);
     /* request data length = number of params + params information */
-    IpcIoPushInt32(ioPtr, methodId);
-    IpcIoPushInt32(ioPtr, dataLen + sizeof(int32_t));
-    IpcIoPushInt32(ioPtr, dataCtx->paramCnt);
-    IpcIoPushFlatObj(ioPtr, (const uint8_t *)(dataCtx->tmpData->bufferBase + dataCtx->ioBuffOffset), dataLen);
+    WriteInt32(ioPtr, methodId);
+    WriteInt32(ioPtr, dataLen + sizeof(int32_t));
+    WriteInt32(ioPtr, dataCtx->paramCnt);
+    WriteUint32(ioPtr, dataLen);
+    bool ret = WriteBuffer(ioPtr, (const uint8_t *)(dataCtx->tmpData->bufferBase + dataCtx->ioBuffOffset), dataLen);
+    if (!ret) {
+        return HC_FALSE;
+    }
     if (dataCtx->withCallback) {
         SvcIdentity badSvc = {0};
         ShowIpcSvcInfo(&(dataCtx->cbSvc));
@@ -88,15 +92,13 @@ int32_t FinalCallRequest(ProxyDevAuthData *dataCtx, int32_t methodId)
             dataCtx->withCallback = false;
             return HC_ERROR;
         }
-        IpcIoPushInt32(ioPtr, PARAM_TYPE_CB_OBJECT);
-        IpcIoPushSvc(ioPtr, &(dataCtx->cbSvc));
+        WriteInt32(ioPtr, PARAM_TYPE_CB_OBJECT);
+        if (!WriteRemoteObject(ioPtr, &(dataCtx->cbSvc))) {
+            return HC_FALSE;
+        }
         LOGI("ipc call with callback, data flag %u", ioPtr->flag);
     }
     dataCtx->withCallback = false;
-    if (!IpcIoAvailable(ioPtr)) {
-        LOGE("request data serialized failed");
-        return HC_ERROR;
-    }
     return HC_SUCCESS;
 }
 
@@ -108,10 +110,6 @@ static int32_t CliInvokeRetCallback(IOwner owner, int32_t code, IpcIo *reply)
     LOGI("starting...");
     if ((reply == NULL) || (owner == NULL)) {
         LOGE("invalid params");
-        return -1;
-    }
-    if (!IpcIoAvailable(reply)) {
-        LOGE("invalid reply data");
         return -1;
     }
     dstReply = (IpcIo *)owner;
@@ -140,10 +138,8 @@ int32_t ActCall(const IClientProxy *clientInst, ProxyDevAuthData *dataCtx)
         dataCtx->data, (IOwner)(dataCtx->reply), CliInvokeRetCallback);
     LOGI("invoke call done, ipc result(%d)", ipcRet);
     ret = HC_ERROR;
-    if (IpcIoAvailable(dataCtx->reply)) {
-        ret = IpcIoPopInt32(dataCtx->reply);
-        LOGI("service call result(%d)", ret);
-    }
+    ReadInt32(dataCtx->reply, &ret);
+    LOGI("service call result(%d)", ret);
     return ((ipcRet == 0) && (ret == HC_SUCCESS)) ? HC_SUCCESS : HC_ERR_IPC_INTERNAL_FAILED;
 }
 

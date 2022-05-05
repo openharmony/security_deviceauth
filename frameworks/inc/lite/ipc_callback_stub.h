@@ -17,7 +17,7 @@
 #define IPC_CALLBACK_STUB_H
 
 #include <stdbool.h>
-#include <serializer.h>
+#include "ipc_skeleton.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,7 +28,7 @@ typedef struct {
     bool registered;
 } StubDevAuthCb;
 
-int32_t CbStubOnRemoteRequest(const IpcContext *ctx, void *ipcMsg, IpcIo *data, void *arg);
+int32_t CbStubOnRemoteRequest(uint32_t code, IpcIo *data, IpcIo *reply, MessageOption option);
 
 #ifdef __cplusplus
 }
