@@ -19,7 +19,7 @@
 #include "hc_log.h"
 #include "ipc_adapt.h"
 #include "ipc_iface.h"
-#include "liteipc_adapter.h"
+#include "ipc_skeleton.h"
 #include "securec.h"
 
 #ifdef __cplusplus
@@ -37,7 +37,8 @@ static void DoCallBack(int32_t callbackId, uintptr_t cbHook, IpcIo *data, IpcIo 
         return;
     }
 
-    (void)IpcIoPopUint32(data); /* skip flat object length information */
+    uint32_t len = 0;
+    ReadUint32(data, &len); /* skip flat object length information */
     for (i = 0; i < MAX_REQUEST_PARAMS_NUM; i++) {
         ret = DecodeIpcData((uintptr_t)(data), &(cbDataCache[i].type),
             &(cbDataCache[i].val), &(cbDataCache[i].valSz));
@@ -50,68 +51,30 @@ static void DoCallBack(int32_t callbackId, uintptr_t cbHook, IpcIo *data, IpcIo 
     return;
 }
 
-static int32_t CbStubOnRemoteReply(void *ipcMsg, IpcIo *reply)
+int32_t CbStubOnRemoteRequest(uint32_t code, IpcIo *data, IpcIo *reply, MessageOption option)
 {
-    uint32_t flag = 0;
-    int32_t ret = 0;
-    IpcIo replyErr;
-    uint8_t replyBuff[16] = {0}; /* length of reply buffer - 16 */
-
-    /* flag: ipc mode is blocking or non blocking. */
-    GetFlag(ipcMsg, &flag);
-    if (flag != LITEIPC_FLAG_DEFAULT) {
-        /* Ipc mode is non blocking. */
-        LOGI("callback - async call(%u)", flag);
-        /* If the system is based on liteipc, the ipcMsg memory needs to be cleaned manually. */
-        FreeBuffer(NULL, ipcMsg);
-        return 0;
-    }
-    /* Ipc mode is blocking. */
-    if (!IpcIoAvailable(reply)) {
-        IpcIoInit(&replyErr, replyBuff, sizeof(replyBuff), 0);
-        IpcIoPushInt32(&replyErr, HC_ERR_IPC_INTERNAL_FAILED);
-        LOGI("callback - SendReply error code(%d)", HC_ERR_IPC_INTERNAL_FAILED);
-        ret = SendReply(NULL, ipcMsg, &replyErr);
-    } else {
-        LOGI("callback - SendReply done");
-        ret = SendReply(NULL, ipcMsg, reply);
-    }
-    return ret;
-}
-
-int32_t CbStubOnRemoteRequest(const IpcContext *ctx, void *ipcMsg, IpcIo *data, void *arg)
-{
-    uint32_t code = 0;
     int32_t callbackId;
     uintptr_t cbHook = 0x0;
-    IpcIo reply;
-    uint8_t replyBuff[1024] = {0}; /* length of reply buffer - 1024 */
-    int32_t ret = 0;
-    (void)ctx;
-    (void)arg;
 
     LOGI("enter invoking callback...");
-    if ((ipcMsg == NULL) || (data == NULL)) {
+    if (data == NULL) {
         LOGE("invalid param");
         return -1;
     }
 
-    GetCode(ipcMsg, &code);
     LOGI("receive ipc transact code(%u)", code);
-    IpcIoInit(&reply, replyBuff, sizeof(replyBuff), 0);
     switch (code) {
         case DEV_AUTH_CALLBACK_REQUEST:
-            callbackId = IpcIoPopInt32(data);
-            cbHook = IpcIoPopUintptr(data);
-            DoCallBack(callbackId, cbHook, data, &reply);
+            ReadInt32(data, &callbackId);
+            cbHook = ReadPointer(data);
+            DoCallBack(callbackId, cbHook, data, reply);
             break;
         default:
             LOGE("Invoke callback cmd code(%u) error", code);
             break;
     }
-    ret = CbStubOnRemoteReply(ipcMsg, &reply);
-    LOGI("Invoke callback done, result(%d)", ret);
-    return ret;
+    LOGI("Invoke callback done, result(%d)", HC_SUCCESS);
+    return HC_SUCCESS;
 }
 
 #ifdef __cplusplus
