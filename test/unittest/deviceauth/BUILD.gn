@@ -76,6 +76,6 @@ ohos_unittest("deviceauth_llt") {
     "hiviewdfx_hilog_native:libhilog",
   ]
   if (support_jsapi) {
-    external_deps += [ "os_account_standard:os_account_innerkits" ]
+    external_deps += [ "os_account:os_account_innerkits" ]
   }
 }
