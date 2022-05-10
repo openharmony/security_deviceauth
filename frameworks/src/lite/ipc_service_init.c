@@ -18,7 +18,7 @@
 #include "device_auth_defines.h"
 #include "hc_log.h"
 #include "ipc_dev_auth_stub.h"
-#include "liteipc_adapter.h"
+#include "ipc_skeleton.h"
 #include "ohos_init.h"
 
 #ifdef __cplusplus
@@ -69,7 +69,7 @@ void ServiceInit(void)
         .MessageHandle = MessageHandle,
         .GetTaskConfig = GetTaskConfig,
         SERVER_IPROXY_IMPL_BEGIN,
-        .Invoke = OnRemoteRequest,
+        .Invoke = OnRemoteInvoke,
         IPROXY_END,
     };
 

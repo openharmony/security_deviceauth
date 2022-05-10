@@ -24,7 +24,7 @@
 #include "ipc_dev_auth_stub.h"
 #include "ipc_sdk.h"
 #include "ipc_service.h"
-#include "liteipc_adapter.h"
+#include "ipc_skeleton.h"
 #include "securec.h"
 
 #ifdef __cplusplus
@@ -57,6 +57,7 @@ static HcMutex g_cbListLock;
 
 static StubDevAuthCb g_sdkCbStub;
 static IClientProxy *g_proxyInstance = NULL;
+static IpcObjectStub g_objectStub;
 
 static void SetIpcCallBackNodeDefault(IpcCallBackNode *node)
 {
@@ -450,7 +451,7 @@ static void OnTransmitStub(uintptr_t cbHook, const IpcDataInfo *cbDataCache, int
     (void)GetIpcRequestParamByType(cbDataCache, cacheNum,
         PARAM_TYPE_COMM_DATA, (uint8_t *)&data, (int32_t *)(&dataLen));
     bRet = onTransmitHook(requestId, data, dataLen);
-    (bRet == true) ? IpcIoPushInt32(reply, HC_SUCCESS) : IpcIoPushInt32(reply, HC_ERROR);
+    (bRet == true) ? WriteInt32(reply, HC_SUCCESS) : WriteInt32(reply, HC_ERROR);
     return;
 }
 
@@ -468,7 +469,7 @@ static void OnSessKeyStub(uintptr_t cbHook, const IpcDataInfo *cbDataCache, int3
     (void)GetIpcRequestParamByType(cbDataCache, cacheNum, PARAM_TYPE_SESS_KEY,
         (uint8_t *)(&keyData), (int32_t *)(&dataLen));
     onSessKeyHook(requestId, keyData, dataLen);
-    IpcIoPushInt32(reply, HC_SUCCESS);
+    WriteInt32(reply, HC_SUCCESS);
     return;
 }
 
@@ -487,7 +488,7 @@ static void OnFinishStub(uintptr_t cbHook, const IpcDataInfo *cbDataCache, int32
     (void)GetIpcRequestParamByType(cbDataCache, cacheNum, PARAM_TYPE_OPCODE, (uint8_t *)(&opCode), &inOutLen);
     (void)GetIpcRequestParamByType(cbDataCache, cacheNum, PARAM_TYPE_COMM_DATA, (uint8_t *)(&data), NULL);
     onFinishHook(requestId, opCode, data);
-    IpcIoPushInt32(reply, HC_SUCCESS);
+    WriteInt32(reply, HC_SUCCESS);
     return;
 }
 
@@ -508,7 +509,7 @@ static void OnErrorStub(uintptr_t cbHook, const IpcDataInfo *cbDataCache, int32_
     (void)GetIpcRequestParamByType(cbDataCache, cacheNum, PARAM_TYPE_ERRCODE, (uint8_t *)(&errCode), &inOutLen);
     (void)GetIpcRequestParamByType(cbDataCache, cacheNum, PARAM_TYPE_ERR_INFO, (uint8_t *)(&errInfo), NULL);
     onErrorHook(requestId, opCode, errCode, errInfo);
-    IpcIoPushInt32(reply, HC_SUCCESS);
+    WriteInt32(reply, HC_SUCCESS);
     return;
 }
 
@@ -529,11 +530,11 @@ static void OnRequestStub(uintptr_t cbHook, const IpcDataInfo *cbDataCache, int3
     (void)GetIpcRequestParamByType(cbDataCache, cacheNum, PARAM_TYPE_REQ_INFO, (uint8_t *)(&reqParams), NULL);
     reqResult = onReqHook(requestId, opCode, reqParams);
     if (reqResult == NULL) {
-        IpcIoPushInt32(reply, HC_ERROR);
+        WriteInt32(reply, HC_ERROR);
         return;
     }
-    IpcIoPushInt32(reply, HC_SUCCESS);
-    IpcIoPushString(reply, (const char *)(reqResult));
+    WriteInt32(reply, HC_SUCCESS);
+    WriteString(reply, (const char *)(reqResult));
     HcFree(reqResult);
     reqResult = NULL;
     return;
@@ -547,7 +548,7 @@ static void OnGroupCreatedStub(uintptr_t cbHook, const IpcDataInfo *cbDataCache,
     onGroupCreatedHook = (void (*)(const char *))(cbHook);
     (void)GetIpcRequestParamByType(cbDataCache, cacheNum, PARAM_TYPE_GROUP_INFO, (uint8_t *)(&groupInfo), NULL);
     onGroupCreatedHook(groupInfo);
-    IpcIoPushInt32(reply, HC_SUCCESS);
+    WriteInt32(reply, HC_SUCCESS);
     return;
 }
 
@@ -559,7 +560,7 @@ static void OnGroupDeletedStub(uintptr_t cbHook, const IpcDataInfo *cbDataCache,
     onDelGroupHook = (void (*)(const char *))(cbHook);
     (void)GetIpcRequestParamByType(cbDataCache, cacheNum, PARAM_TYPE_GROUP_INFO, (uint8_t *)(&groupInfo), NULL);
     onDelGroupHook(groupInfo);
-    IpcIoPushInt32(reply, HC_SUCCESS);
+    WriteInt32(reply, HC_SUCCESS);
     return;
 }
 
@@ -573,7 +574,7 @@ static void OnDevBoundStub(uintptr_t cbHook, const IpcDataInfo *cbDataCache, int
     (void)GetIpcRequestParamByType(cbDataCache, cacheNum, PARAM_TYPE_UDID, (uint8_t *)(&udid), NULL);
     (void)GetIpcRequestParamByType(cbDataCache, cacheNum, PARAM_TYPE_GROUP_INFO, (uint8_t *)(&groupInfo), NULL);
     onDevBoundHook(udid, groupInfo);
-    IpcIoPushInt32(reply, HC_SUCCESS);
+    WriteInt32(reply, HC_SUCCESS);
     return;
 }
 
@@ -587,7 +588,7 @@ static void OnDevUnboundStub(uintptr_t cbHook, const IpcDataInfo *cbDataCache, i
     (void)GetIpcRequestParamByType(cbDataCache, cacheNum, PARAM_TYPE_UDID, (uint8_t *)(&udid), NULL);
     (void)GetIpcRequestParamByType(cbDataCache, cacheNum, PARAM_TYPE_GROUP_INFO, (uint8_t *)(&groupInfo), NULL);
     onDevUnBoundHook(udid, groupInfo);
-    IpcIoPushInt32(reply, HC_SUCCESS);
+    WriteInt32(reply, HC_SUCCESS);
     return;
 }
 
@@ -599,7 +600,7 @@ static void OnDevUnTrustStub(uintptr_t cbHook, const IpcDataInfo *cbDataCache, i
     onDevUnTrustHook = (void (*)(const char *))(cbHook);
     (void)GetIpcRequestParamByType(cbDataCache, cacheNum, PARAM_TYPE_UDID, (uint8_t *)(&udid), NULL);
     onDevUnTrustHook(udid);
-    IpcIoPushInt32(reply, HC_SUCCESS);
+    WriteInt32(reply, HC_SUCCESS);
     return;
 }
 
@@ -615,7 +616,7 @@ static void OnDelLastGroupStub(uintptr_t cbHook, const IpcDataInfo *cbDataCache,
     inOutLen = sizeof(groupType);
     (void)GetIpcRequestParamByType(cbDataCache, cacheNum, PARAM_TYPE_GROUP_TYPE, (uint8_t *)(&groupType), &inOutLen);
     onDelLastGroupHook(udid, groupType);
-    IpcIoPushInt32(reply, HC_SUCCESS);
+    WriteInt32(reply, HC_SUCCESS);
     return;
 }
 
@@ -630,7 +631,7 @@ static void OnTrustDevNumChangedStub(uintptr_t cbHook,
     inOutLen = sizeof(devNum);
     (void)GetIpcRequestParamByType(cbDataCache, cacheNum, PARAM_TYPE_DATA_NUM, (uint8_t *)(&devNum), &inOutLen);
     onTrustDevNumChangedHook(devNum);
-    IpcIoPushInt32(reply, HC_SUCCESS);
+    WriteInt32(reply, HC_SUCCESS);
     return;
 }
 
@@ -669,9 +670,10 @@ static uint32_t EncodeCallData(IpcIo *dataParcel, int32_t type, const uint8_t *p
         paramTmp = (const uint8_t *)(&zeroVal);
         paramSz = sizeof(zeroVal);
     }
-    IpcIoPushInt32(dataParcel, type);
-    IpcIoPushFlatObj(dataParcel, (const void *)(paramTmp), (uint32_t)paramSz);
-    if (!IpcIoAvailable(dataParcel)) {
+    WriteInt32(dataParcel, type);
+    WriteUint32(dataParcel, (uint32_t)paramSz);
+    bool ret = WriteBuffer(dataParcel, (const void *)(paramTmp), (uint32_t)paramSz);
+    if (!ret) {
         return (uint32_t)(HC_ERROR);
     }
     return (uint32_t)(HC_SUCCESS);
@@ -712,7 +714,9 @@ static bool GaCbOnTransmitWithType(int64_t requestId, const uint8_t *data, uint3
     UnLockCallbackList();
     HcFree((void *)dataParcel);
     LOGI("process done, request id: %lld", requestId);
-    if (IpcIoAvailable(&reply) && (IpcIoPopInt32(&reply) == HC_SUCCESS)) {
+    int32_t value;
+    ReadInt32(&reply, &value);
+    if (value == HC_SUCCESS) {
         return true;
     }
     return false;
@@ -916,11 +920,9 @@ static char *GaCbOnRequestWithType(int64_t requestId, int32_t operationCode, con
     ActCallback(node->proxyId, CB_ID_ON_REQUEST, (uintptr_t)(node->cbCtx.devAuth.onRequest), dataParcel, &reply);
     UnLockCallbackList();
     HcFree((void *)dataParcel);
-    if (IpcIoAvailable(&reply)) {
-        ret = IpcIoPopInt32(&reply);
-        if (ret == HC_SUCCESS) {
-            dPtr = (const char *)IpcIoPopString(&reply, NULL);
-        }
+    ReadInt32(&reply, &ret);
+    if (ret == HC_SUCCESS) {
+        dPtr = (const char *)ReadString(&reply, NULL);
     }
     LOGI("process done, request id: %lld, %s result", requestId, (dPtr != NULL) ? "valid" : "invalid");
     return (dPtr != NULL) ? strdup(dPtr) : NULL;
@@ -1460,14 +1462,17 @@ int32_t IpcEncodeCallReplay(uintptr_t replayCache, int32_t type, const uint8_t *
     unsigned long valZero = 0ul;
 
     replyParcel = (IpcIo *)(replayCache);
-    IpcIoPushInt32(replyParcel, type);
+    WriteInt32(replyParcel, type);
+    bool value;
     if ((result != NULL) && (resultSz > 0)) {
-        IpcIoPushFlatObj(replyParcel, (const void *)result, (uint32_t)resultSz);
+        WriteUint32(replyParcel, (uint32_t)resultSz);
+        value = WriteBuffer(replyParcel, (const void *)result, (uint32_t)resultSz);
     } else {
-        IpcIoPushFlatObj(replyParcel, (const void *)(&valZero), sizeof(valZero));
+        WriteUint32(replyParcel, sizeof(valZero));
+        value = WriteBuffer(replyParcel, (const void *)(&valZero), sizeof(valZero));
     }
-    if (!IpcIoAvailable(replyParcel)) {
-        ret = HC_ERROR;
+    if (!value) {
+        return HC_FALSE;
     }
     LOGI("reply type %d, %s", type, (ret == HC_SUCCESS) ? "success" : "failed");
     return ret;
@@ -1481,11 +1486,9 @@ int32_t DecodeIpcData(uintptr_t data, int32_t *type, uint8_t **val, int32_t *val
     if (dataPtr->bufferLeft <= 0) {
         return HC_SUCCESS;
     }
-    *type = IpcIoPopInt32(dataPtr);
-    *val = (uint8_t *)IpcIoPopFlatObj(dataPtr, (uint32_t *)valSz);
-    if (!IpcIoAvailable(dataPtr)) {
-        return HC_ERROR;
-    }
+    ReadInt32(dataPtr, type);
+    ReadUint32(dataPtr, (uint32_t *)valSz);
+    *val = (uint8_t *)ReadBuffer(dataPtr, *valSz);
     return HC_SUCCESS;
 }
 
@@ -1496,7 +1499,7 @@ void DecodeCallReply(uintptr_t callCtx, IpcDataInfo *replyCache, int32_t cacheNu
     uint32_t replyLen;
 
     ProxyDevAuthData *dataCache = (ProxyDevAuthData *)(callCtx);
-    replyLen = IpcIoPopUint32(dataCache->reply);
+    ReadUint32(dataCache->reply, &replyLen);
     LOGI("to decode data length %u", replyLen);
     if (replyLen == 0) {
         return;
@@ -1621,11 +1624,6 @@ IpcIo *InitIpcDataCache(uint32_t buffSz)
     buf = (uint8_t *)ioPtr + sizeof(IpcIo);
     /* ipcio inited with 4 svc objects */
     IpcIoInit(ioPtr, (void *)buf, buffSz, 4);
-    if (!IpcIoAvailable(ioPtr)) {
-        LOGE("IpcIoInit failed");
-        HcFree((void *)ioPtr);
-        return NULL;
-    }
     return ioPtr;
 }
 
@@ -1634,7 +1632,7 @@ int32_t GetIpcIoDataLength(const IpcIo *io)
     uintptr_t beginPos;
     uintptr_t endPos;
 
-    if ((io == NULL) || !IpcIoAvailable((IpcIo *)io)) {
+    if (io == NULL) {
         return 0;
     }
     beginPos = (uintptr_t)(io->bufferBase + IpcIoBufferOffset());
@@ -1650,8 +1648,6 @@ void ShowIpcSvcInfo(const SvcIdentity *svc)
 
 int32_t InitProxyAdapt(void)
 {
-    int32_t ret;
-
     if (g_proxyInstance == NULL) {
         g_proxyInstance = (IClientProxy *)GetProxyInstance(DEV_AUTH_SERVICE_NAME);
         if (g_proxyInstance == NULL) {
@@ -1662,11 +1658,13 @@ int32_t InitProxyAdapt(void)
     }
 
     if (!g_sdkCbStub.registered) {
-        ret = RegisterIpcCallback(CbStubOnRemoteRequest, 0, IPC_WAIT_FOREVER, &(g_sdkCbStub.stubIdentity), NULL);
-        if (ret != 0) {
-            LOGE("register ipc cb failed");
-            return HC_ERR_IPC_INIT;
-        }
+        g_objectStub.func = CbStubOnRemoteRequest;
+        g_objectStub.args = NULL;
+        g_objectStub.isRemote = false;
+        g_sdkCbStub.stubIdentity.handle = IPC_INVALID_HANDLE;
+        g_sdkCbStub.stubIdentity.token = SERVICE_TYPE_ANONYMOUS;
+        g_sdkCbStub.stubIdentity.cookie = (uintptr_t)&g_objectStub;
+
         ShowIpcSvcInfo(&(g_sdkCbStub.stubIdentity));
         LOGI("register ipc cb success");
         g_sdkCbStub.registered = true;
@@ -1677,9 +1675,6 @@ int32_t InitProxyAdapt(void)
 void UnInitProxyAdapt(void)
 {
     g_proxyInstance = NULL;
-    if (UnregisterIpcCallback(g_sdkCbStub.stubIdentity)) {
-        LOGW("un-register ipc cb failed");
-    }
     g_sdkCbStub.registered = false;
     return;
 }
