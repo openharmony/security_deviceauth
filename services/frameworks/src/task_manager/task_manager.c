@@ -19,7 +19,7 @@
 #include "hc_log.h"
 
 #ifndef HICHAIN_THREAD_STACK_SIZE
-#define HICHAIN_THREAD_STACK_SIZE 4096
+#define HICHAIN_THREAD_STACK_SIZE 16384
 #endif
 
 static HcTaskThread *g_taskThread = NULL;
