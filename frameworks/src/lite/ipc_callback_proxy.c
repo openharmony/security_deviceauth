@@ -17,7 +17,7 @@
 #include "hc_log.h"
 #include "hc_types.h"
 #include "ipc_adapt.h"
-#include "liteipc_adapter.h"
+#include "ipc_skeleton.h"
 #include "securec.h"
 
 #ifdef __cplusplus
@@ -28,12 +28,6 @@ static void CbProxyFormReplyData(int32_t reqRetVal, IpcIo *replyDst, const IpcIo
 {
     errno_t eno;
 
-    if (!IpcIoAvailable((IpcIo *)replySrc)) {
-        LOGE("reply context is not available");
-        *(int32_t *)(replyDst->bufferCur) = -1;
-        replyDst->bufferLeft = sizeof(int32_t);
-        return;
-    }
     if (reqRetVal != 0) {
         *(int32_t *)(replyDst->bufferCur) = reqRetVal;
         replyDst->bufferLeft = sizeof(int32_t);
@@ -65,29 +59,29 @@ void CbProxySendRequest(SvcIdentity sid, int32_t callbackId, uintptr_t cbHook, I
     if (reqData == NULL) {
         return;
     }
-    IpcIoPushInt32(reqData, callbackId);
-    IpcIoPushUintptr(reqData, cbHook);
+    WriteInt32(reqData, callbackId);
+    WritePointer(reqData, cbHook);
     dataSz = GetIpcIoDataLength((const IpcIo *)data);
     LOGI("to form callback params data length(%d)", dataSz);
     if (dataSz > 0) {
-        IpcIoPushFlatObj(reqData, data->bufferBase + IpcIoBufferOffset(), dataSz);
-    }
-    if (!IpcIoAvailable(reqData)) {
-        LOGE("form send data failed");
-        HcFree((void *)reqData);
-        return;
+        WriteUint32(reqData, dataSz);
+        bool value = WriteBuffer(reqData, data->bufferBase + IpcIoBufferOffset(), dataSz);
+        if (!value) {
+            return;
+        }
     }
     /* callFlag: ipc mode is blocking or non blocking. */
-    int32_t callFlag = ((reply != NULL) ? LITEIPC_FLAG_DEFAULT : LITEIPC_FLAG_ONEWAY);
-    ret = SendRequest(NULL, sid, DEV_AUTH_CALLBACK_REQUEST, reqData, &replyTmp, callFlag, &outMsg);
-    LOGI("SendRequest(%d) done, return(%d)", callFlag, ret);
+    MessageOption option;
+    MessageOptionInit(&option);
+    option.flags = ((reply != NULL) ? TF_OP_SYNC : TF_OP_ASYNC);
+    ret = SendRequest(sid, DEV_AUTH_CALLBACK_REQUEST, reqData, &replyTmp, option, &outMsg);
+    LOGI("SendRequest(%d) done, return(%d)", option.flags, ret);
     HcFree((void *)reqData);
     if (reply == NULL) {
-        FreeBuffer(NULL, (void *)outMsg);
         return;
     }
     CbProxyFormReplyData(ret, reply, &replyTmp);
-    FreeBuffer(NULL, (void *)outMsg);
+    FreeBuffer((void *)outMsg);
     return;
 }
 
