@@ -138,4 +138,4 @@
 
 **安全子系统**
 
-security\_deviceauth
+[security\_deviceauth](https://gitee.com/openharmony/security_deviceauth)
