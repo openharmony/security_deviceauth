@@ -124,7 +124,7 @@ if (defined(ohos_lite)) {
       "//base/startup/syspara_lite/interfaces/innerkits/native/syspara:syspara",
       "//third_party/cJSON:cjson_static",
       "//third_party/mbedtls:mbedtls_shared",
-      "//third_party/openssl:libcrypto_static",
+      "//third_party/openssl:libcrypto_shared",
       "//utils/native/base:utils",
     ]
     external_deps = [ "hiviewdfx_hilog_native:libhilog" ]
