@@ -25,11 +25,11 @@
 #include "hc_log.h"
 #include "huks_adapter.h"
 
-#define LOG_AND_RETURN_IF_FAIL(ret, fmt, ...) \
+#define LOG_AND_RETURN_IF_MBED_FAIL(ret, fmt, ...) \
 do { \
     if ((ret) != 0) { \
         LOGE(fmt, ##__VA_ARGS__); \
-        return (ret); \
+        return HAL_ERR_MBEDTLS; \
     } \
 } while (0)
 
@@ -107,10 +107,10 @@ static int32_t CalculateMessageDigest(mbedtls_md_type_t type, const Blob *input,
     }
 
     int32_t ret = mbedtls_md(info, input->data, input->dataSize, output->data);
-    LOG_AND_RETURN_IF_FAIL(ret, "Calculate message digest failed.\n");
+    LOG_AND_RETURN_IF_MBED_FAIL(ret, "Calculate message digest failed.\n");
 
     output->dataSize = outSize;
-    return ret;
+    return HAL_SUCCESS;
 }
 
 static int32_t Sha256(const Blob *input, Blob *output)
@@ -125,27 +125,31 @@ static int32_t Sha256(const Blob *input, Blob *output)
 static int32_t ReadBigNums(mbedtls_mpi *x, mbedtls_mpi *y, const Blob *blob)
 {
     int32_t ret = mbedtls_mpi_read_binary(x, blob->data, P256_KEY_SIZE);
-    LOG_AND_RETURN_IF_FAIL(ret, "Read x coordinate of public key failed.");
-    return mbedtls_mpi_read_binary(y, blob->data + P256_KEY_SIZE, P256_KEY_SIZE);
+    LOG_AND_RETURN_IF_MBED_FAIL(ret, "Read x coordinate of public key failed.");
+    ret = mbedtls_mpi_read_binary(y, blob->data + P256_KEY_SIZE, P256_KEY_SIZE);
+    LOG_AND_RETURN_IF_MBED_FAIL(ret, "Read y coordinate of public key failed.");
+    return HAL_SUCCESS;
 }
 
 static int32_t ReadEcPublicKey(mbedtls_ecp_point *point, const Blob *publicKey)
 {
     int32_t ret = ReadBigNums(&point->X, &point->Y, publicKey);
-    LOG_AND_RETURN_IF_FAIL(ret, "Read coordinate of public key failed.");
-    return mbedtls_mpi_lset(&point->Z, 1);
+    LOG_AND_RETURN_IF_MBED_FAIL(ret, "Read coordinate of public key failed.");
+    ret = mbedtls_mpi_lset(&point->Z, 1);
+    LOG_AND_RETURN_IF_MBED_FAIL(ret, "Lset point z failed.");
+    return HAL_SUCCESS;
 }
 
 static int32_t WriteOutBigNums(const mbedtls_mpi *x, const mbedtls_mpi *y, Blob *out)
 {
     int32_t ret = mbedtls_mpi_write_binary(x, out->data, P256_KEY_SIZE);
-    LOG_AND_RETURN_IF_FAIL(ret, "Write x coordinate of public key failed.");
+    LOG_AND_RETURN_IF_MBED_FAIL(ret, "Write x coordinate of public key failed.");
 
     ret = mbedtls_mpi_write_binary(y, out->data + P256_KEY_SIZE, P256_KEY_SIZE);
-    LOG_AND_RETURN_IF_FAIL(ret, "Write y coordinate of public key failed.");
+    LOG_AND_RETURN_IF_MBED_FAIL(ret, "Write y coordinate of public key failed.");
 
     out->dataSize = P256_PUBLIC_SIZE;
-    return ret;
+    return HAL_SUCCESS;
 }
 
 static int32_t WriteOutEcPublicKey(const mbedtls_ecp_point *point, Blob *publicKey)
@@ -160,38 +164,37 @@ static int32_t EcKeyAgreement(const Blob *privateKey, const Blob *publicKey, Blo
         LOGE("Input params for ec key agree is invalid.");
         return HAL_ERR_INVALID_PARAM;
     }
-
     mbedtls_mpi *secret = HcMalloc(sizeof(mbedtls_mpi), 0);
     mbedtls_ecp_keypair *keyPair = HcMalloc(sizeof(mbedtls_ecp_keypair), 0);
     mbedtls_entropy_context *entropy = HcMalloc(sizeof(mbedtls_entropy_context), 0);
     mbedtls_ctr_drbg_context *ctrDrbg = HcMalloc(sizeof(mbedtls_ctr_drbg_context), 0);
-
+    if ((secret == NULL) || (keyPair == NULL) || (entropy == NULL) || (ctrDrbg == NULL)) {
+        LOGE("Malloc for mbedtls ec key param failed.");
+        HcFree(secret);
+        HcFree(keyPair);
+        HcFree(entropy);
+        HcFree(ctrDrbg);
+        return HAL_ERR_BAD_ALLOC;
+    }
     mbedtls_mpi_init(secret);
     mbedtls_ecp_keypair_init(keyPair);
     mbedtls_entropy_init(entropy);
     mbedtls_ctr_drbg_init(ctrDrbg);
     mbedtls_ecp_point P;
     mbedtls_ecp_point_init(&P);
-
     int32_t ret = ReadEcPublicKey(&keyPair->Q, publicKey);
     LOG_AND_GOTO_CLEANUP_IF_FAIL(ret, "Read the public key failed.\n");
-
     ret = mbedtls_ecp_group_load(&keyPair->grp, MBEDTLS_ECP_DP_SECP256R1);
     LOG_AND_GOTO_CLEANUP_IF_FAIL(ret, "Load the ecp group failed.\n");
-
     ret = mbedtls_mpi_read_binary(&keyPair->d, privateKey->data, privateKey->dataSize);
     LOG_AND_GOTO_CLEANUP_IF_FAIL(ret, "Read the private key failed.\n");
-
     ret = mbedtls_ctr_drbg_seed(ctrDrbg, mbedtls_entropy_func, entropy,
         g_randomSeedCustom, sizeof(g_randomSeedCustom));
     LOG_AND_GOTO_CLEANUP_IF_FAIL(ret, "Set custom string failed.\n");
-
-    ret = mbedtls_ecp_mul_restartable(&keyPair->grp, &P, &keyPair->d, &keyPair->Q,
-        mbedtls_ctr_drbg_random, ctrDrbg, NULL);
-    LOG_AND_GOTO_CLEANUP_IF_FAIL(ret, "Compute secret key failed.\n");
-
-    mbedtls_mpi_copy(secret, &P.X);
-    WriteOutEcPublicKey(&P, secretKey);
+    LOG_AND_GOTO_CLEANUP_IF_FAIL(mbedtls_ecp_mul_restartable(&keyPair->grp, &P, &keyPair->d, &keyPair->Q,
+        mbedtls_ctr_drbg_random, ctrDrbg, NULL), "Compute secret key failed.\n");
+    LOG_AND_GOTO_CLEANUP_IF_FAIL(mbedtls_mpi_copy(secret, &P.X), "Copy secret failed.\n");
+    LOG_AND_GOTO_CLEANUP_IF_FAIL(WriteOutEcPublicKey(&P, secretKey), "Write out ec public key failed.\n");
 CLEAN_UP:
     mbedtls_mpi_free(secret);
     mbedtls_ecp_keypair_free(keyPair);
@@ -202,7 +205,8 @@ CLEAN_UP:
     HcFree(keyPair);
     HcFree(entropy);
     HcFree(ctrDrbg);
-    return ret;
+    LOG_AND_RETURN_IF_MBED_FAIL(ret, "Ec key agree failed.");
+    return HAL_SUCCESS;
 }
 
 static int32_t EcHashToPoint(const Blob *hash, Blob *point)
@@ -248,7 +252,8 @@ static int32_t EcHashToPoint(const Blob *hash, Blob *point)
 CLEAN_UP:
     FreePointParams(&scalarA, &scalarB, &pointA, &pointB, &result);
     mbedtls_ecp_group_free(&grp);
-    return ret;
+    LOG_AND_RETURN_IF_MBED_FAIL(ret, "Ec hash to point failed.");
+    return HAL_SUCCESS;
 }
 
 // only support P256 HashToPoint for standard system
@@ -271,7 +276,7 @@ int32_t MbedtlsHashToPoint(const Uint8Buff *hash, Uint8Buff *outEcPoint)
     };
 
     int32_t ret = EcHashToPoint(&hashBlob, &pointBlob);
-    if (ret != HAL_SUCCESS || pointBlob.dataSize != EC_LEN) {
+    if (ret != 0 || pointBlob.dataSize != EC_LEN) {
         LOGE("HashToPoint with mbedtls for P256 failed, ret: %d", ret);
         return HAL_FAILED;
     }
@@ -305,7 +310,7 @@ int32_t MbedtlsAgreeSharedSecret(const KeyBuff *priKey, const KeyBuff *pubKey, U
         .data = sharedKey->val
     };
     int32_t ret = EcKeyAgreement(&priKeyBlob, &pubKeyBlob, &sharedKeyBlob);
-    if (ret != HAL_SUCCESS) {
+    if (ret != 0) {
         LOGE("Agree key failed, ret = %d", ret);
         return HAL_FAILED;
     }
