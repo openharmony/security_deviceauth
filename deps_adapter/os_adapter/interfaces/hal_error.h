@@ -35,5 +35,6 @@ enum {
     HAL_ERR_HUKS = -20,
     HAL_ERR_SHORT_BUFFER = -21,
     HAL_ERR_NOT_SUPPORTED = -22,
+    HAL_ERR_MBEDTLS = -23,
 };
 #endif
