@@ -31,8 +31,32 @@ group("deviceauth_build") {
 }
 
 group("deviceauth_test_build") {
+  deps = []
   if (os_level == "standard") {
     testonly = true
-    deps = [ "test/unittest/deviceauth:deviceauth_llt" ]
+    deps += [
+      "test/fuzztest/group_auth_fuzz_test/authDevice_fuzzer:fuzztest",
+      "test/fuzztest/group_auth_fuzz_test/ga_processData_fuzzer:fuzztest",
+      "test/fuzztest/group_manager_fuzz_test/addMemberToGroup_fuzzer:fuzztest",
+      "test/fuzztest/group_manager_fuzz_test/checkAccessToGroup_fuzzer:fuzztest",
+      "test/fuzztest/group_manager_fuzz_test/createGroup_fuzzer:fuzztest",
+      "test/fuzztest/group_manager_fuzz_test/deleteGroup_fuzzer:fuzztest",
+      "test/fuzztest/group_manager_fuzz_test/deleteMemberFromGroup_fuzzer:fuzztest",
+      "test/fuzztest/group_manager_fuzz_test/getDeviceInfoById_fuzzer:fuzztest",
+      "test/fuzztest/group_manager_fuzz_test/getGroupInfoById_fuzzer:fuzztest",
+      "test/fuzztest/group_manager_fuzz_test/getGroupInfo_fuzzer:fuzztest",
+      "test/fuzztest/group_manager_fuzz_test/getJoinedGroups_fuzzer:fuzztest",
+      "test/fuzztest/group_manager_fuzz_test/getPkInfoList_fuzzer:fuzztest",
+      "test/fuzztest/group_manager_fuzz_test/getRegisterInfo_fuzzer:fuzztest",
+      "test/fuzztest/group_manager_fuzz_test/getRelatedGroups_fuzzer:fuzztest",
+      "test/fuzztest/group_manager_fuzz_test/getTrustedDevices_fuzzer:fuzztest",
+      "test/fuzztest/group_manager_fuzz_test/gm_processData_fuzzer:fuzztest",
+      "test/fuzztest/group_manager_fuzz_test/isDeviceInGroup_fuzzer:fuzztest",
+      "test/fuzztest/group_manager_fuzz_test/regCallback_fuzzer:fuzztest",
+      "test/fuzztest/group_manager_fuzz_test/regDataChangeListener_fuzzer:fuzztest",
+      "test/fuzztest/group_manager_fuzz_test/unRegCallback_fuzzer:fuzztest",
+      "test/fuzztest/group_manager_fuzz_test/unRegDataChangeListener_fuzzer:fuzztest",
+      "test/unittest/deviceauth:deviceauth_llt",
+    ]
   }
 }
