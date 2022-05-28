@@ -27,7 +27,7 @@ using namespace OHOS::Security::AccessToken;
 int32_t CheckPermission(void)
 {
     AccessTokenID tokenId = IPCSkeleton::GetCallingTokenID();
-    ATokenTypeEnum tokenType = AccessTokenKit::GetTokenType(tokenId);
+    ATokenTypeEnum tokenType = AccessTokenKit::GetTokenTypeFlag(tokenId);
     if (tokenType == TOKEN_NATIVE) {
         NativeTokenInfo findInfo;
         if (AccessTokenKit::GetNativeTokenInfo(tokenId, findInfo) != 0) {

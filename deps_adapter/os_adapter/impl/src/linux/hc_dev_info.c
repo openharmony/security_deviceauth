@@ -39,7 +39,7 @@ int32_t HcGetUdid(uint8_t *udid, int32_t udidLen)
 const char *GetStoragePath(void)
 {
 #ifndef LITE_DEVICE
-    const char *storageFile = "/data/data/deviceauth/hcgroup.dat";
+    const char *storageFile = "/data/service/el1/public/deviceauth/hcgroup.dat";
 #else
     const char *storageFile = "/storage/deviceauth/hcgroup.dat";
 #endif
@@ -50,7 +50,7 @@ const char *GetStoragePath(void)
 const char *GetStorageDirPath(void)
 {
 #ifndef LITE_DEVICE
-    const char *storageFile = "/data/data/deviceauth";
+    const char *storageFile = "/data/service/el1/public/deviceauth";
 #else
     const char *storageFile = "/storage/deviceauth";
 #endif
@@ -61,7 +61,7 @@ const char *GetStorageDirPath(void)
 const char *GetAccountStoragePath(void)
 {
 #ifndef LITE_DEVICE
-    const char *storageFile = "/data/data/deviceauth/account";
+    const char *storageFile = "/data/service/el1/public/deviceauth/account";
 #else
     const char *storageFile = "/storage/deviceauth/account";
 #endif
