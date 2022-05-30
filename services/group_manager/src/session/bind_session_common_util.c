@@ -230,6 +230,10 @@ void InformPeerModuleError(CJson *out, const BindSession *session)
     if (errorData == NULL) {
         return;
     }
+    if (AddStringToJson(errorData, FIELD_APP_ID, session->appId) != HC_SUCCESS) {
+        LOGE("Failed to add appId to errorData!");
+        return;
+    }
     if (AddInt64StringToJson(errorData, FIELD_REQUEST_ID, session->reqId) != HC_SUCCESS) {
         LOGE("Failed to add requestId to errorData!");
         return;
