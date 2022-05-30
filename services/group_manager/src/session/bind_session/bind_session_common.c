@@ -317,14 +317,9 @@ static int32_t AddDevInfoToParams(const TrustedDeviceEntry *devAuthParams, CJson
 
 static int32_t AddGroupInfoByDatabase(int32_t osAccountId, const char *groupId, CJson *params)
 {
-    TrustedGroupEntry *entry = CreateGroupEntry();
+    TrustedGroupEntry *entry = GetGroupEntryById(osAccountId, groupId);
     if (entry == NULL) {
-        LOGE("Failed to allocate groupEntry memory!");
-        return HC_ERR_ALLOC_MEMORY;
-    }
-    if (GetGroupInfoById(osAccountId, groupId, entry) != HC_SUCCESS) {
-        LOGE("Failed to obtain the group information from the database!");
-        DestroyGroupEntry(entry);
+        LOGE("Failed to get groupEntry from db!");
         return HC_ERR_DB;
     }
     if (AddGroupInfoToParams(entry, params) != HC_SUCCESS) {

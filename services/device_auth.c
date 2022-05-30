@@ -278,6 +278,8 @@ DEVICE_AUTH_API_PUBLIC const DeviceGroupManager *GetGmInstance(void)
     g_groupManagerInstance->deleteGroup = DeleteGroupImpl;
     g_groupManagerInstance->addMemberToGroup = AddMemberToGroupImpl;
     g_groupManagerInstance->deleteMemberFromGroup = DeleteMemberFromGroupImpl;
+    g_groupManagerInstance->addMultiMembersToGroup = AddMultiMembersToGroupImpl;
+    g_groupManagerInstance->delMultiMembersFromGroup = DelMultiMembersFromGroupImpl;
     g_groupManagerInstance->processData = ProcessBindDataImpl;
     g_groupManagerInstance->getRegisterInfo = GetRegisterInfo;
     g_groupManagerInstance->checkAccessToGroup = CheckAccessToGroupImpl;

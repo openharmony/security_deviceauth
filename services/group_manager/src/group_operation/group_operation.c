@@ -42,7 +42,7 @@ static bool IsGroupTypeSupported(int groupType)
         ((groupType == ACROSS_ACCOUNT_AUTHORIZE_GROUP) && (IsAcrossAccountGroupSupported()))) {
         return true;
     }
-    LOGE("Invalid group type! [GroupType]: %d", groupType);
+    LOGE("The group type is not supported! [GroupType]: %d", groupType);
     return false;
 }
 
@@ -56,7 +56,7 @@ static void RemoveNoPermissionGroup(int32_t osAccountId, GroupEntryVec *groupEnt
             index++;
             continue;
         }
-        if (IsGroupAccessible(osAccountId, StringGet(&(*groupEntryPtr)->id), appId)) {
+        if (CheckGroupAccessible(osAccountId, StringGet(&(*groupEntryPtr)->id), appId) == HC_SUCCESS) {
             index++;
             continue;
         }
@@ -746,6 +746,84 @@ static int32_t RequestDeleteMemberFromGroup(int32_t osAccountId, int64_t request
     return HC_SUCCESS;
 }
 
+static int32_t RequestAddMultiMembersToGroup(int32_t osAccountId, const char *appId, const char *addParams)
+{
+    osAccountId = DevAuthGetRealOsAccountLocalId(osAccountId);
+    if ((appId == NULL) || (addParams == NULL) || (osAccountId == INVALID_OS_ACCOUNT)) {
+        LOGE("Invalid input parameters!");
+        return HC_ERR_INVALID_PARAMS;
+    }
+    LOGI("[Start]: RequestAddMultiMembersToGroup! [AppId]: %s", appId);
+    CJson *params = CreateJsonFromString(addParams);
+    if (params == NULL) {
+        LOGE("Failed to create json from string!");
+        return HC_ERR_JSON_CREATE;
+    }
+    int32_t groupType = GROUP_TYPE_INVALID;
+    if (GetIntFromJson(params, FIELD_GROUP_TYPE, &groupType) != HC_SUCCESS) {
+        LOGE("Failed to get groupType from json!");
+        FreeJson(params);
+        return HC_ERR_JSON_GET;
+    }
+    if (!IsGroupTypeSupported(groupType)) {
+        FreeJson(params);
+        return HC_ERR_NOT_SUPPORT;
+    }
+    int32_t res;
+    if (groupType == IDENTICAL_ACCOUNT_GROUP) {
+        IdenticalAccountGroup *instance = (IdenticalAccountGroup *)GetIdenticalAccountGroupInstance();
+        res = instance->addMultiMembersToGroup(osAccountId, appId, params);
+    } else if (groupType == ACROSS_ACCOUNT_AUTHORIZE_GROUP) {
+        AcrossAccountGroup *instance = (AcrossAccountGroup *)GetAcrossAccountGroupInstance();
+        res = instance->addMultiMembersToGroup(osAccountId, appId, params);
+    } else {
+        LOGE("The input groupType is invalid! [GroupType]: %d", groupType);
+        res = HC_ERR_INVALID_PARAMS;
+    }
+    FreeJson(params);
+    LOGI("[End]: RequestAddMultiMembersToGroup!");
+    return res;
+}
+
+static int32_t RequestDelMultiMembersFromGroup(int32_t osAccountId, const char *appId, const char *deleteParams)
+{
+    osAccountId = DevAuthGetRealOsAccountLocalId(osAccountId);
+    if ((appId == NULL) || (deleteParams == NULL) || (osAccountId == INVALID_OS_ACCOUNT)) {
+        LOGE("Invalid input parameters!");
+        return HC_ERR_INVALID_PARAMS;
+    }
+    LOGI("[Start]: RequestDelMultiMembersFromGroup! [AppId]: %s", appId);
+    CJson *params = CreateJsonFromString(deleteParams);
+    if (params == NULL) {
+        LOGE("Failed to create json from string!");
+        return HC_ERR_JSON_CREATE;
+    }
+    int32_t groupType = GROUP_TYPE_INVALID;
+    if (GetIntFromJson(params, FIELD_GROUP_TYPE, &groupType) != HC_SUCCESS) {
+        LOGE("Failed to get groupType from json!");
+        FreeJson(params);
+        return HC_ERR_JSON_GET;
+    }
+    if (!IsGroupTypeSupported(groupType)) {
+        FreeJson(params);
+        return HC_ERR_NOT_SUPPORT;
+    }
+    int32_t res;
+    if (groupType == IDENTICAL_ACCOUNT_GROUP) {
+        IdenticalAccountGroup *instance = (IdenticalAccountGroup *)GetIdenticalAccountGroupInstance();
+        res = instance->delMultiMembersFromGroup(osAccountId, appId, params);
+    } else if (groupType == ACROSS_ACCOUNT_AUTHORIZE_GROUP) {
+        AcrossAccountGroup *instance = (AcrossAccountGroup *)GetAcrossAccountGroupInstance();
+        res = instance->delMultiMembersFromGroup(osAccountId, appId, params);
+    } else {
+        LOGE("The input groupType is invalid! [GroupType]: %d", groupType);
+        res = HC_ERR_INVALID_PARAMS;
+    }
+    FreeJson(params);
+    LOGI("[End]: RequestDelMultiMembersFromGroup!");
+    return res;
+}
+
 static int32_t RequestProcessBindData(int64_t requestId, const uint8_t *data, uint32_t dataLen)
 {
     if ((data == NULL) || (dataLen == 0) || (dataLen > MAX_DATA_BUFFER_SIZE)) {
@@ -837,7 +915,7 @@ static int32_t CheckAccessToGroup(int32_t osAccountId, const char *appId, const 
         LOGE("Invalid input parameters!");
         return HC_ERR_INVALID_PARAMS;
     }
-    if (!IsGroupAccessible(osAccountId, groupId, appId)) {
+    if (CheckGroupAccessible(osAccountId, groupId, appId) != HC_SUCCESS) {
         LOGE("You do not have the permission to query the group information!");
         return HC_ERR_ACCESS_DENIED;
     }
@@ -856,28 +934,23 @@ static int32_t GetAccessibleGroupInfoById(int32_t osAccountId, const char *appId
         LOGE("No group is found based on the query parameters!");
         return HC_ERR_GROUP_NOT_EXIST;
     }
-    if (!IsGroupAccessible(osAccountId, groupId, appId)) {
+    if (CheckGroupAccessible(osAccountId, groupId, appId) != HC_SUCCESS) {
         LOGE("You do not have the permission to query the group information!");
         return HC_ERR_ACCESS_DENIED;
     }
-    TrustedGroupEntry *groupInfo = CreateGroupEntry();
-    if (groupInfo == NULL) {
-        LOGE("Failed to allocate groupInfo memory!");
-        return HC_ERR_ALLOC_MEMORY;
-    }
-    if (GetGroupInfoById(osAccountId, groupId, groupInfo) != HC_SUCCESS) {
-        LOGE("Failed to obtain the group information from the database!");
-        DestroyGroupEntry(groupInfo);
+    TrustedGroupEntry *groupEntry = GetGroupEntryById(osAccountId, groupId);
+    if (groupEntry == NULL) {
+        LOGE("Failed to get groupEntry from db!");
         return HC_ERR_DB;
     }
     CJson *groupInfoJson = CreateJson();
     if (groupInfoJson == NULL) {
         LOGE("Failed to allocate groupInfoJson memory!");
-        DestroyGroupEntry(groupInfo);
+        DestroyGroupEntry(groupEntry);
         return HC_ERR_JSON_FAIL;
     }
-    int32_t result = GenerateReturnGroupInfo(groupInfo, groupInfoJson);
-    DestroyGroupEntry(groupInfo);
+    int32_t result = GenerateReturnGroupInfo(groupEntry, groupInfoJson);
+    DestroyGroupEntry(groupEntry);
     if (result != HC_SUCCESS) {
         FreeJson(groupInfoJson);
         return result;
@@ -992,7 +1065,7 @@ static int32_t GetAccessibleDeviceInfoById(int32_t osAccountId, const char *appI
         LOGE("No group is found based on the query parameters!");
         return HC_ERR_GROUP_NOT_EXIST;
     }
-    if (!IsGroupAccessible(osAccountId, groupId, appId)) {
+    if (CheckGroupAccessible(osAccountId, groupId, appId) != HC_SUCCESS) {
         LOGE("You do not have the permission to query the group information!");
         return HC_ERR_ACCESS_DENIED;
     }
@@ -1040,7 +1113,7 @@ static int32_t GetAccessibleTrustedDevices(int32_t osAccountId, const char *appI
         LOGE("No group is found based on the query parameters!");
         return HC_ERR_GROUP_NOT_EXIST;
     }
-    if (!IsGroupAccessible(osAccountId, groupId, appId)) {
+    if (CheckGroupAccessible(osAccountId, groupId, appId) != HC_SUCCESS) {
         LOGE("You do not have the permission to query the group information!");
         return HC_ERR_ACCESS_DENIED;
     }
@@ -1067,7 +1140,7 @@ static bool IsDeviceInAccessibleGroup(int32_t osAccountId, const char *appId, co
         LOGE("No group is found based on the query parameters!");
         return false;
     }
-    if (!IsGroupAccessible(osAccountId, groupId, appId)) {
+    if (CheckGroupAccessible(osAccountId, groupId, appId) != HC_SUCCESS) {
         LOGE("You do not have the permission to query the group information!");
         return false;
     }
@@ -1128,6 +1201,8 @@ static const GroupImpl g_groupImplInstance = {
     .deleteGroup = RequestDeleteGroup,
     .addMember = RequestAddMemberToGroup,
     .deleteMember = RequestDeleteMemberFromGroup,
+    .addMultiMembers = RequestAddMultiMembersToGroup,
+    .delMultiMembers = RequestDelMultiMembersFromGroup,
     .processBindData = RequestProcessBindData,
     .confirmRequest = RequestConfirmRequest,
     .addGroupRole = AddGroupRoleWithCheck,

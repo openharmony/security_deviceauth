@@ -36,8 +36,9 @@ DECLARE_HC_VECTOR(AccountTokenDb, OsAccountTokenInfo)
 IMPLEMENT_HC_VECTOR(AccountTokenDb, OsAccountTokenInfo, 1)
 
 #define MAX_DB_PATH_LEN 256
+#define SELF_ECC_KEY_LEN 32
 
-AccountAuthTokenManager g_tokenManager;
+AccountAuthTokenManager g_asyTokenManager;
 
 static const AlgLoader *g_algLoader = NULL;
 static bool g_isInitial = false;
@@ -92,20 +93,20 @@ static bool GetTokenPath(int32_t osAccountId, char *tokenPath, uint32_t pathBuff
         LOGE("Failed to get the account storage path!");
         return false;
     }
-    int32_t ret;
+    int32_t writeByteNum;
     if (osAccountId == DEFAULT_OS_ACCOUNT) {
-        ret = sprintf_s(tokenPath, pathBufferLen, "%s/account_data.dat", beginPath);
+        writeByteNum = sprintf_s(tokenPath, pathBufferLen, "%s/account_data_asy.dat", beginPath);
     } else {
-        ret = sprintf_s(tokenPath, pathBufferLen, "%s/account_data%d.dat", beginPath, osAccountId);
+        writeByteNum = sprintf_s(tokenPath, pathBufferLen, "%s/account_data_asy%d.dat", beginPath, osAccountId);
     }
-    if (ret <= 0) {
+    if (writeByteNum <= 0) {
         LOGE("sprintf_s fail!");
         return false;
     }
     return true;
 }
 
-static int32_t GenerateTokenFromJson(CJson *tokenJson, AccountToken *token)
+static int32_t GenerateTokenFromJson(const CJson *tokenJson, AccountToken *token)
 {
     CJson *pkInfoJson = GetObjFromJson(tokenJson, FIELD_PK_INFO);
     if (pkInfoJson == NULL) {
@@ -261,11 +262,9 @@ static int32_t WriteTokensJsonToFile(int32_t osAccountId, CJson *tokensJson)
         return ret;
     }
     int32_t fileSize = (int32_t)(HcStrlen(storeJsonString) + 1);
-    if (HcFileWrite(file, storeJsonString, fileSize) == fileSize) {
-        ret = HC_SUCCESS;
-    } else {
+    if (HcFileWrite(file, storeJsonString, fileSize) != fileSize) {
         LOGE("Failed to write token array to file.");
-        ret = HC_ERROR;
+        ret = HC_ERR_FILE;
     }
     FreeJsonString(storeJsonString);
     HcFileClose(file);
@@ -885,9 +884,9 @@ static int32_t CheckDevicePk(const CJson *credJson)
     return ret;
 }
 
-static int32_t CheckUserId(const char *userId, CJson *credJson)
+static int32_t CheckUserId(const char *userId, const CJson *in)
 {
-    CJson *pkInfoJson = GetObjFromJson(credJson, FIELD_PK_INFO);
+    CJson *pkInfoJson = GetObjFromJson(in, FIELD_PK_INFO);
     if (pkInfoJson == NULL) {
         LOGE("Failed to get pkInfoJson");
         return HC_ERR_JSON_GET;
@@ -903,24 +902,24 @@ static int32_t CheckUserId(const char *userId, CJson *credJson)
     return HC_ERROR;
 }
 
-static int32_t CheckCredValidity(const CJson *in, CJson *credJson)
+static int32_t CheckCredValidity(const CJson *in)
 {
     const char *userId = GetStringFromJson(in, FIELD_USER_ID);
     if (userId == NULL) {
         LOGE("Failed to get userId");
         return HC_ERR_JSON_GET;
     }
-    int32_t ret = VerifySignature(credJson);
+    int32_t ret = VerifySignature(in);
     if (ret != HC_SUCCESS) {
         LOGE("Verify server credential failed!");
         return ret;
     }
-    ret = CheckDevicePk(credJson);
+    ret = CheckDevicePk(in);
     if (ret != HC_SUCCESS) {
         LOGE("Check devicePk failed!");
         return ret;
     }
-    ret = CheckUserId(userId, credJson);
+    ret = CheckUserId(userId, in);
     if (ret != HC_SUCCESS) {
         LOGE("Check userId failed!");
     }
@@ -934,12 +933,7 @@ static int32_t AddToken(int32_t osAccountId, const CJson *in, CJson *out)
         LOGE("Input param is null!");
         return HC_ERR_NULL_PTR;
     }
-    CJson *credJson = GetObjFromJson(in, FIELD_CREDENTIAL);
-    if (credJson == NULL) {
-        LOGE("Failed to get credJson");
-        return HC_ERR_JSON_GET;
-    }
-    int32_t ret = CheckCredValidity(in, credJson);
+    int32_t ret = CheckCredValidity(in);
     if (ret != HC_SUCCESS) {
         LOGE("Invalid credential");
         return ret;
@@ -949,7 +943,7 @@ static int32_t AddToken(int32_t osAccountId, const CJson *in, CJson *out)
         LOGE("Failed to allocate token memory!");
         return HC_ERR_ALLOC_MEMORY;
     }
-    ret = GenerateTokenFromJson(credJson, token);
+    ret = GenerateTokenFromJson(in, token);
     if (ret != HC_SUCCESS) {
         LOGE("Failed to generate token");
         DestroyAccountToken(token);
@@ -1169,9 +1163,9 @@ static void LoadTokenDb(void)
         if (name == NULL) {
             continue;
         }
-        if (strcmp(name, "account_data.dat") == 0) {
+        if (strcmp(name, "account_data_asy.dat") == 0) {
             LoadOsAccountTokenDb(DEFAULT_OS_ACCOUNT);
-        } else if (sscanf_s(name, "account_data%d.dat", &osAccountId) == 1) {
+        } else if (sscanf_s(name, "account_data_asy%d.dat", &osAccountId) == 1) {
             LoadOsAccountTokenDb(osAccountId);
         }
     }
@@ -1183,25 +1177,25 @@ void InitTokenManager(void)
     if (g_accountDbMutex == NULL) {
         g_accountDbMutex = (HcMutex *)HcMalloc(sizeof(HcMutex), 0);
         if (g_accountDbMutex == NULL) {
-            LOGE("Alloc account database mutex failed");
+            LOGE("Alloc account database mutex failed.");
             return;
         }
         if (InitHcMutex(g_accountDbMutex) != HC_SUCCESS) {
-            LOGE("Init account mutex failed");
+            LOGE("Init account mutex failed.");
             HcFree(g_accountDbMutex);
             g_accountDbMutex = NULL;
             return;
         }
     }
     g_accountDbMutex->lock(g_accountDbMutex);
-    (void)memset_s(&g_tokenManager, sizeof(AccountAuthTokenManager), 0, sizeof(AccountAuthTokenManager));
-    g_tokenManager.addToken = AddToken;
-    g_tokenManager.getToken = GetToken;
-    g_tokenManager.deleteToken = DeleteToken;
-    g_tokenManager.getRegisterProof = GetRegisterProof;
-    g_tokenManager.getServerPublicKey = GetServerPublicKey;
-    g_tokenManager.generateKeyAlias = GenerateKeyAlias;
-    g_tokenManager.getAlgVersion = GetAlgVersion;
+    (void)memset_s(&g_asyTokenManager, sizeof(AccountAuthTokenManager), 0, sizeof(AccountAuthTokenManager));
+    g_asyTokenManager.addToken = AddToken;
+    g_asyTokenManager.getToken = GetToken;
+    g_asyTokenManager.deleteToken = DeleteToken;
+    g_asyTokenManager.getRegisterProof = GetRegisterProof;
+    g_asyTokenManager.getServerPublicKey = GetServerPublicKey;
+    g_asyTokenManager.generateKeyAlias = GenerateKeyAlias;
+    g_asyTokenManager.getAlgVersion = GetAlgVersion;
     if (!g_isInitial) {
         g_accountTokenDb = CREATE_HC_VECTOR(AccountTokenDb);
         g_isInitial = true;
@@ -1259,12 +1253,12 @@ AccountToken *CreateAccountToken(void)
     token->serverPk.val = (uint8_t *)HcMalloc(SERVER_PK_SIZE, 0);
     GOTO_IF_CHECK_NULL(token->serverPk.val, "serverPk");
     token->serverPk.length = SERVER_PK_SIZE;
-    token->pkInfo.deviceId.val = (uint8_t *)HcMalloc(DEVICE_ID_SIZE, 0);
+    token->pkInfo.deviceId.val = (uint8_t *)HcMalloc(DEV_AUTH_DEVICE_ID_SIZE, 0);
     GOTO_IF_CHECK_NULL(token->pkInfo.deviceId.val, "deviceId");
-    token->pkInfo.deviceId.length = DEVICE_ID_SIZE;
-    token->pkInfo.userId.val = (uint8_t *)HcMalloc(USER_ID_SIZE, 0);
+    token->pkInfo.deviceId.length = DEV_AUTH_DEVICE_ID_SIZE;
+    token->pkInfo.userId.val = (uint8_t *)HcMalloc(DEV_AUTH_USER_ID_SIZE, 0);
     GOTO_IF_CHECK_NULL(token->pkInfo.userId.val, "userId");
-    token->pkInfo.userId.length = USER_ID_SIZE;
+    token->pkInfo.userId.length = DEV_AUTH_USER_ID_SIZE;
     token->pkInfo.version.val = (uint8_t *)HcMalloc(PK_VERSION_SIZE, 0);
     GOTO_IF_CHECK_NULL(token->pkInfo.version.val, "version");
     token->pkInfo.version.length = PK_VERSION_SIZE;
@@ -1302,14 +1296,14 @@ void DestroyAccountToken(AccountToken *token)
 
 AccountAuthTokenManager *GetAccountAuthTokenManager(void)
 {
-    return &g_tokenManager;
+    return &g_asyTokenManager;
 }
 
 void DestroyTokenManager(void)
 {
     g_accountDbMutex->lock(g_accountDbMutex);
     g_algLoader = NULL;
-    (void)memset_s(&g_tokenManager, sizeof(AccountAuthTokenManager), 0, sizeof(AccountAuthTokenManager));
+    (void)memset_s(&g_asyTokenManager, sizeof(AccountAuthTokenManager), 0, sizeof(AccountAuthTokenManager));
     uint32_t index;
     OsAccountTokenInfo *info = NULL;
     FOR_EACH_HC_VECTOR(g_accountTokenDb, index, info) {

@@ -371,6 +371,70 @@ static int32_t IpcServiceGmDelMemberFromGroup(const IpcDataInfo *ipcParams, int3
     return ret;
 }
 
+static int32_t IpcServiceGmAddMultiMembersToGroup(const IpcDataInfo *ipcParams, int32_t paramNum, uintptr_t outCache)
+{
+    int32_t callRet;
+    int32_t ret;
+    int32_t inOutLen;
+    int32_t osAccountId;
+    const char *addParams = NULL;
+    const char *appId = NULL;
+
+    LOGI("starting ...");
+    inOutLen = sizeof(int32_t);
+    ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_OS_ACCOUNT_ID, (uint8_t *)&osAccountId, &inOutLen);
+    if ((inOutLen != sizeof(int32_t)) || (ret != HC_SUCCESS)) {
+        LOGE("get param error, type %d", PARAM_TYPE_OS_ACCOUNT_ID);
+        return HC_ERR_IPC_BAD_PARAM;
+    }
+    ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_ADD_PARAMS, (uint8_t *)&addParams, NULL);
+    if (ret != HC_SUCCESS) {
+        LOGE("get param error, type %d", PARAM_TYPE_ADD_PARAMS);
+        return ret;
+    }
+    ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
+    if (ret != HC_SUCCESS) {
+        LOGE("get param error, type %d", PARAM_TYPE_APPID);
+        return ret;
+    }
+    callRet = g_devGroupMgrMethod.addMultiMembersToGroup(osAccountId, appId, addParams);
+    ret = IpcEncodeCallReplay(outCache, PARAM_TYPE_IPC_RESULT, (const uint8_t *)&callRet, sizeof(int32_t));
+    LOGI("process done, call ret %d, ipc ret %d", callRet, ret);
+    return ret;
+}
+
+static int32_t IpcServiceGmDelMultiMembersFromGroup(const IpcDataInfo *ipcParams, int32_t paramNum, uintptr_t outCache)
+{
+    int32_t callRet;
+    int32_t ret;
+    int32_t inOutLen;
+    int32_t osAccountId;
+    const char *delParams = NULL;
+    const char *appId = NULL;
+
+    LOGI("starting ...");
+    inOutLen = sizeof(int32_t);
+    ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_OS_ACCOUNT_ID, (uint8_t *)&osAccountId, &inOutLen);
+    if ((inOutLen != sizeof(int32_t)) || (ret != HC_SUCCESS)) {
+        LOGE("get param error, type %d", PARAM_TYPE_OS_ACCOUNT_ID);
+        return HC_ERR_IPC_BAD_PARAM;
+    }
+    ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_APPID, (uint8_t *)&appId, NULL);
+    if (ret != HC_SUCCESS) {
+        LOGE("get param error, type %d", PARAM_TYPE_APPID);
+        return ret;
+    }
+    ret = GetIpcRequestParamByType(ipcParams, paramNum, PARAM_TYPE_DEL_PARAMS, (uint8_t *)&delParams, NULL);
+    if (ret != HC_SUCCESS) {
+        LOGE("get param error, type %d", PARAM_TYPE_DEL_PARAMS);
+        return ret;
+    }
+    callRet = g_devGroupMgrMethod.delMultiMembersFromGroup(osAccountId, appId, delParams);
+    ret = IpcEncodeCallReplay(outCache, PARAM_TYPE_IPC_RESULT, (const uint8_t *)&callRet, sizeof(int32_t));
+    LOGI("process done, call ret %d, ipc ret %d", callRet, ret);
+    return ret;
+}
+
 static int32_t IpcServiceGmProcessData(const IpcDataInfo *ipcParams, int32_t paramNum, uintptr_t outCache)
 {
     int32_t callRet;
@@ -946,6 +1010,8 @@ static int32_t AddMethodMap(uintptr_t ipcInstance)
     ret &= SetIpcCallMap(ipcInstance, IpcServiceGmDelGroup, IPC_CALL_ID_DEL_GROUP);
     ret &= SetIpcCallMap(ipcInstance, IpcServiceGmAddMemberToGroup, IPC_CALL_ID_ADD_GROUP_MEMBER);
     ret &= SetIpcCallMap(ipcInstance, IpcServiceGmDelMemberFromGroup, IPC_CALL_ID_DEL_GROUP_MEMBER);
+    ret &= SetIpcCallMap(ipcInstance, IpcServiceGmAddMultiMembersToGroup, IPC_CALL_ID_ADD_MULTI_GROUP_MEMBERS);
+    ret &= SetIpcCallMap(ipcInstance, IpcServiceGmDelMultiMembersFromGroup, IPC_CALL_ID_DEL_MULTI_GROUP_MEMBERS);
     ret &= SetIpcCallMap(ipcInstance, IpcServiceGmProcessData, IPC_CALL_ID_GM_PROC_DATA);
     ret &= SetIpcCallMap(ipcInstance, IpcServiceGmApplyRegisterInfo, IPC_CALL_ID_APPLY_REG_INFO);
     ret &= SetIpcCallMap(ipcInstance, IpcServiceGmCheckAccessToGroup, IPC_CALL_ID_CHECK_ACCESS_TO_GROUP);

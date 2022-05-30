@@ -37,6 +37,8 @@ int32_t GetHashMessage(const Uint8Buff *first, const Uint8Buff *second, uint8_t 
 
 int32_t AssertUserIdExist(const CJson *jsonParams);
 int32_t AssertSharedUserIdExist(const CJson *jsonParams);
+int32_t AssertGroupTypeMatch(int32_t inputType, int32_t targetType);
+int32_t AssertSameGroupNotExist(int32_t osAccountId, const char *groupId);
 int32_t CheckGroupExist(int32_t osAccountId, const char *groupId);
 int32_t CheckGroupNumLimit(int32_t osAccountId, int32_t groupType, const char *appId);
 int32_t CheckDeviceNumLimit(int32_t osAccountId, const char *groupId, const char *peerUdid);
@@ -54,9 +56,12 @@ int32_t AddExpireTimeOrDefault(const CJson *jsonParams, TrustedGroupEntry *group
 int32_t AddUserIdToGroupParams(const CJson *jsonParams, TrustedGroupEntry *groupParams);
 int32_t AddSharedUserIdToGroupParams(const CJson *jsonParams, TrustedGroupEntry *groupParams);
 
-int32_t AddUdidToParams(TrustedDeviceEntry *devParams);
+int32_t AddSelfUdidToParams(TrustedDeviceEntry *devParams);
+int32_t AddUdidToParams(const CJson *jsonParams, TrustedDeviceEntry *devParams);
+int32_t AddAuthIdToParams(const CJson *jsonParams, TrustedDeviceEntry *devParams);
 int32_t AddAuthIdToParamsOrDefault(const CJson *jsonParams, TrustedDeviceEntry *devParams);
 int32_t AddUserTypeToParamsOrDefault(const CJson *jsonParams, TrustedDeviceEntry *devParams);
+int32_t AddCredTypeToParams(const CJson *jsonParams, TrustedDeviceEntry *devParams);
 int32_t AddServiceTypeToParams(const char *groupId, TrustedDeviceEntry *devParams);
 int32_t AddGroupIdToDevParams(const char *groupId, TrustedDeviceEntry *devParams);
 int32_t AddUserIdToDevParams(const CJson *jsonParams, TrustedDeviceEntry *devParams);
@@ -79,12 +84,12 @@ int32_t GetAppIdFromJson(const CJson *jsonParams, const char **appId);
 
 int32_t GetHashResult(const uint8_t *info, uint32_t infoLen, char *hash, uint32_t hashLen);
 
-bool IsTrustedDeviceInGroup(int32_t osAccountId, const char *groupId, const char *deviceId, bool isUdid);
-int32_t GetGroupInfoById(int32_t osAccountId, const char *groupId, TrustedGroupEntry *returnGroupEntry);
-bool IsGroupOwner(int32_t osAccountId, const char *groupId, const char *appId);
-bool IsGroupAccessible(int32_t osAccountId, const char *groupId, const char *appId);
+bool IsLocalDevice(const char *udid);
 bool IsGroupExistByGroupId(int32_t osAccountId, const char *groupId);
-bool IsGroupEditAllowed(int32_t osAccountId, const char *groupId, const char *appId);
+bool IsGroupOwner(int32_t osAccountId, const char *groupId, const char *appId);
+bool IsTrustedDeviceInGroup(int32_t osAccountId, const char *groupId, const char *deviceId, bool isUdid);
+int32_t CheckGroupAccessible(int32_t osAccountId, const char *groupId, const char *appId);
+int32_t CheckGroupEditAllowed(int32_t osAccountId, const char *groupId, const char *appId);
 int32_t GetGroupInfo(int32_t osAccountId, int groupType, const char *groupId, const char *groupName,
     const char *groupOwner, GroupEntryVec *groupEntryVec);
 int32_t GetJoinedGroups(int32_t osAccountId, int groupType, GroupEntryVec *groupEntryVec);

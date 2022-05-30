@@ -685,7 +685,7 @@ static bool GaCbOnTransmitWithType(int64_t requestId, const uint8_t *data, uint3
     uint32_t ret;
     IpcIo *dataParcel = NULL;
     IpcIo reply;
-    uint8_t dataBuf[IPC_STACK_BUFF_SZ] = {0};
+    uint8_t dataBuf[IPC_STACK_BUFF_SZ] = { 0 };
     IpcCallBackNode *node = NULL;
 
     LOGI("starting ... request id: %lld, type %d", requestId, type);
@@ -887,7 +887,7 @@ static char *GaCbOnRequestWithType(int64_t requestId, int32_t operationCode, con
     uint32_t uRet;
     IpcIo *dataParcel = NULL;
     IpcIo reply;
-    uint8_t dataBuf[IPC_STACK_BUFF_SZ] = {0};
+    uint8_t dataBuf[IPC_STACK_BUFF_SZ] = { 0 };
     const char *dPtr = NULL;
     IpcCallBackNode *node = NULL;
 
@@ -1000,7 +1000,6 @@ void IpcOnGroupCreated(const char *groupInfo)
         if (g_ipcCallBackList.ctx[i].cbType == CB_TYPE_LISTENER) {
             listener = &(g_ipcCallBackList.ctx[i].cbCtx.listener);
             if (listener->onGroupCreated == NULL) {
-                LOGE("onGroupCreated hook is invalid");
                 continue;
             }
             ActCallback(g_ipcCallBackList.ctx[i].proxyId, CB_ID_ON_GROUP_CREATED,
@@ -1048,7 +1047,6 @@ void IpcOnGroupDeleted(const char *groupInfo)
         if (g_ipcCallBackList.ctx[i].cbType == CB_TYPE_LISTENER) {
             listener = &(g_ipcCallBackList.ctx[i].cbCtx.listener);
             if (listener->onGroupDeleted == NULL) {
-                LOGE("onGroupDeleted hook is null");
                 continue;
             }
             ActCallback(g_ipcCallBackList.ctx[i].proxyId, CB_ID_ON_GROUP_DELETED,
@@ -1097,7 +1095,6 @@ void IpcOnDeviceBound(const char *peerUdid, const char *groupInfo)
         if (g_ipcCallBackList.ctx[i].cbType == CB_TYPE_LISTENER) {
             listener = &(g_ipcCallBackList.ctx[i].cbCtx.listener);
             if (listener->onDeviceBound == NULL) {
-                LOGE("onDeviceBound hook is null");
                 continue;
             }
             ActCallback(g_ipcCallBackList.ctx[i].proxyId, CB_ID_ON_DEV_BOUND,
@@ -1146,7 +1143,6 @@ void IpcOnDeviceUnBound(const char *peerUdid, const char *groupInfo)
         if (g_ipcCallBackList.ctx[i].cbType == CB_TYPE_LISTENER) {
             listener = &(g_ipcCallBackList.ctx[i].cbCtx.listener);
             if (listener->onDeviceUnBound == NULL) {
-                LOGE("onDeviceUnBound hook is null");
                 continue;
             }
             ActCallback(g_ipcCallBackList.ctx[i].proxyId, CB_ID_ON_DEV_UNBOUND,
@@ -1194,7 +1190,6 @@ void IpcOnDeviceNotTrusted(const char *peerUdid)
         if (g_ipcCallBackList.ctx[i].cbType == CB_TYPE_LISTENER) {
             listener = &(g_ipcCallBackList.ctx[i].cbCtx.listener);
             if (listener->onDeviceNotTrusted == NULL) {
-                LOGE("onDeviceNotTrusted hook is null");
                 continue;
             }
             ActCallback(g_ipcCallBackList.ctx[i].proxyId, CB_ID_ON_DEV_UNTRUSTED,
@@ -1243,7 +1238,6 @@ void IpcOnLastGroupDeleted(const char *peerUdid, int32_t groupType)
         if (g_ipcCallBackList.ctx[i].cbType == CB_TYPE_LISTENER) {
             listener = &(g_ipcCallBackList.ctx[i].cbCtx.listener);
             if (listener->onLastGroupDeleted == NULL) {
-                LOGE("onLastGroupDeleted hook is null");
                 continue;
             }
             ActCallback(g_ipcCallBackList.ctx[i].proxyId, CB_ID_ON_LAST_GROUP_DELETED,
@@ -1287,7 +1281,6 @@ void IpcOnTrustedDeviceNumChanged(int32_t curTrustedDeviceNum)
         if (g_ipcCallBackList.ctx[i].cbType == CB_TYPE_LISTENER) {
             listener = &(g_ipcCallBackList.ctx[i].cbCtx.listener);
             if (listener->onTrustedDeviceNumChanged == NULL) {
-                LOGE("onTrustedDeviceNumChanged hook is null");
                 continue;
             }
             ActCallback(g_ipcCallBackList.ctx[i].proxyId, CB_ID_ON_TRUST_DEV_NUM_CHANGED,

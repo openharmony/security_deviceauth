@@ -45,6 +45,18 @@ int32_t DeleteMemberFromGroupImpl(int32_t osAccountId, int64_t requestId, const 
                             : HC_ERR_NOT_SUPPORT;
 }
 
+int32_t AddMultiMembersToGroupImpl(int32_t osAccountId, const char *appId, const char *addParams)
+{
+    return IsGroupSupport() ? GetGroupImplInstance()->addMultiMembers(osAccountId, appId, addParams)
+                            : HC_ERR_NOT_SUPPORT;
+}
+
+int32_t DelMultiMembersFromGroupImpl(int32_t osAccountId, const char *appId, const char *deleteParams)
+{
+    return IsGroupSupport() ? GetGroupImplInstance()->delMultiMembers(osAccountId, appId, deleteParams)
+                            : HC_ERR_NOT_SUPPORT;
+}
+
 int32_t ProcessBindDataImpl(int64_t requestId, const uint8_t *data, uint32_t dataLen)
 {
     return IsGroupSupport() ? GetGroupImplInstance()->processBindData(requestId, data, dataLen) : HC_ERR_NOT_SUPPORT;

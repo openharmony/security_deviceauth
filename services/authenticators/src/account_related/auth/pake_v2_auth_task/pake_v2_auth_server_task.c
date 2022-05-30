@@ -146,7 +146,7 @@ static int32_t AsyAuthServerStepOne(TaskBase *task, const CJson *in, CJson *out,
     GOTO_IF_ERR(GetIntFromJson(in, FIELD_AUTH_FORM, &innerTask->params.authForm));
     const char *userIdPeer = GetStringFromJson(in, FIELD_USER_ID);
     uint32_t userIdPeerLen = HcStrlen(userIdPeer) + 1;
-    if (userIdPeer == NULL || userIdPeerLen > USER_ID_SIZE) {
+    if (userIdPeer == NULL || userIdPeerLen > DEV_AUTH_USER_ID_SIZE) {
         LOGE("Payload not contain peer userId or userId len is invalid.");
         return HC_ERR_BAD_MESSAGE;
     }

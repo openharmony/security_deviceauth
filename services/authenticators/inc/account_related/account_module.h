@@ -19,9 +19,19 @@
 #include "dev_auth_module_manager.h"
 #include "json_utils.h"
 
+typedef enum {
+    IMPORT_SELF_CREDENTIAL = 0,
+    DELETE_SELF_CREDENTIAL = 1,
+    QUERY_SELF_CREDENTIAL_INFO = 2,
+    IMPORT_TRUSTED_CREDENTIALS = 3,
+    DELETE_TRUSTED_CREDENTIALS = 4,
+    QUERY_TRUSTED_CREDENTIALS = 5,
+    REQUEST_SIGNATURE = 6,
+} CredentialCode;
+
 int32_t CheckAccountMsgRepeatability(const CJson *in);
 bool IsAccountSupported(void);
 AuthModuleBase *CreateAccountModule(void);
-int32_t ProcessAccountCredentials(int32_t osAccountId, int32_t credentialOpCode, const CJson *in, CJson *out);
+int32_t ProcessAccountCredentials(int32_t osAccountId, int32_t opCode, CJson *in, CJson *out);
 
 #endif
