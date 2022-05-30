@@ -24,7 +24,8 @@ extern "C" {
 
 typedef struct {
     BaseGroup base;
-    int32_t (*generateGroupId)(const char *userIdHash, char **returnGroupId);
+    int32_t (*addMultiMembersToGroup)(int32_t osAccountId, const char *appId, CJson *jsonParams);
+    int32_t (*delMultiMembersFromGroup)(int32_t osAccountId, const char *appId, CJson *jsonParams);
 } IdenticalAccountGroup;
 
 bool IsIdenticalAccountGroupSupported(void);

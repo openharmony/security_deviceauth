@@ -66,6 +66,9 @@
 #define FIELD_IS_DELETE_ALL "isDeleteAll"
 #define FIELD_BLE_CHALLENGE "bleChallenge"
 #define FIELD_OS_ACCOUNT_ID "osAccountId"
+#define FIELD_AUTH_CODE "authCode"
+#define FIELD_AUTH_CODE_ID "authCodeId"
+#define FIELD_DEVICE_LIST "deviceList"
 
 typedef enum {
     DEFAULT_OS_ACCOUNT = 0,
@@ -109,14 +112,10 @@ typedef enum {
 } GroupAuthForm;
 
 typedef enum {
-    IMPORT_SELF_CREDENTIAL = 0,
-    DELETE_SELF_CREDENTIAL = 1,
-    QUERY_SELF_CREDENTIAL_INFO = 2,
-    IMPORT_TRUSTED_CREDENTIALS = 3,
-    DELETE_TRUSTED_CREDENTIALS = 4,
-    QUERY_TRUSTED_CREDENTIALS = 5,
-    REQUEST_SIGNATURE = 6,
-} CredentialCode;
+    INVALID_CRED = 0,
+    SYMMETRIC_CRED = 1,
+    ASYMMETRIC_CRED = 2,
+} CredType;
 
 typedef enum {
     DEVICE_TYPE_ACCESSORY = 0,
@@ -172,6 +171,8 @@ typedef struct {
     int32_t (*deleteMemberFromGroup)(int32_t osAccountId, int64_t requestId, const char *appId,
         const char *deleteParams);
     int32_t (*processData)(int64_t requestId, const uint8_t *data, uint32_t dataLen);
+    int32_t (*addMultiMembersToGroup)(int32_t osAccountId, const char *appId, const char *addParams);
+    int32_t (*delMultiMembersFromGroup)(int32_t osAccountId, const char *appId, const char *deleteParams);
     int32_t (*getRegisterInfo)(const char *reqJsonStr, char **returnRegisterInfo);
     int32_t (*checkAccessToGroup)(int32_t osAccountId, const char *appId, const char *groupId);
     int32_t (*getPkInfoList)(int32_t osAccountId, const char *appId, const char *queryParams, char **returnInfoList,

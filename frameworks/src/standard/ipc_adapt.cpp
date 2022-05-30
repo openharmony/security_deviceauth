@@ -946,7 +946,6 @@ void IpcOnGroupCreated(const char *groupInfo)
         if (g_ipcCallBackList.ctx[i].cbType == CB_TYPE_LISTENER) {
             listener = &(g_ipcCallBackList.ctx[i].cbCtx.listener);
             if (listener->onGroupCreated == nullptr) {
-                LOGE("onGroupCreated hook is invalid");
                 continue;
             }
             ServiceDevAuth::ActCallback(g_ipcCallBackList.ctx[i].proxyId, CB_ID_ON_GROUP_CREATED,
@@ -986,7 +985,6 @@ void IpcOnGroupDeleted(const char *groupInfo)
         if (g_ipcCallBackList.ctx[i].cbType == CB_TYPE_LISTENER) {
             listener = &(g_ipcCallBackList.ctx[i].cbCtx.listener);
             if (listener->onGroupDeleted == nullptr) {
-                LOGE("onGroupDeleted hook is null");
                 continue;
             }
             ServiceDevAuth::ActCallback(g_ipcCallBackList.ctx[i].proxyId, CB_ID_ON_GROUP_DELETED,
@@ -1028,7 +1026,6 @@ void IpcOnDeviceBound(const char *peerUdid, const char *groupInfo)
         if (g_ipcCallBackList.ctx[i].cbType == CB_TYPE_LISTENER) {
             listener = &(g_ipcCallBackList.ctx[i].cbCtx.listener);
             if (listener->onDeviceBound == nullptr) {
-                LOGE("onDeviceBound hook is null");
                 continue;
             }
             ServiceDevAuth::ActCallback(g_ipcCallBackList.ctx[i].proxyId, CB_ID_ON_DEV_BOUND,
@@ -1070,7 +1067,6 @@ void IpcOnDeviceUnBound(const char *peerUdid, const char *groupInfo)
         if (g_ipcCallBackList.ctx[i].cbType == CB_TYPE_LISTENER) {
             listener = &(g_ipcCallBackList.ctx[i].cbCtx.listener);
             if (listener->onDeviceUnBound == nullptr) {
-                LOGE("onDeviceUnBound hook is null");
                 continue;
             }
             ServiceDevAuth::ActCallback(g_ipcCallBackList.ctx[i].proxyId, CB_ID_ON_DEV_UNBOUND,
@@ -1110,7 +1106,6 @@ void IpcOnDeviceNotTrusted(const char *peerUdid)
         if (g_ipcCallBackList.ctx[i].cbType == CB_TYPE_LISTENER) {
             listener = &(g_ipcCallBackList.ctx[i].cbCtx.listener);
             if (listener->onDeviceNotTrusted == nullptr) {
-                LOGE("onDeviceNotTrusted hook is null");
                 continue;
             }
             ServiceDevAuth::ActCallback(g_ipcCallBackList.ctx[i].proxyId, CB_ID_ON_DEV_UNTRUSTED,
@@ -1152,7 +1147,6 @@ void IpcOnLastGroupDeleted(const char *peerUdid, int32_t groupType)
         if (g_ipcCallBackList.ctx[i].cbType == CB_TYPE_LISTENER) {
             listener = &(g_ipcCallBackList.ctx[i].cbCtx.listener);
             if (listener->onLastGroupDeleted == nullptr) {
-                LOGE("onLastGroupDeleted hook is null");
                 continue;
             }
             ServiceDevAuth::ActCallback(g_ipcCallBackList.ctx[i].proxyId, CB_ID_ON_LAST_GROUP_DELETED,
@@ -1187,7 +1181,6 @@ void IpcOnTrustedDeviceNumChanged(int32_t curTrustedDeviceNum)
         if (g_ipcCallBackList.ctx[i].cbType == CB_TYPE_LISTENER) {
             listener = &(g_ipcCallBackList.ctx[i].cbCtx.listener);
             if (listener->onTrustedDeviceNumChanged == nullptr) {
-                LOGE("onTrustedDeviceNumChanged hook is null");
                 continue;
             }
             ServiceDevAuth::ActCallback(g_ipcCallBackList.ctx[i].proxyId, CB_ID_ON_TRUST_DEV_NUM_CHANGED,

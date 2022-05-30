@@ -177,7 +177,7 @@ static int32_t DevAuthRequestCall(void *origin, IpcIo *req, IpcIo *reply)
     int32_t ret;
     int32_t methodId = -1;
     int32_t reqParamNum = 0;
-    IpcDataInfo reqParams[MAX_REQUEST_PARAMS_NUM] = {{0}};
+    IpcDataInfo reqParams[MAX_REQUEST_PARAMS_NUM] = { { 0 } };
     IpcServiceCall serviceCall = NULL;
 
     (void)origin;
@@ -214,7 +214,7 @@ int32_t OnRemoteInvoke(IServerProxy *iProxy, int32_t reqId, void *origin, IpcIo 
     int32_t n;
     int32_t (*callCtx)(void *origin, IpcIo *req, IpcIo *reply) = NULL;
     IpcIo replyTmp;
-    uint8_t dataBuff[IPC_IO_BUFF_SZ] = {0};
+    uint8_t dataBuff[IPC_IO_BUFF_SZ] = { 0 };
     int32_t ret = HC_ERR_IPC_UNKNOW_OPCODE;
 
     (void)origin;

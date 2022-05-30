@@ -259,7 +259,7 @@ static int32_t InitAccountModule(void)
 }
 
 static int32_t ProcessCredentials(int32_t osAccountId, int32_t credentialOpCode,
-    const CJson *in, CJson *out, int moduleType)
+    CJson *in, CJson *out, int moduleType)
 {
     if (moduleType != ACCOUNT_MODULE) {
         LOGE("Unsupported method in the module, moduleType: %d.", moduleType);

@@ -30,7 +30,7 @@ static void DoCallBack(int32_t callbackId, uintptr_t cbHook, IpcIo *data, IpcIo 
 {
     int32_t ret;
     int32_t i;
-    IpcDataInfo cbDataCache[MAX_REQUEST_PARAMS_NUM] = {{0}};
+    IpcDataInfo cbDataCache[MAX_REQUEST_PARAMS_NUM] = { { 0 } };
 
     if (cbHook == 0x0) {
         LOGE("Invalid call back hook");
