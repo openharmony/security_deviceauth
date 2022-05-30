@@ -28,7 +28,7 @@ account_related_inc_path += [
   "${services_path}/authenticators/inc",
   "${services_path}/authenticators/inc/account_related",
   "${services_path}/authenticators/inc/account_related/auth/pake_v2_auth_task",
-  "${services_path}/authenticators/inc/account_related/creds_manager/asysmetric_token_manager",
+  "${services_path}/authenticators/inc/account_related/creds_manager",
 ]
 
 authenticators_account_related_files = [
@@ -36,7 +36,8 @@ authenticators_account_related_files = [
   "${services_path}/authenticators/src/account_related/account_multi_task_manager.c",
   "${services_path}/authenticators/src/account_related/account_task_main.c",
   "${services_path}/authenticators/src/account_related/account_version_util.c",
-  "${services_path}/authenticators/src/account_related/creds_manager/asysmetric_token_manager/asy_token_manager.c",
+  "${services_path}/authenticators/src/account_related/creds_manager/asy_token_manager.c",
+  "${services_path}/authenticators/src/account_related/creds_manager/sym_token_manager.c",
   "${services_path}/authenticators/src/account_related/auth/pake_v2_auth_task/pake_v2_auth_task_common.c",
   "${services_path}/authenticators/src/account_related/auth/pake_v2_auth_task/pake_v2_auth_client_task.c",
   "${services_path}/authenticators/src/account_related/auth/pake_v2_auth_task/pake_v2_auth_server_task.c",

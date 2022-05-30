@@ -30,6 +30,8 @@ int32_t CreateGroupImpl(int32_t osAccountId, int64_t requestId, const char *appI
 int32_t DeleteGroupImpl(int32_t osAccountId, int64_t requestId, const char *appId, const char *disbandParams);
 int32_t AddMemberToGroupImpl(int32_t osAccountId, int64_t requestId, const char *appId, const char *addParams);
 int32_t DeleteMemberFromGroupImpl(int32_t osAccountId, int64_t requestId, const char *appId, const char *deleteParams);
+int32_t AddMultiMembersToGroupImpl(int32_t osAccountId, const char *appId, const char *addParams);
+int32_t DelMultiMembersFromGroupImpl(int32_t osAccountId, const char *appId, const char *deleteParams);
 int32_t ProcessBindDataImpl(int64_t requestId, const uint8_t *data, uint32_t dataLen);
 int32_t ConfirmRequestImpl(int32_t osAccountId, int64_t requestId, const char *appId, const char *confirmParams);
 int32_t AddGroupManagerImpl(int32_t osAccountId, const char *appId, const char *groupId, const char *managerAppId);

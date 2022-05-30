@@ -84,7 +84,7 @@ int32_t FinalCallRequest(ProxyDevAuthData *dataCtx, int32_t methodId)
         return HC_FALSE;
     }
     if (dataCtx->withCallback) {
-        SvcIdentity badSvc = {0};
+        SvcIdentity badSvc = { 0 };
         ShowIpcSvcInfo(&(dataCtx->cbSvc));
         if ((sizeof(dataCtx->cbSvc) != sizeof(badSvc)) ||
             !memcmp(&(dataCtx->cbSvc), &badSvc, sizeof(badSvc))) {

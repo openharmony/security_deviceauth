@@ -268,7 +268,7 @@ int32_t MbedtlsHashToPoint(const Uint8Buff *hash, Uint8Buff *outEcPoint)
         LOGE("MbedtlsHashToPoint invalid length.");
         return HAL_ERR_INVALID_PARAM;
     }
-    uint8_t hashTmp[BYTE_LENGTH_CURVE_25519] = {0};
+    uint8_t hashTmp[BYTE_LENGTH_CURVE_25519] = { 0 };
     (void)memcpy_s(hashTmp, BYTE_LENGTH_CURVE_25519, hash->val, BYTE_LENGTH_CURVE_25519);
 
     hashTmp[BYTE_LENGTH_CURVE_25519 - 1] &= ~HASH2POINT_PARA_PREPRO;

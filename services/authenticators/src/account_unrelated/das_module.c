@@ -27,7 +27,7 @@ DECLARE_HC_VECTOR(TaskInModuleVec, void *);
 IMPLEMENT_HC_VECTOR(TaskInModuleVec, void *, 1)
 
 TaskInModuleVec g_taskInModuleVec;
-DasAuthModule g_dasModule = {0};
+DasAuthModule g_dasModule = { 0 };
 
 static int32_t RegisterDasLocalIdentity(const char *pkgName, const char *serviceType, Uint8Buff *authId, int userType)
 {

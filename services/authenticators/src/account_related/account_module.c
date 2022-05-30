@@ -14,6 +14,9 @@
  */
 
 #include "account_module.h"
+#include "account_module_defines.h"
+#include "account_multi_task_manager.h"
+#include "account_version_util.h"
 #include "alg_loader.h"
 #include "asy_token_manager.h"
 #include "clib_error.h"
@@ -24,9 +27,7 @@
 #include "json_utils.h"
 #include "pake_v2_auth_client_task.h"
 #include "pake_v2_auth_server_task.h"
-#include "account_module_defines.h"
-#include "account_multi_task_manager.h"
-#include "account_version_util.h"
+#include "sym_token_manager.h"
 
 #define ACCOUNT_CLIENT_FIRST_MESSAGE 0x0000
 #define ACCOUNT_CLIENT_STEP_MASK 0x000F
@@ -126,40 +127,9 @@ static void DestroyAccountTask(int32_t taskId)
     authManager->deleteTaskFromManager(taskId);
 }
 
-static void DestroyAccountModule(AuthModuleBase *module)
+static int32_t ProcessAsyTokens(int32_t osAccountId, int32_t opCode, CJson *in, CJson *out)
 {
-    DestroyAccountMultiTaskManager();
-    DestroyTokenManager();
-    DestroyVersionInfos();
-    (void)memset_s(module, sizeof(AccountModule), 0, sizeof(AccountModule));
-}
-
-AuthModuleBase *CreateAccountModule(void)
-{
-    g_module.moduleBase.moduleType = ACCOUNT_MODULE;
-    g_module.moduleBase.createTask = CreateAccountTask;
-    g_module.moduleBase.processTask = ProcessAccountTask;
-    g_module.moduleBase.destroyTask = DestroyAccountTask;
-    g_module.moduleBase.destroyModule = DestroyAccountModule;
-
-    InitVersionInfos();
-    InitAccountMultiTaskManager();
-    InitTokenManager();
-    return (AuthModuleBase *)&g_module;
-}
-
-bool IsAccountSupported(void)
-{
-    return true;
-}
-
-int32_t ProcessAccountCredentials(int32_t osAccountId, int32_t credentialOpCode, const CJson *in, CJson *out)
-{
-    if (in == NULL) {
-        LOGE("The input param: in is null.");
-        return HC_ERR_NULL_PTR;
-    }
-    switch (credentialOpCode) {
+    switch (opCode) {
         case IMPORT_SELF_CREDENTIAL:
             return GetAccountAuthTokenManager()->addToken(osAccountId, in, out);
         case DELETE_SELF_CREDENTIAL: {
@@ -177,8 +147,83 @@ int32_t ProcessAccountCredentials(int32_t osAccountId, int32_t credentialOpCode,
             }
             return GetAccountAuthTokenManager()->getRegisterProof(in, out);
         default:
-            LOGE("Operation is not supported for: %d.", credentialOpCode);
-            break;
+            LOGE("Operation is not supported for: %d.", opCode);
+            return HC_ERR_NOT_SUPPORT;
     }
-    return HC_ERR_NOT_SUPPORT;
+}
+
+static int32_t ProcessSymTokens(int32_t osAccountId, int32_t opCode, CJson *in, CJson *out)
+{
+    switch (opCode) {
+        case IMPORT_SELF_CREDENTIAL:
+        case IMPORT_TRUSTED_CREDENTIALS:
+            return GetSymTokenManager()->addToken(osAccountId, in);
+        case DELETE_SELF_CREDENTIAL:
+        case DELETE_TRUSTED_CREDENTIALS: {
+            const char *userId = GetStringFromJson(in, FIELD_USER_ID);
+            if (userId == NULL) {
+                LOGE("Failed to get userId from json!");
+                return HC_ERR_JSON_GET;
+            }
+            const char *deviceId = GetStringFromJson(in, FIELD_DEVICE_ID);
+            if (deviceId == NULL) {
+                LOGE("Failed to get deviceId from json!");
+                return HC_ERR_JSON_GET;
+            }
+            return GetSymTokenManager()->deleteToken(osAccountId, userId, deviceId);
+        }
+        default:
+            LOGE("Operation is not supported for: %d.", opCode);
+            return HC_ERR_NOT_SUPPORT;
+    }
+}
+
+static void DestroyAccountModule(AuthModuleBase *module)
+{
+    DestroyAccountMultiTaskManager();
+    DestroyTokenManager();
+    DestroySymTokenManager();
+    DestroyVersionInfos();
+    (void)memset_s(module, sizeof(AccountModule), 0, sizeof(AccountModule));
+}
+
+AuthModuleBase *CreateAccountModule(void)
+{
+    g_module.moduleBase.moduleType = ACCOUNT_MODULE;
+    g_module.moduleBase.createTask = CreateAccountTask;
+    g_module.moduleBase.processTask = ProcessAccountTask;
+    g_module.moduleBase.destroyTask = DestroyAccountTask;
+    g_module.moduleBase.destroyModule = DestroyAccountModule;
+
+    InitVersionInfos();
+    InitAccountMultiTaskManager();
+    InitTokenManager();
+    InitSymTokenManager();
+    return (AuthModuleBase *)&g_module;
+}
+
+bool IsAccountSupported(void)
+{
+    return true;
+}
+
+int32_t ProcessAccountCredentials(int32_t osAccountId, int32_t opCode, CJson *in, CJson *out)
+{
+    if (in == NULL) {
+        LOGE("The input param: in is null.");
+        return HC_ERR_NULL_PTR;
+    }
+    int32_t credentialType = INVALID_CRED;
+    if (GetIntFromJson(in, FIELD_CREDENTIAL_TYPE, &credentialType) != HC_SUCCESS) {
+        LOGE("Failed to get credentialType from json!");
+        return HC_ERR_JSON_GET;
+    }
+    if (credentialType == ASYMMETRIC_CRED) {
+        return ProcessAsyTokens(osAccountId, opCode, in, out);
+    } else if (credentialType == SYMMETRIC_CRED) {
+        return ProcessSymTokens(osAccountId, opCode, in, out);
+    } else {
+        LOGE("Invalid credential type! [CredType]: %d", credentialType);
+        return HC_ERR_NOT_SUPPORT;
+    }
 }

@@ -201,13 +201,13 @@ static bool GetOsAccountInfoPath(int32_t osAccountId, char *infoPath, uint32_t p
         LOGE("[DB]: Failed to get the storage path dir!");
         return false;
     }
-    int32_t ret;
+    int32_t writeByteNum;
     if (osAccountId == DEFAULT_OS_ACCOUNT) {
-        ret = sprintf_s(infoPath, pathBufferLen, "%s/hcgroup.dat", beginPath);
+        writeByteNum = sprintf_s(infoPath, pathBufferLen, "%s/hcgroup.dat", beginPath);
     } else {
-        ret = sprintf_s(infoPath, pathBufferLen, "%s/hcgroup%d.dat", beginPath, osAccountId);
+        writeByteNum = sprintf_s(infoPath, pathBufferLen, "%s/hcgroup%d.dat", beginPath, osAccountId);
     }
-    if (ret <= 0) {
+    if (writeByteNum <= 0) {
         LOGE("[DB]: sprintf_s fail!");
         return false;
     }
@@ -649,14 +649,14 @@ static bool SaveParcelToFile(const OsAccountTrustedInfo *info, HcParcel *parcel)
     }
     int fileSize = (int)GetParcelDataSize(parcel);
     const char *fileData = GetParcelData(parcel);
-    if (HcFileWrite(file, fileData, fileSize) == fileSize) {
-        ret = true;
+    int writeSize = HcFileWrite(file, fileData, fileSize);
+    HcFileClose(file);
+    if (writeSize == fileSize) {
+        return true;
     } else {
         LOGE("[DB]: write file error!");
-        ret = false;
+        return false;
     }
-    HcFileClose(file);
-    return ret;
 }
 
 static bool CompareQueryGroupParams(const QueryGroupParams *params, const TrustedGroupEntry *entry)

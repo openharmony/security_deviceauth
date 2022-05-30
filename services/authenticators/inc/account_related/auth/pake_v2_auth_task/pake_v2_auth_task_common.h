@@ -34,8 +34,8 @@ typedef struct {
     Uint8Buff devIdSelf;
     Uint8Buff devIdPeer;
     uint8_t pkCloud[SERVER_PK_SIZE];
-    uint8_t userIdSelf[USER_ID_SIZE];
-    uint8_t userIdPeer[USER_ID_SIZE];
+    uint8_t userIdSelf[DEV_AUTH_USER_ID_SIZE];
+    uint8_t userIdPeer[DEV_AUTH_USER_ID_SIZE];
     uint8_t pkSelf[PK_SIZE];
     Uint8Buff pkInfoSelf;
     Uint8Buff pkInfoSignSelf;

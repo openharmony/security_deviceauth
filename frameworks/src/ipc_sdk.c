@@ -40,8 +40,8 @@ typedef struct {
     uintptr_t inst;
     char appId[IPC_APPID_LEN];
 } IpcProxyCbInfo;
-static IpcProxyCbInfo g_ipcProxyCbList = {0};
-static IpcProxyCbInfo g_ipcListenerCbList = {0};
+static IpcProxyCbInfo g_ipcProxyCbList = { 0 };
+static IpcProxyCbInfo g_ipcListenerCbList = { 0 };
 static HcMutex g_ipcMutex;
 
 static void DelIpcCliCallbackCtx(const char *appId, IpcProxyCbInfo *cbCache)
@@ -281,7 +281,7 @@ static int32_t IpcGmCreateGroup(int32_t osAccountId, int64_t requestId, const ch
     uintptr_t callCtx = 0x0;
     int32_t ret;
     int32_t inOutLen;
-    IpcDataInfo replyCache = {0};
+    IpcDataInfo replyCache = { 0 };
 
     LOGI("starting ...");
     if (!IS_STRING_VALID(createParams) || !IS_STRING_VALID(appid)) {
@@ -342,7 +342,7 @@ static int32_t IpcGmDelGroup(int32_t osAccountId, int64_t requestId, const char 
     uintptr_t callCtx = 0x0;
     int32_t ret;
     int32_t inOutLen;
-    IpcDataInfo replyCache = {0};
+    IpcDataInfo replyCache = { 0 };
 
     LOGI("starting ...");
     if (!IS_STRING_VALID(delParams) || !IS_STRING_VALID(appId)) {
@@ -403,7 +403,7 @@ static int32_t IpcGmAddMemberToGroup(int32_t osAccountId, int64_t requestId, con
     uintptr_t callCtx = 0x0;
     int32_t ret;
     int32_t inOutLen;
-    IpcDataInfo replyCache = {0};
+    IpcDataInfo replyCache = { 0 };
 
     LOGI("starting ...");
     if (!IS_STRING_VALID(appId) || !IS_STRING_VALID(addParams)) {
@@ -463,7 +463,7 @@ static int32_t IpcGmDelMemberFromGroup(int32_t osAccountId, int64_t requestId, c
     uintptr_t callCtx = 0x0;
     int32_t ret;
     int32_t inOutLen;
-    IpcDataInfo replyCache = {0};
+    IpcDataInfo replyCache = { 0 };
 
     LOGI("starting ...");
     if (!IS_STRING_VALID(appId) || !IS_STRING_VALID(delParams)) {
@@ -518,12 +518,116 @@ static int32_t IpcGmDelMemberFromGroup(int32_t osAccountId, int64_t requestId, c
     return ret;
 }
 
+static int32_t IpcGmAddMultiMembersToGroup(int32_t osAccountId, const char *appId, const char *addParams)
+{
+    LOGI("starting ...");
+    if (!IS_STRING_VALID(appId) || !IS_STRING_VALID(addParams)) {
+        LOGE("Invalid params");
+        return HC_ERR_INVALID_PARAMS;
+    }
+    if (!IsServiceRunning()) {
+        LOGE("service is not activity");
+        return HC_ERR_IPC_SERVICE_DIED;
+    }
+    uintptr_t callCtx = 0x0;
+    int32_t ret = CreateCallCtx(&callCtx, NULL);
+    if (ret != HC_SUCCESS) {
+        LOGE("CreateCallCtx failed, ret %d", ret);
+        return HC_ERR_IPC_INIT;
+    }
+    ret = SetCallRequestParamInfo(callCtx, PARAM_TYPE_OS_ACCOUNT_ID, (const uint8_t *)&osAccountId,
+        sizeof(osAccountId));
+    if (ret != HC_SUCCESS) {
+        LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_OS_ACCOUNT_ID);
+        DestroyCallCtx(&callCtx, NULL);
+        return HC_ERR_IPC_BUILD_PARAM;
+    }
+    ret = SetCallRequestParamInfo(callCtx, PARAM_TYPE_APPID, (const uint8_t *)appId, strlen(appId) + 1);
+    if (ret != HC_SUCCESS) {
+        LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_APPID);
+        DestroyCallCtx(&callCtx, NULL);
+        return HC_ERR_IPC_BUILD_PARAM;
+    }
+    ret = SetCallRequestParamInfo(callCtx, PARAM_TYPE_ADD_PARAMS, (const uint8_t *)addParams, strlen(addParams) + 1);
+    if (ret != HC_SUCCESS) {
+        LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_ADD_PARAMS);
+        DestroyCallCtx(&callCtx, NULL);
+        return HC_ERR_IPC_BUILD_PARAM;
+    }
+    ret = DoBinderCall(callCtx, IPC_CALL_ID_ADD_MULTI_GROUP_MEMBERS, true);
+    if (ret == HC_ERR_IPC_INTERNAL_FAILED) {
+        LOGE("ipc call failed");
+        DestroyCallCtx(&callCtx, NULL);
+        return HC_ERR_IPC_PROC_FAILED;
+    }
+    IpcDataInfo replyCache = { 0 };
+    DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
+    int32_t inOutLen = sizeof(int32_t);
+    GetIpcReplyByType(&replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
+    DestroyCallCtx(&callCtx, NULL);
+    LOGI("process done, ret %d", ret);
+    return ret;
+}
+
+static int32_t IpcGmDelMultiMembersFromGroup(int32_t osAccountId, const char *appId, const char *delParams)
+{
+    LOGI("starting ...");
+    if (!IS_STRING_VALID(appId) || !IS_STRING_VALID(delParams)) {
+        LOGE("Invalid params");
+        return HC_ERR_INVALID_PARAMS;
+    }
+    if (!IsServiceRunning()) {
+        LOGE("service is not activity");
+        return HC_ERR_IPC_SERVICE_DIED;
+    }
+    uintptr_t callCtx = 0x0;
+    int32_t ret = CreateCallCtx(&callCtx, NULL);
+    if (ret != HC_SUCCESS) {
+        LOGE("CreateCallCtx failed, ret %d", ret);
+        return HC_ERR_IPC_INIT;
+    }
+    ret = SetCallRequestParamInfo(callCtx, PARAM_TYPE_OS_ACCOUNT_ID, (const uint8_t *)&osAccountId,
+        sizeof(osAccountId));
+    if (ret != HC_SUCCESS) {
+        LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_OS_ACCOUNT_ID);
+        DestroyCallCtx(&callCtx, NULL);
+        return HC_ERR_IPC_BUILD_PARAM;
+    }
+    ret = SetCallRequestParamInfo(callCtx, PARAM_TYPE_APPID, (const uint8_t *)appId, strlen(appId) + 1);
+    if (ret != HC_SUCCESS) {
+        LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_APPID);
+        DestroyCallCtx(&callCtx, NULL);
+        return HC_ERR_IPC_BUILD_PARAM;
+    }
+    ret = SetCallRequestParamInfo(callCtx, PARAM_TYPE_DEL_PARAMS, (const uint8_t *)delParams, strlen(delParams) + 1);
+    if (ret != HC_SUCCESS) {
+        LOGE("set request param failed, ret %d, param id %d", ret, PARAM_TYPE_DEL_PARAMS);
+        DestroyCallCtx(&callCtx, NULL);
+        return HC_ERR_IPC_BUILD_PARAM;
+    }
+    ret = DoBinderCall(callCtx, IPC_CALL_ID_DEL_MULTI_GROUP_MEMBERS, true);
+    if (ret == HC_ERR_IPC_INTERNAL_FAILED) {
+        LOGE("ipc call failed");
+        DestroyCallCtx(&callCtx, NULL);
+        return HC_ERR_IPC_PROC_FAILED;
+    }
+    IpcDataInfo replyCache = { 0 };
+    DecodeCallReply(callCtx, &replyCache, REPLAY_CACHE_NUM(replyCache));
+    ret = HC_ERR_IPC_UNKNOW_REPLY;
+    int32_t inOutLen = sizeof(int32_t);
+    GetIpcReplyByType(&replyCache, REPLAY_CACHE_NUM(replyCache), PARAM_TYPE_IPC_RESULT, (uint8_t *)&ret, &inOutLen);
+    DestroyCallCtx(&callCtx, NULL);
+    LOGI("process done, ret %d", ret);
+    return ret;
+}
+
 static int32_t IpcGmProcessData(int64_t requestId, const uint8_t *data, uint32_t dataLen)
 {
     uintptr_t callCtx = 0x0;
     int32_t ret;
     int32_t inOutLen;
-    IpcDataInfo replyCache = {0};
+    IpcDataInfo replyCache = { 0 };
 
     LOGI("starting ...");
     if (!IS_COMM_DATA_VALID(data, dataLen)) {
@@ -570,7 +674,7 @@ static int32_t IpcGmGetRegisterInfo(const char *reqJsonStr, char **registerInfo)
     uintptr_t callCtx = 0x0;
     int32_t ret;
     int32_t inOutLen;
-    IpcDataInfo replyCache[IPC_DATA_CACHES_3] = {{0}};
+    IpcDataInfo replyCache[IPC_DATA_CACHES_3] = { { 0 } };
     char *outInfo = NULL;
 
     LOGI("starting ...");
@@ -630,7 +734,7 @@ static int32_t IpcGmCheckAccessToGroup(int32_t osAccountId, const char *appId, c
     uintptr_t callCtx = 0x0;
     int32_t ret;
     int32_t inOutLen;
-    IpcDataInfo replyCache = {0};
+    IpcDataInfo replyCache = { 0 };
 
     LOGI("starting ...");
     if (!IS_STRING_VALID(appId) || !IS_STRING_VALID(groupId)) {
@@ -708,7 +812,7 @@ static int32_t IpcGmGetPkInfoList(int32_t osAccountId, const char *appId, const 
     uintptr_t callCtx = 0x0;
     int32_t ret;
     int32_t inOutLen;
-    IpcDataInfo replyCache[IPC_DATA_CACHES_4] = {{0}};
+    IpcDataInfo replyCache[IPC_DATA_CACHES_4] = { { 0 } };
 
     LOGI("starting ...");
     if (!IS_STRING_VALID(appId) || !IS_STRING_VALID(queryParams) ||
@@ -791,7 +895,7 @@ static int32_t IpcGmGetGroupInfoById(int32_t osAccountId, const char *appId, con
     uintptr_t callCtx = 0x0;
     int32_t ret;
     int32_t inOutLen;
-    IpcDataInfo replyCache[IPC_DATA_CACHES_3] = {{0}};
+    IpcDataInfo replyCache[IPC_DATA_CACHES_3] = { { 0 } };
 
     LOGI("starting ...");
     if (!IS_STRING_VALID(groupId) || !IS_STRING_VALID(appId) || (outGroupInfo == NULL)) {
@@ -876,7 +980,7 @@ static int32_t IpcGmGetGroupInfo(int32_t osAccountId, const char *appId, const c
     uintptr_t callCtx = 0x0;
     int32_t ret;
     int32_t inOutLen;
-    IpcDataInfo replyCache[IPC_DATA_CACHES_4] = {{0}};
+    IpcDataInfo replyCache[IPC_DATA_CACHES_4] = { { 0 } };
 
     LOGI("starting ...");
     if (!IS_STRING_VALID(queryParams) || !IS_STRING_VALID(appId) || (outGroupVec == NULL) || (groupNum == NULL)) {
@@ -962,7 +1066,7 @@ static int32_t IpcGmGetJoinedGroups(int32_t osAccountId, const char *appId, int3
     uintptr_t callCtx = 0x0;
     int32_t ret;
     int32_t inOutLen;
-    IpcDataInfo replyCache[IPC_DATA_CACHES_4] = {{0}};
+    IpcDataInfo replyCache[IPC_DATA_CACHES_4] = { { 0 } };
 
     LOGI("starting ...");
     if (!IS_STRING_VALID(appId) || (outGroupVec == NULL) || (groupNum == NULL)) {
@@ -1047,7 +1151,7 @@ static int32_t IpcGmGetRelatedGroups(int32_t osAccountId, const char *appId, con
     uintptr_t callCtx = 0x0;
     int32_t ret;
     int32_t inOutLen;
-    IpcDataInfo replyCache[IPC_DATA_CACHES_4] = {{0}};
+    IpcDataInfo replyCache[IPC_DATA_CACHES_4] = { { 0 } };
 
     LOGI("starting ...");
     if (!IS_STRING_VALID(appId) || !IS_STRING_VALID(peerUdid) || (outGroupVec == NULL) || (groupNum == NULL)) {
@@ -1158,7 +1262,7 @@ static int32_t IpcGmGetDeviceInfoById(int32_t osAccountId, const char *appId, co
     uintptr_t callCtx = 0x0;
     int32_t ret;
     int32_t inOutLen;
-    IpcDataInfo replyCache[IPC_DATA_CACHES_3] = {{0}};
+    IpcDataInfo replyCache[IPC_DATA_CACHES_3] = { { 0 } };
 
     LOGI("starting ...");
     if (!IS_STRING_VALID(appId) || !IS_STRING_VALID(peerUdid) || !IS_STRING_VALID(groupId) || (outDevInfo == NULL)) {
@@ -1228,7 +1332,7 @@ static int32_t IpcGmGetTrustedDevices(int32_t osAccountId, const char *appId,
     uintptr_t callCtx = 0x0;
     int32_t ret;
     int32_t inOutLen;
-    IpcDataInfo replyCache[IPC_DATA_CACHES_4] = {{0}};
+    IpcDataInfo replyCache[IPC_DATA_CACHES_4] = { { 0 } };
 
     LOGI("starting ...");
     if (!IS_STRING_VALID(appId) || !IS_STRING_VALID(groupId) ||
@@ -1289,7 +1393,7 @@ static bool IpcGmIsDeviceInGroup(int32_t osAccountId, const char *appId, const c
     uintptr_t callCtx = 0x0;
     int32_t ret;
     int32_t inOutLen;
-    IpcDataInfo replyCache = {0};
+    IpcDataInfo replyCache = { 0 };
 
     LOGI("starting ...");
     if (!IS_STRING_VALID(appId) || !IS_STRING_VALID(groupId) || !IS_STRING_VALID(udid)) {
@@ -1364,6 +1468,8 @@ static void InitIpcGmMethods(DeviceGroupManager *gmMethodObj)
     gmMethodObj->deleteGroup = IpcGmDelGroup;
     gmMethodObj->addMemberToGroup = IpcGmAddMemberToGroup;
     gmMethodObj->deleteMemberFromGroup = IpcGmDelMemberFromGroup;
+    gmMethodObj->addMultiMembersToGroup = IpcGmAddMultiMembersToGroup;
+    gmMethodObj->delMultiMembersFromGroup = IpcGmDelMultiMembersFromGroup;
     gmMethodObj->processData = IpcGmProcessData;
     gmMethodObj->getRegisterInfo = IpcGmGetRegisterInfo;
     gmMethodObj->checkAccessToGroup = IpcGmCheckAccessToGroup;
@@ -1386,7 +1492,7 @@ static int32_t IpcGaProcessData(int64_t authReqId,
     uintptr_t callCtx = 0x0;
     int32_t ret;
     int32_t inOutLen;
-    IpcDataInfo replyCache = {0};
+    IpcDataInfo replyCache = { 0 };
 
     LOGI("starting ...");
     if (!IS_COMM_DATA_VALID(data, dataLen) || (callback == NULL)) {
@@ -1443,7 +1549,7 @@ static int32_t IpcGaAuthDevice(int32_t osAccountId, int64_t authReqId, const cha
     uintptr_t callCtx = 0x0;
     int32_t ret;
     int32_t inOutLen;
-    IpcDataInfo replyCache = {0};
+    IpcDataInfo replyCache = { 0 };
 
     LOGI("starting ...");
     if (!IS_STRING_VALID(authParams) || (callback == NULL)) {

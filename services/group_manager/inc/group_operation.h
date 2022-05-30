@@ -28,6 +28,8 @@ typedef struct {
     int32_t (*deleteGroup)(int32_t osAccountId, int64_t requestId, const char *appId, const char *disbandParams);
     int32_t (*addMember)(int32_t osAccountId, int64_t requestId, const char *appId, const char *addParams);
     int32_t (*deleteMember)(int32_t osAccountId, int64_t requestId, const char *appId, const char *deleteParams);
+    int32_t (*addMultiMembers)(int32_t osAccountId, const char *appId, const char *addParams);
+    int32_t (*delMultiMembers)(int32_t osAccountId, const char *appId, const char *deleteParams);
     int32_t (*processBindData)(int64_t requestId, const uint8_t *data, uint32_t dataLen);
     int32_t (*confirmRequest)(int32_t osAccountId, int64_t requestId, const char *appId, const char *confirmParams);
     int32_t (*addGroupRole)(int32_t osAccountId, bool isManager, const char *appId, const char *groupId,
