@@ -24,6 +24,8 @@ extern "C" {
 
 typedef struct {
     BaseGroup base;
+    int32_t (*addMultiMembersToGroup)(int32_t osAccountId, const char *appId, CJson *jsonParams);
+    int32_t (*delMultiMembersFromGroup)(int32_t osAccountId, const char *appId, CJson *jsonParams);
 } AcrossAccountGroup;
 
 bool IsAcrossAccountGroupSupported(void);

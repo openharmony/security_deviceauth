@@ -21,20 +21,6 @@
 #include "common_defs.h"
 #include "string_util.h"
 
-#define SELF_ECC_KEY_LEN 32
-
-#define COPY_STRING_GOTO_ERR_IF_FAIL(src, dest, tag) \
-    do { \
-        if ((src) == NULL) { \
-            LOGE("%s is NULL", tag); \
-            goto ERR; \
-        } \
-        if (memcpy_s((dest), sizeof(dest), src, HcStrlen(src) + 1) != EOK) { \
-            LOGE("%s copy failed", tag); \
-            goto ERR; \
-        } \
-    } while (0)
-
 typedef struct {
     Uint8Buff version;
     Uint8Buff userId;

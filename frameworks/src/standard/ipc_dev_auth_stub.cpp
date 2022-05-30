@@ -159,7 +159,7 @@ int32_t ServiceDevAuth::OnRemoteRequest(uint32_t code, MessageParcel &data, Mess
     int32_t methodId = 0;
     int32_t reqParamNum = 0;
     MessageParcel replyCache;
-    IpcDataInfo reqParams[MAX_REQUEST_PARAMS_NUM] = {{0}};
+    IpcDataInfo reqParams[MAX_REQUEST_PARAMS_NUM] = { { 0 } };
     IpcServiceCall serviceCall = nullptr;
 
     LOGI("request code %u", code);

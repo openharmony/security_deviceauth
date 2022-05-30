@@ -33,7 +33,7 @@ void StubDevAuthCb::DoCallBack(int32_t callbackId, uintptr_t cbHook,
     int32_t ret;
     int32_t i;
     MessageParcel retParcel;
-    IpcDataInfo cbDataCache[MAX_REQUEST_PARAMS_NUM] = {{0}};
+    IpcDataInfo cbDataCache[MAX_REQUEST_PARAMS_NUM] = { { 0 } };
 
     if (cbHook == 0x0) {
         LOGE("Invalid call back hook");

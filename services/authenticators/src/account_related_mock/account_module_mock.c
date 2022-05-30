@@ -35,7 +35,7 @@ AuthModuleBase *CreateAccountModule(void)
     return NULL;
 }
 
-int32_t ProcessAccountCredentials(int32_t osAccountId, int32_t credentialOpCode, const CJson *in, CJson *out)
+int32_t ProcessAccountCredentials(int32_t osAccountId, int32_t credentialOpCode, CJson *in, CJson *out)
 {
     (void)osAccountId;
     (void)credentialOpCode;

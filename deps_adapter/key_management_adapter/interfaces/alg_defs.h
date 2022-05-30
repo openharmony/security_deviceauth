@@ -42,6 +42,7 @@ typedef enum {
     ED25519 = 0,
     X25519 = 1,
     P256 = 2,
+    AES = 3,
 } Algorithm;
 
 typedef enum {

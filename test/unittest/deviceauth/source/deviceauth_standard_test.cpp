@@ -370,6 +370,66 @@ HWTEST_F(GmDeleteMemberFromGroupTest, GmDeleteMemberFromGroupTest002, TestSize.L
     EXPECT_NE(ret, HC_SUCCESS);
 }
 
+class GmAddMultiMembersToGroupTest : public testing::Test {
+public:
+    static void SetUpTestCase();
+    static void TearDownTestCase();
+    void SetUp();
+    void TearDown();
+};
+
+void GmAddMultiMembersToGroupTest::SetUpTestCase() {}
+void GmAddMultiMembersToGroupTest::TearDownTestCase() {}
+
+void GmAddMultiMembersToGroupTest::SetUp()
+{
+    int ret = InitDeviceAuthService();
+    EXPECT_EQ(ret, HC_SUCCESS);
+}
+
+void GmAddMultiMembersToGroupTest::TearDown()
+{
+    DestroyDeviceAuthService();
+}
+
+HWTEST_F(GmAddMultiMembersToGroupTest, GmAddMultiMembersToGroupTest002, TestSize.Level0)
+{
+    const DeviceGroupManager *gm = GetGmInstance();
+    EXPECT_NE(gm, nullptr);
+    int32_t ret = gm->addMultiMembersToGroup(DEFAULT_OS_ACCOUNT, TEST_APP_ID, NULL);
+    EXPECT_NE(ret, HC_SUCCESS);
+}
+
+class GmDelMultiMembersFromGroupTest : public testing::Test {
+public:
+    static void SetUpTestCase();
+    static void TearDownTestCase();
+    void SetUp();
+    void TearDown();
+};
+
+void GmDelMultiMembersFromGroupTest::SetUpTestCase() {}
+void GmDelMultiMembersFromGroupTest::TearDownTestCase() {}
+
+void GmDelMultiMembersFromGroupTest::SetUp()
+{
+    int ret = InitDeviceAuthService();
+    EXPECT_EQ(ret, HC_SUCCESS);
+}
+
+void GmDelMultiMembersFromGroupTest::TearDown()
+{
+    DestroyDeviceAuthService();
+}
+
+HWTEST_F(GmDelMultiMembersFromGroupTest, GmDelMultiMembersFromGroupTest002, TestSize.Level0)
+{
+    const DeviceGroupManager *gm = GetGmInstance();
+    EXPECT_NE(gm, nullptr);
+    int32_t ret = gm->delMultiMembersFromGroup(DEFAULT_OS_ACCOUNT, TEST_APP_ID, NULL);
+    EXPECT_NE(ret, HC_SUCCESS);
+}
+
 class GmProcessDataTest : public testing::Test {
 public:
     static void SetUpTestCase();

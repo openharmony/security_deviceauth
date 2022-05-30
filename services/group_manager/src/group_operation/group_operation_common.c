@@ -141,57 +141,6 @@ bool IsTrustedDeviceInGroup(int32_t osAccountId, const char *groupId, const char
     return true;
 }
 
-int32_t GetGroupInfoById(int32_t osAccountId, const char *groupId, TrustedGroupEntry *returnGroupEntry)
-{
-    if ((groupId == NULL) || (returnGroupEntry == NULL)) {
-        LOGE("The input groupId or returnGroupEntry is NULL!");
-        return HC_ERR_INVALID_PARAMS;
-    }
-    int32_t result;
-    uint32_t index;
-    TrustedGroupEntry **entry = NULL;
-    GroupEntryVec groupEntryVec = CreateGroupEntryVec();
-    QueryGroupParams params = InitQueryGroupParams();
-    params.groupId = groupId;
-    result = QueryGroups(osAccountId, &params, &groupEntryVec);
-    if (result != HC_SUCCESS) {
-        LOGE("Failed to query groups!");
-        ClearGroupEntryVec(&groupEntryVec);
-        return result;
-    }
-    FOR_EACH_HC_VECTOR(groupEntryVec, index, entry) {
-        if ((entry == NULL) || (*entry == NULL)) {
-            continue;
-        }
-        result = GenerateGroupEntryFromEntry(*entry, returnGroupEntry) ? HC_SUCCESS : HC_ERR_MEMORY_COPY;
-        ClearGroupEntryVec(&groupEntryVec);
-        return result;
-    }
-    ClearGroupEntryVec(&groupEntryVec);
-    return HC_ERR_GROUP_NOT_EXIST;
-}
-
-bool IsGroupAccessible(int32_t osAccountId, const char *groupId, const char *appId)
-{
-    if ((groupId == NULL) || (appId == NULL)) {
-        LOGE("The input groupId or appId is NULL!");
-        return false;
-    }
-    TrustedGroupEntry *entry = GetGroupEntryById(osAccountId, groupId);
-    if (entry == NULL) {
-        LOGE("The group cannot be found!");
-        return false;
-    }
-    if ((entry->visibility == GROUP_VISIBILITY_PUBLIC) ||
-        (IsGroupManager(appId, entry)) ||
-        (IsGroupFriend(appId, entry))) {
-        DestroyGroupEntry(entry);
-        return true;
-    }
-    DestroyGroupEntry(entry);
-    return false;
-}
-
 int32_t CheckGroupNumLimit(int32_t osAccountId, int32_t groupType, const char *appId)
 {
     /* Currently, only peer to peer group is supported. */
@@ -201,6 +150,17 @@ int32_t CheckGroupNumLimit(int32_t osAccountId, int32_t groupType, const char *a
         return HC_ERR_BEYOND_LIMIT;
     }
     return HC_SUCCESS;
+}
+
+bool IsLocalDevice(const char *udid)
+{
+    char localUdid[INPUT_UDID_LEN] = { 0 };
+    int32_t res = HcGetUdid((uint8_t *)localUdid, INPUT_UDID_LEN);
+    if (res != HC_SUCCESS) {
+        LOGE("Failed to get local udid! res: %d", res);
+        return HC_ERR_DB;
+    }
+    return (strcmp(localUdid, udid) == 0);
 }
 
 bool IsGroupOwner(int32_t osAccountId, const char *groupId, const char *appId)
@@ -237,30 +197,50 @@ bool IsGroupExistByGroupId(int32_t osAccountId, const char *groupId)
     }
     TrustedGroupEntry *entry = GetGroupEntryById(osAccountId, groupId);
     if (entry == NULL) {
-        LOGE("The group cannot be found!");
         return false;
     }
     DestroyGroupEntry(entry);
     return true;
 }
 
-bool IsGroupEditAllowed(int32_t osAccountId, const char *groupId, const char *appId)
+int32_t CheckGroupAccessible(int32_t osAccountId, const char *groupId, const char *appId)
 {
     if ((groupId == NULL) || (appId == NULL)) {
         LOGE("The input groupId or appId is NULL!");
-        return false;
+        return HC_ERR_NULL_PTR;
     }
     TrustedGroupEntry *entry = GetGroupEntryById(osAccountId, groupId);
     if (entry == NULL) {
         LOGE("The group cannot be found!");
-        return false;
+        return HC_ERR_GROUP_NOT_EXIST;
     }
-    if (IsGroupManager(appId, entry)) {
+    if ((entry->visibility != GROUP_VISIBILITY_PUBLIC) &&
+        (!IsGroupManager(appId, entry)) &&
+        (!IsGroupFriend(appId, entry))) {
         DestroyGroupEntry(entry);
-        return true;
+        return HC_ERR_ACCESS_DENIED;
     }
     DestroyGroupEntry(entry);
-    return false;
+    return HC_SUCCESS;
+}
+
+int32_t CheckGroupEditAllowed(int32_t osAccountId, const char *groupId, const char *appId)
+{
+    if ((groupId == NULL) || (appId == NULL)) {
+        LOGE("The input groupId or appId is NULL!");
+        return HC_ERR_NULL_PTR;
+    }
+    TrustedGroupEntry *entry = GetGroupEntryById(osAccountId, groupId);
+    if (entry == NULL) {
+        LOGE("The group cannot be found!");
+        return HC_ERR_GROUP_NOT_EXIST;
+    }
+    if (!IsGroupManager(appId, entry)) {
+        DestroyGroupEntry(entry);
+        return HC_ERR_ACCESS_DENIED;
+    }
+    DestroyGroupEntry(entry);
+    return HC_SUCCESS;
 }
 
 int32_t GetGroupInfo(int32_t osAccountId, int groupType, const char *groupId, const char *groupName,
@@ -451,14 +431,14 @@ bool IsAccountRelatedGroup(int groupType)
     return ((groupType == IDENTICAL_ACCOUNT_GROUP) || (groupType == ACROSS_ACCOUNT_AUTHORIZE_GROUP));
 }
 
-int32_t GenerateReturnGroupInfo(const TrustedGroupEntry *groupInfo, CJson *returnJson)
+int32_t GenerateReturnGroupInfo(const TrustedGroupEntry *groupEntry, CJson *returnJson)
 {
     int32_t result;
-    if (((result = AddGroupNameToReturn(groupInfo, returnJson)) != HC_SUCCESS) ||
-        ((result = AddGroupIdToReturn(groupInfo, returnJson)) != HC_SUCCESS) ||
-        ((result = AddGroupOwnerToReturn(groupInfo, returnJson)) != HC_SUCCESS) ||
-        ((result = AddGroupTypeToReturn(groupInfo, returnJson)) != HC_SUCCESS) ||
-        ((result = AddGroupVisibilityToReturn(groupInfo, returnJson)) != HC_SUCCESS)) {
+    if (((result = AddGroupNameToReturn(groupEntry, returnJson)) != HC_SUCCESS) ||
+        ((result = AddGroupIdToReturn(groupEntry, returnJson)) != HC_SUCCESS) ||
+        ((result = AddGroupOwnerToReturn(groupEntry, returnJson)) != HC_SUCCESS) ||
+        ((result = AddGroupTypeToReturn(groupEntry, returnJson)) != HC_SUCCESS) ||
+        ((result = AddGroupVisibilityToReturn(groupEntry, returnJson)) != HC_SUCCESS)) {
         return result;
     }
     return HC_SUCCESS;
@@ -703,13 +683,27 @@ int32_t AddSharedUserIdToGroupParams(const CJson *jsonParams, TrustedGroupEntry 
     return HC_SUCCESS;
 }
 
-int32_t AddUdidToParams(TrustedDeviceEntry *devParams)
+int32_t AddSelfUdidToParams(TrustedDeviceEntry *devParams)
 {
     char udid[INPUT_UDID_LEN] = { 0 };
     int32_t res = HcGetUdid((uint8_t *)udid, INPUT_UDID_LEN);
     if (res != HC_SUCCESS) {
         LOGE("Failed to get local udid! res: %d", res);
         return HC_ERR_DB;
+    }
+    if (!StringSetPointer(&devParams->udid, udid)) {
+        LOGE("Failed to copy udid!");
+        return HC_ERR_MEMORY_COPY;
+    }
+    return HC_SUCCESS;
+}
+
+int32_t AddUdidToParams(const CJson *jsonParams, TrustedDeviceEntry *devParams)
+{
+    const char *udid = GetStringFromJson(jsonParams, FIELD_UDID);
+    if (udid == NULL) {
+        LOGE("Failed to get udid from json!");
+        return HC_ERR_JSON_GET;
     }
     if (!StringSetPointer(&devParams->udid, udid)) {
         LOGE("Failed to copy udid!");
@@ -735,6 +729,31 @@ int32_t AddAuthIdToParamsOrDefault(const CJson *jsonParams, TrustedDeviceEntry *
         LOGE("Failed to copy authId!");
         return HC_ERR_MEMORY_COPY;
     }
+    return HC_SUCCESS;
+}
+
+int32_t AddAuthIdToParams(const CJson *jsonParams, TrustedDeviceEntry *devParams)
+{
+    const char *authId = GetStringFromJson(jsonParams, FIELD_DEVICE_ID);
+    if (authId == NULL) {
+        LOGE("Failed to get authId from json!");
+        return HC_ERR_JSON_GET;
+    }
+    if (!StringSetPointer(&devParams->authId, authId)) {
+        LOGE("Failed to copy authId!");
+        return HC_ERR_MEMORY_COPY;
+    }
+    return HC_SUCCESS;
+}
+
+int32_t AddCredTypeToParams(const CJson *jsonParams, TrustedDeviceEntry *devParams)
+{
+    int32_t credType = INVALID_CRED;
+    if (GetIntFromJson(jsonParams, FIELD_CREDENTIAL_TYPE, &credType) != HC_SUCCESS) {
+        LOGE("Failed to get credentialType from json!");
+        return HC_ERR_JSON_GET;
+    }
+    devParams->credential = (uint8_t)credType;
     return HC_SUCCESS;
 }
 
@@ -796,6 +815,15 @@ int32_t AssertSharedUserIdExist(const CJson *jsonParams)
     if (sharedUserId == NULL) {
         LOGE("Failed to get sharedUserId from jsonParams!");
         return HC_ERR_JSON_GET;
+    }
+    return HC_SUCCESS;
+}
+
+int32_t AssertSameGroupNotExist(int32_t osAccountId, const char *groupId)
+{
+    if (IsGroupExistByGroupId(osAccountId, groupId)) {
+        LOGE("The group has been created!");
+        return HC_ERR_GROUP_DUPLICATE;
     }
     return HC_SUCCESS;
 }
@@ -873,18 +901,21 @@ int32_t DelGroupFromDb(int32_t osAccountId, const char *groupId)
         LOGE("The input groupId is NULL!");
         return HC_ERR_NULL_PTR;
     }
-    int32_t result;
     QueryGroupParams queryGroupParams = InitQueryGroupParams();
     queryGroupParams.groupId = groupId;
     QueryDeviceParams queryDeviceParams = InitQueryDeviceParams();
     queryDeviceParams.groupId = groupId;
-    if (((result = DelTrustedDevice(osAccountId, &queryDeviceParams)) != HC_SUCCESS) ||
-        ((result = DelGroup(osAccountId, &queryGroupParams)) != HC_SUCCESS) ||
-        ((result = SaveOsAccountDb(osAccountId)) != HC_SUCCESS)) {
-        LOGE("Failed to delete group from database!");
-        return result;
+    int32_t result = HC_SUCCESS;
+    if (DelTrustedDevice(osAccountId, &queryDeviceParams) != HC_SUCCESS) {
+        result = HC_ERR_DEL_GROUP;
     }
-    return HC_SUCCESS;
+    if (DelGroup(osAccountId, &queryGroupParams) != HC_SUCCESS) {
+        result = HC_ERR_DEL_GROUP;
+    }
+    if (SaveOsAccountDb(osAccountId) != HC_SUCCESS) {
+        result = HC_ERR_DEL_GROUP;
+    }
+    return result;
 }
 
 int32_t ConvertGroupIdToJsonStr(const char *groupId, char **returnJsonStr)
@@ -1045,14 +1076,9 @@ int32_t GetGroupTypeFromDb(int32_t osAccountId, const char *groupId, int32_t *re
         LOGE("The input parameters contains NULL value!");
         return HC_ERR_INVALID_PARAMS;
     }
-    TrustedGroupEntry *groupEntry = CreateGroupEntry();
+    TrustedGroupEntry *groupEntry = GetGroupEntryById(osAccountId, groupId);
     if (groupEntry == NULL) {
-        LOGE("Failed to allocate groupEntry memory!");
-        return HC_ERR_ALLOC_MEMORY;
-    }
-    if (GetGroupInfoById(osAccountId, groupId, groupEntry) != HC_SUCCESS) {
-        LOGE("Failed to get groupEntry from database!");
-        DestroyGroupEntry(groupEntry);
+        LOGE("Failed to get groupEntry from db!");
         return HC_ERR_DB;
     }
     *returnGroupType = groupEntry->type;
@@ -1116,11 +1142,20 @@ int32_t GetAppIdFromJson(const CJson *jsonParams, const char **appId)
     return HC_SUCCESS;
 }
 
+int32_t AssertGroupTypeMatch(int32_t inputType, int32_t targetType)
+{
+    if (inputType != targetType) {
+        LOGE("Invalid group type! [InputType]: %d, [TargetType]: %d", inputType, targetType);
+        return HC_ERR_INVALID_PARAMS;
+    }
+    return HC_SUCCESS;
+}
+
 int32_t CheckPermForGroup(int32_t osAccountId, int actionType, const char *callerPkgName, const char *groupId)
 {
     if (((actionType == GROUP_DISBAND) && (IsGroupOwner(osAccountId, groupId, callerPkgName))) ||
-        ((actionType == MEMBER_INVITE) && (IsGroupEditAllowed(osAccountId, groupId, callerPkgName))) ||
-        ((actionType == MEMBER_DELETE) && (IsGroupEditAllowed(osAccountId, groupId, callerPkgName)))) {
+        ((actionType == MEMBER_INVITE) && (CheckGroupEditAllowed(osAccountId, groupId, callerPkgName) == HC_SUCCESS)) ||
+        ((actionType == MEMBER_DELETE) && (CheckGroupEditAllowed(osAccountId, groupId, callerPkgName) == HC_SUCCESS))) {
         return HC_SUCCESS;
     }
     LOGE("You do not have the right to execute the command!");
