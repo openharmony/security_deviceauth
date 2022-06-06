@@ -978,7 +978,8 @@ static int32_t DoGenerateAndExportPk(const char *userId, const char *deviceId,
         int32_t authId = 0;
         Uint8Buff authIdBuff = { (uint8_t *)&authId, sizeof(int32_t) };
         ExtraInfo extInfo = { authIdBuff, -1, -1 };
-        ret = g_algLoader->generateKeyPairWithStorage(keyAlias, SELF_ECC_KEY_LEN, P256, &extInfo);
+        ret = g_algLoader->generateKeyPairWithStorage(keyAlias, SELF_ECC_KEY_LEN, P256,
+            KEY_PURPOSE_KEY_AGREE, &extInfo);
     } else {
         LOGI("Key pair already exists");
     }

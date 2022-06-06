@@ -320,6 +320,11 @@ int32_t GetRegisterInfo(const char *reqJsonStr, char **returnRegisterInfo)
         LOGE("Failed to create request json!");
         return HC_ERR_JSON_CREATE;
     }
+    if (AddIntToJson(requestJson, FIELD_CREDENTIAL_TYPE, ASYMMETRIC_CRED) != HC_SUCCESS) {
+        LOGE("Failed to add credentialType to input json!");
+        FreeJson(requestJson);
+        return HC_ERR_JSON_GET;
+    }
     CJson *registerInfo = CreateJson();
     if (registerInfo == NULL) {
         LOGE("Failed to allocate registerInfo memory!");
