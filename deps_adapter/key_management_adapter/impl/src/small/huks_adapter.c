@@ -634,8 +634,9 @@ static int32_t ConstructGenerateKeyPairWithStorageParams(struct HksParamSet **pa
 }
 
 static int32_t GenerateKeyPairWithStorage(const Uint8Buff *keyAlias, uint32_t keyLen, Algorithm algo,
-    const ExtraInfo *exInfo)
+    KeyPurpose purpose, const ExtraInfo *exInfo)
 {
+    (void)purpose;
     CHECK_PTR_RETURN_HAL_ERROR_CODE(keyAlias, "keyAlias");
     CHECK_PTR_RETURN_HAL_ERROR_CODE(keyAlias->val, "keyAlias->val");
     CHECK_LEN_ZERO_RETURN_ERROR_CODE(keyAlias->length, "keyAlias->length");
