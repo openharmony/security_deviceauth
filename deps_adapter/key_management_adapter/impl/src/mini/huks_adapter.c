@@ -18,6 +18,7 @@
 #include "hc_file.h"
 #include "hc_log.h"
 #include "hc_types.h"
+#include "hc_dev_info.h"
 #include "hks_api.h"
 #include "hks_param.h"
 #include "hks_type.h"
