@@ -28,7 +28,9 @@
 
 static enum HksKeyPurpose g_purposeToHksKeyPurpose[] = {
     HKS_KEY_PURPOSE_MAC,
-    HKS_KEY_PURPOSE_DERIVE
+    HKS_KEY_PURPOSE_DERIVE,
+    HKS_KEY_PURPOSE_SIGN | HKS_KEY_PURPOSE_VERIFY,
+    HKS_KEY_PURPOSE_AGREE
 };
 
 static enum HksKeyAlg g_algToHksAlgorithm[] = {
@@ -728,7 +730,7 @@ static int32_t BigNumExpMod(const Uint8Buff *base, const Uint8Buff *exp, const c
 }
 
 static int32_t ConstructGenerateKeyPairWithStorageParams(struct HksParamSet **paramSet, Algorithm algo,
-    uint32_t keyLen, const struct HksBlob *authIdBlob)
+    uint32_t keyLen, KeyPurpose purpose, const struct HksBlob *authIdBlob)
 {
     struct HksParam keyParam[] = {
         {
@@ -739,7 +741,7 @@ static int32_t ConstructGenerateKeyPairWithStorageParams(struct HksParamSet **pa
             .uint32Param = HKS_STORAGE_PERSISTENT
         }, {
             .tag = HKS_TAG_PURPOSE,
-            .uint32Param = HKS_KEY_PURPOSE_SIGN | HKS_KEY_PURPOSE_VERIFY
+            .uint32Param = g_purposeToHksKeyPurpose[purpose]
         }, {
             .tag = HKS_TAG_KEY_SIZE,
             .uint32Param = keyLen * BITS_PER_BYTE
@@ -761,7 +763,7 @@ static int32_t ConstructGenerateKeyPairWithStorageParams(struct HksParamSet **pa
 }
 
 static int32_t GenerateKeyPairWithStorage(const Uint8Buff *keyAlias, uint32_t keyLen, Algorithm algo,
-    const ExtraInfo *exInfo)
+    KeyPurpose purpose, const ExtraInfo *exInfo)
 {
     CHECK_PTR_RETURN_HAL_ERROR_CODE(keyAlias, "keyAlias");
     CHECK_PTR_RETURN_HAL_ERROR_CODE(keyAlias->val, "keyAlias->val");
@@ -774,7 +776,7 @@ static int32_t GenerateKeyPairWithStorage(const Uint8Buff *keyAlias, uint32_t ke
     struct HksBlob keyAliasBlob = { keyAlias->length, keyAlias->val };
     struct HksBlob authIdBlob = { exInfo->authId.length, exInfo->authId.val };
     struct HksParamSet *paramSet = NULL;
-    int32_t ret = ConstructGenerateKeyPairWithStorageParams(&paramSet, algo, keyLen, &authIdBlob);
+    int32_t ret = ConstructGenerateKeyPairWithStorageParams(&paramSet, algo, keyLen, purpose, &authIdBlob);
     if (ret != HAL_SUCCESS) {
         return ret;
     }
@@ -984,7 +986,7 @@ static int32_t Sign(const Uint8Buff *keyAlias, const Uint8Buff *message, Algorit
 
     ret = HksSign(&keyAliasBlob, paramSet, &messageBlob, &signatureBlob);
     if (ret != HKS_SUCCESS) {
-        LOGE("Hks sign failed.");
+        LOGE("Hks sign failed, ret:%d", ret);
         ret = HAL_FAILED;
         goto ERR;
     }
