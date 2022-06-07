@@ -98,7 +98,7 @@ static int32_t PackageAuthInfo(const PakeParams *pakeParams, StandardBindExchang
         /* UserType and pairType are not required when generating key. */
         ExtraInfo exInfo = { pakeParams->baseParams.idSelf, -1, -1 };
         res = pakeParams->baseParams.loader->generateKeyPairWithStorage(keyAlias, PAKE_ED25519_KEY_PAIR_LEN, alg,
-            &exInfo);
+            KEY_PURPOSE_SIGN_VERIFY, &exInfo);
         if (res != HC_SUCCESS) {
             LOGE("generate self auth keyPair failed.");
             return res;

@@ -39,7 +39,8 @@ static int32_t RegisterLocalIdentity(const char *pkgName, const char *serviceTyp
     }
 
     ExtraInfo exInfo = { *authId, -1, -1 }; /* UserType and pairType are not required when generating key. */
-    res = loader->generateKeyPairWithStorage(&keyAliasBuff, PAKE_ED25519_KEY_PAIR_LEN, ED25519, &exInfo);
+    res = loader->generateKeyPairWithStorage(&keyAliasBuff, PAKE_ED25519_KEY_PAIR_LEN, ED25519,
+        KEY_PURPOSE_SIGN_VERIFY, &exInfo);
     if (res != HC_SUCCESS) {
         LOGE("Failed to generate key pair!");
         return res;

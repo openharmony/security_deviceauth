@@ -48,6 +48,8 @@ typedef enum {
 typedef enum {
     KEY_PURPOSE_MAC = 0,
     KEY_PURPOSE_DERIVE = 1,
+    KEY_PURPOSE_SIGN_VERIFY = 2,
+    KEY_PURPOSE_KEY_AGREE = 3
 } KeyPurpose;
 
 typedef enum {
@@ -106,7 +108,7 @@ typedef int32_t (*BigNumExpModFunc)(const Uint8Buff *base, const Uint8Buff *exp,
     Uint8Buff *outNum);
 
 typedef int32_t (*GenerateKeyPairWithStorageFunc)(const Uint8Buff *keyAlias, uint32_t keyLen, Algorithm algo,
-    const ExtraInfo *exInfo);
+    KeyPurpose purpose, const ExtraInfo *exInfo);
 
 typedef int32_t (*GenerateKeyPairFunc)(Algorithm algo, Uint8Buff *outPriKey, Uint8Buff *outPubKey);
 
