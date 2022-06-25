@@ -1,3 +1,6 @@
+# Notice
+## This repository has been deprecated due to repository rename. Access [security_device_auth](https://gitee.com/openharmony/security_device_auth) instead to obtain the latest code and capabilities.
+
 # deviceauth<a name="EN-US_TOPIC_0000001150002727"></a>
 
 -   [Introduction](#section11660541593)

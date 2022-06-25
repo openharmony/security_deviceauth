@@ -1,3 +1,6 @@
+# 公告
+## 由于仓库改名，此仓库已废弃。请访问 [security_device_auth](https://gitee.com/openharmony/security_device_auth) 获取最新代码和能力。
+
 # 设备互信认证<a name="ZH-CN_TOPIC_0000001150002727"></a>
 
 -   [简介](#section11660541593)
