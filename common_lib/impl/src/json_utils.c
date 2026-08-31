@@ -19,6 +19,7 @@
 #include "securec.h"
 #include "clib_error.h"
 #include "clib_types.h"
+#include "parse_json_int64.h"
 #include "string_util.h"
 
 #define RECURSE_FLAG_TRUE 1
@@ -270,7 +271,12 @@ int32_t GetInt64FromJson(const CJson *jsonObj, const char *key, int64_t *value)
     if (str == NULL) {
         return CLIB_ERR_JSON_GET;
     }
-    *value = StringToInt64(str);
+    if (value == NULL) {
+        return CLIB_ERR_NULL_PTR;
+    }
+    if (!ParseJsonInt64(str, value)) {
+        return CLIB_ERR_INVALID_PARAM;
+    }
     return CLIB_SUCCESS;
 }
 

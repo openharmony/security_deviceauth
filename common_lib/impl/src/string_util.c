@@ -18,6 +18,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "parse_json_int64.h"
 #include "securec.h"
 #include "clib_error.h"
 #include "clib_types.h"
@@ -103,10 +104,11 @@ int32_t HexStringToByte(const char *hexStr, uint8_t *byte, uint32_t byteLen)
 
 int64_t StringToInt64(const char *cp)
 {
-    if (cp == NULL) {
+    int64_t value = 0;
+    if (!ParseJsonInt64(cp, &value)) {
         return 0;
     }
-    return strtoll(cp, NULL, DEC);
+    return value;
 }
 
 void ConvertToAnonymousStr(const char *originalStr, char **anonymousStr)
